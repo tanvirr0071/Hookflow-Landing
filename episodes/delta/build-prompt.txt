@@ -1,0 +1,342 @@
+Build a YouTube Short in Remotion from my voice-over: a "Markup" Short, "Amex Paid Delta $8.2B. Delta's Profit Was $5B.".
+
+THE GOAL
+It must look like a premium cinematic animated documentary short: painterly, richly textured, deep, lit like a film, with character acting so natural it feels observed from real life. Character design keeps the clean appeal of a high-end anime feature, but every frame is rendered with volume, texture and atmosphere. It must never look like flat vector art, motion graphics, an explainer, a slideshow or a paper cut-out puppet. It plays as one continuous story that moves with the voice: the same world, the same characters and the same hero prop carry the viewer from shot to shot, and every shot hands off to the next. Every cut, every action and every piece of text is synced to the voice-over to the frame.
+
+Work like a real feature-animation studio, in this order, and do not skip ahead:
+timing → reference (motion and hands) → design (model sheets, hand sheet, props, texture kit, background plates) → layout and animatic → key poses → breakdowns and in-betweens → secondary motion → lighting, texture and compositing → QA.
+Each stage has a quality gate (STEP 12). Do not start a stage until the previous gate passes.
+
+PRIORITIES WHEN SOMETHING HAS TO GIVE
+1. Sync and facts are never compromised.
+2. Believable movement and hands. A character who moves with real weight in a simple frame beats a detailed character who moves like a paper puppet.
+3. Quality over quantity. Fewer, better drawings, well staged, beat many crude ones. Use real animation staging cheats freely: silhouettes against bright windows, backs of heads, over-the-shoulder framing, characters cropped by foreground objects, and moving holds.
+4. Every frame must survive a pause. If a paused frame looks like a vector explainer, a PowerPoint slide, clip art or a cut-out puppet, it fails.
+
+INPUT
+- Voice-over: voiceover/delta.mp3 (ElevenLabs, English). It is my file: never edit, replace or regenerate it, and never create a voice. Copy it to public/vo/delta.mp3.
+- If there is no Remotion project in this folder, create one with `npx create-video@latest` (blank template, TypeScript). Run `npx remotion skills add` and follow /remotion-best-practices.
+- Free tools only: no paid APIs, no stock footage, no AI images. Install what is missing: `brew install ffmpeg cmake` and `npx remotion add @remotion/media @remotion/media-utils @remotion/install-whisper-cpp @remotion/google-fonts @remotion/transitions @remotion/noise @remotion/motion-blur @remotion/paths @remotion/shapes @remotion/layout-utils @remotion/animation-utils`. Also `npm i opentype.js @fontsource/permanent-marker` (for handwriting, see STEP 7).
+- If I have placed character or prop artwork in public/assets/ (SVG or PNG), use it instead of drawing that item from scratch.
+- Reference (my own recordings, not stock): reference/delta/sNN_<action>.mp4 are phone clips of me acting the key actions (s01_set-check-on-easel, s02_write-big-with-marker, s03_circle-line-with-pen, s04_heave-crate-and-shove, s04_hold-pass-to-reader, s07_pin-sheet-and-slap-flat, s08_hover-heavy-stamp, s10_tear-off-fax, s13_slam-stamp, s16_carry-board-in-wind), and reference/hands/<pose>.jpg are photos of my hand in each pose of the hand library (STEP 3). When they exist, they are the source for poses, timing and hand shapes (STEP 3B). When one is missing, key that action by hand with the timing table in STEP 6.
+- For reference analysis, install the free MediaPipe package: `pip3 install mediapipe opencv-python numpy`.
+
+STEP 0 — PROJECT AUDIT AND STRUCTURE
+- Read every file in src/components/ and src/lib/ from earlier episodes (grain, flares, speed lines, rigs and anything else). Reuse what fits. Upgrade components in place without breaking earlier episodes: add optional props, never rename or remove existing ones. Log what you reused, upgraded and built new in out/delta/review.md.
+- Structure:
+  - src/delta/Delta.tsx (the composition), src/delta/shots/Shot01<Name>.tsx … (one file per shot, named after the shot titles in STEP 9)
+  - src/data/delta/words.json, timeline.ts, copy.ts, glyphs.json, poses/ (keyed and reference-extracted poses), sim/ (baked secondary motion)
+  - src/lib/ (shared, reusable across episodes): ease.ts, Camera3D.tsx, SurfaceText.tsx, HandWrite.tsx, Particles.tsx, Grade.tsx, rig/ (Skeleton, IK2Bone, SkinnedLimb, HandRig, FaceRig, ShadingStack), textures/
+  - scripts/: extract-pose.py (MediaPipe), bake-secondary.ts, build-glyphs.ts, build-textures.ts
+  - src/components/characters/, props/, backgrounds/, fx/ (reusable in later videos)
+- Determinism: never use Math.random(). Use random(seed) from remotion for every particle, blink and drift, so every render is identical.
+
+STEP 1 — TIMING MAP (do this first)
+1. Get the exact audio duration with getAudioDurationInSeconds from @remotion/media-utils and confirm it with ffprobe (they must agree within one frame).
+2. Composition "Delta": 1080x1920 at 30 fps. durationInFrames = Math.ceil(duration * 30) + 4. The last 4 frames are the loop hold (see the last shot).
+3. Transcribe: make a 16 kHz mono WAV copy of the voice-over in a temp folder (whisper.cpp requires it). Install whisper.cpp and the large-v3-turbo model with @remotion/install-whisper-cpp and transcribe with tokenLevelTimestamps: true; use the DTW token timestamps (t_dtw) where present. Merge sub-word tokens into words.
+4. Align Whisper's words to the script below with a sequence alignment. The script wins: "Amex" may come out as "Amix", "a mix" or "I'm ex", "Amex's" as "Amexes", "Delta's" as "Deltas" or "Delta is", and "SkyMiles" as "sky miles" (two words); numbers may come out as digits ("8.2", "2025", "$5 billion", "13%", "2018", "2008", "$1 billion", "2020", "12.4", "$9 billion", "2.9"), and one digit token may cover several script words ("2008" for "two thousand eight", "2025" for "twenty twenty-five"); map them to the script's words. Save src/data/delta/words.json as [{ word, scriptIndex, startMs, endMs, rawFrame, frame }].
+5. Onset refinement: Whisper word starts are often 40–120 ms off. Decode the voice-over to PCM, compute a 10 ms RMS envelope, and snap every cut word and beat word to the nearest speech onset within ±3 frames. Run ffmpeg silencedetect (noise=-35dB:d=0.18) and record every pause. Keep both the raw and the refined frame.
+6. Build src/data/delta/timeline.ts: for every shot its cut word, cut frame, end frame (the next shot's cut frame) and every beat word inside it with its refined frame, plus helpers such as beat("s05", "word"). All animation reads from this file. Never hard-code seconds or absolute frames in components; offsets relative to a beat (beat - 3) are fine.
+7. Cut rule: a shot cuts in on its CUT word (usually the first word of the line). Actions land on their BEAT words. A big hit never lands on a shot's first frame: leave at least 6 frames between the cut and the first big hit so the anticipation reads.
+8. Sync rule: every action tied to a word lands ON that word's refined start frame. Big actions get 2–4 frames of anticipation before the hit (a wind-up, a squash, a held breath), then follow-through and settle over 6–12 frames after it.
+9. Pace: a new shot or a clear new action every 2–3 seconds. If a shot runs past 3 seconds on my voice, add a camera change or a new action on its next beat word. Something meaningful moves at least every second.
+10. Write out/delta/timing-report.md (shot, cut word, word time, raw frame, refined frame, every beat word → frame, every pause with its length) and out/delta/sfx-cues.csv (timecode HH:MM:SS:FF at 30 fps, frame, shot, action, suggested sound: marker squeak, crate scrape and thud, boarding-gate beep, thunder, newspaper bundle thud, fax whir and paper tear, rubber-stamp slam, runway wind…) so I can add SFX by hand.
+
+VOICE-OVER SCRIPT (for reference; the audio is the source of truth)
+Amex paid Delta more than Delta's entire profit.
+Eight point two billion dollars, in twenty twenty-five.
+Delta's net profit that year was five billion.
+Amex buys miles that Delta must honor with seats.
+Look at everything charged on Amex cards worldwide.
+About thirteen percent goes on Delta cards.
+Amex's payment has more than doubled since twenty eighteen.
+But what happens to that money in a crisis?
+First, the two thousand eight crash.
+Amex prepaid Delta one billion dollars
+for miles it would use later.
+Then came twenty twenty, and the planes sat parked.
+Delta lost twelve point four billion.
+It borrowed nine billion against its SkyMiles program.
+"The largest debt financing in aviation history," Delta said.
+Yet Amex still paid two point nine billion.
+That year, Delta's profit vanished. The Amex money didn't.
+
+FACT LOCK
+Every number, date, quote and name in this prompt is fact-checked. Do not add any number, date, name or claim that is not in this prompt (the check's fine print and guilloché, the other lines of the income statement and the ledger, the map's coastlines and light points, the newspaper's columns and photo, the fax header, the departure boards, the annual report cover, the body text of the loan contract and the boarding pass's barcode use neutral filler graphics, not invented facts). Put every in-world string in src/data/delta/copy.ts exactly as written below, character for character (curly quotes “ ”, middle dot ·, en dash –, em dash —, tilde ~). Components import strings from copy.ts; no string literals for in-world text inside components. Write a small check script that compares copy.ts against this list and fails on any difference. Keep "AMEX 10-K · DEC 31, 2025" (the source tag under the 13% slice) and "— DELTA AIR LINES, SEPT 2020" (the attribution under the quote, which always keeps its curly quotes) wherever they appear.
+
+IN-WORLD COPY (exact)
+AMERICAN EXPRESS → DELTA AIR LINES
+AMEX PAID MORE THAN DELTA’S PROFIT
+$8.2 BILLION
+2025
+NET INCOME $5.0B · 2025
+SKYMILES
+PAID WITH MILES
+EVERYTHING CHARGED ON AMEX CARDS · WORLDWIDE
+13% · ON DELTA CARDS
+AMEX 10-K · DEC 31, 2025
+2018 · $3.4B
+2025 · $8.2B
+IN A CRISIS?
+DEC 2008
+CRASH
+AMEX → DELTA · $1 BILLION · PREPAID
+FOR SKYMILES · TO BE USED LATER
+2020 · PARKED
+NET LOSS $12.4B · 2020
+LOAN · $9B · COLLATERAL: SKYMILES
+SEPT 2020
+“THE LARGEST DEBT FINANCING IN AVIATION HISTORY.”
+— DELTA AIR LINES, SEPT 2020
+AMEX → DELTA · 2020 · $2.9B
+DOWN 30%
+PROFIT
+
+STEP 2 — LOOK BIBLE (before any shot is animated)
+Write src/delta/style.ts with the tokens below, then build and review the design stills in STEP 12, Gate A.
+
+THE WORLD (one geography, so camera moves and cuts make sense)
+- One airline hub airport. The terminal and a maintenance hangar face each other across the apron: the terminal's top floor is one long glass wall with the finance office (shots 3, 10, 11, 13, 17) and the boardroom (shots 5–8, 14, 15) side by side behind it, both looking north across the apron at the hangar's open doors. The hangar's ceremony stage, where the giant check stands on its easel (shots 1, 2 and the end of 17), is seen tiny through that glass in shots 3 and 17, and the terminal's lit glass wall is seen through the hangar doors in shots 1 and 2.
+- Below the offices runs the concourse: the gate lounge (shot 4), whose window looks onto the apron and a jet at the gate, and at the concourse's far end the newsstand (shot 9).
+- The apron between terminal and hangar is where the planes sit parked in rows in 2020 (shot 12); beyond the hangar, the runway runs left to right across the frame (shot 16), and its edge lights are seen from the office window in shot 17.
+- Time moves through the same rooms: the finance office is seen in 2025 (shot 3), on a December night in 2008 (shots 10, 11) and in 2020 (shots 13, 17); the boardroom in 2025 (shots 5–8) and in 2020 (shots 14, 15). Same walls, same window, same desk; only light, props and wear change.
+- Reuse the same component for anything that appears twice: the hangar stage and easel (shots 1, 2, 17), the terminal glass wall and its view across the apron (shots 3, 5–8, 10, 11, 13–15, 17), the finance-office desk with its lamp (shots 3, 10, 11, 13, 17), the boardroom glass table (shots 6, 14, 15), the <GiantCheck> hero prop (shots 1, 2, 3, 7, 8, 16, 17), the rubber stamp (shots 8, 13), the SKYMILES crate (shots 4, 14), the Treasurer, the Courier and the Traveller.
+
+PALETTE AND LIGHT (per scene: key light colour and direction, shadow tint, rim colour, line colour)
+- Hangar stage at dusk (shots 1, 2, end of 17): key warm tungsten amber from the rafter work lights, high and from the left; shadow tint deep teal; rim cool dusk blue from the open doors; line colour burnt umber.
+- Finance office, 2025 afternoon (shot 3): key low golden sun from the right, raking through the blinds in stripes; shadow tint dusty violet; rim warm gold; line colour plum brown.
+- Gate lounge, daylight (shot 4): key cool north daylight from the big apron window on the right; fill from the ceiling fluorescents; shadow tint slate blue; rim pale sky white; line colour dark navy.
+- Boardroom, 2025 day (shots 5–7): key soft overcast daylight from the glass wall on the left plus the map wall's cyan glow from behind; shadow tint deep navy; rim map cyan; line colour ink blue. The 13% slice and the checks' amounts carry the episode's accent colour, ledger gold #E3A93B.
+- Boardroom, storm dusk (shot 8): key bruised violet storm light from the glass wall, broken by white lightning flashes from the left; shadow tint indigo; rim cold lightning white; line colour deep aubergine.
+- Newsstand, December 2008 night (shot 9): key greenish fluorescent tubes overhead; shadow tint bottle green; rim cold blue from the snowy window behind; line colour dark moss.
+- Finance office, December 2008 night (shots 10, 11): key warm desk-lamp pool from the left, low; shadow tint deep coffee brown; rim cool blue from the CRT monitor; line colour dark walnut.
+- Apron, 2020 overcast morning (shot 12): key flat diffuse white from a low grey sky, slightly from the right; shadow tint cold blue-green; rim pale silver along fuselages; line colour gunmetal.
+- Finance office and boardroom, 2020 (shots 13–15): key a single cool overhead pendant with most ceiling lights off; shadow tint steel blue; rim faint grey-green daylight from the glass wall; line colour charcoal blue.
+- Runway, 2020 dusk (shot 16): key low orange sun from the left, near the horizon; shadow tint dusk purple; rim cold blue sky; runway edge lights as warm practicals; line colour deep maroon.
+- Finance office, 2020 dusk (shot 17): key the last orange dusk through the glass from the right; the desk lamp as warm fill; shadow tint violet-blue; rim runway-light amber; line colour plum brown, warming to the hangar's amber as the camera pulls back.
+
+RENDERING STYLE (painterly and cinematic, not flat cel)
+- Line art is thin, coloured and secondary to light: lines use the darkest local colour (never pure black), are heavier in shadow and on outer contours, thin out or break where light hits an edge, and taper at the ends (build them as filled shapes, not uniform strokes). Forms are defined mainly by light and shadow.
+- A reusable <ShadingStack> renders every character part and prop in this order: base colour → form shadow with a soft terminator (2–6 px feathered edge; colour = base tinted by the scene's shadow colour, never grey) → a darker core shadow and ambient occlusion in creases (under the chin and hair, inside the elbow, between the fingers, where a body meets a seat) → on skin, a warm, slightly saturated band along the terminator → bounce light on undersides from the floor or nearby colours → highlight → rim light in the key light's colour → specular glints on eyes, hair, lips, nails, a watch and phone glass.
+- Store the key-light direction per shot in style.ts; shadow and light shapes follow it, so a character who turns toward the light brightens on that side.
+- Cast shadows: characters and props cast soft shadows onto floors, walls, desks and each other, matching the key light's direction and softness. Contact shadows sit wherever something touches a surface: the easel's feet on the hangar stage, the SKYMILES crate on the baggage scale, the Treasurer's forearm and the papers on her desk, and the stamp on the annual report.
+
+TEXTURE (every surface, characters included)
+- Build a texture kit once, procedurally and seeded (no outside images), with scripts/build-textures.ts, and pre-render it as seamless PNG tiles: paper grain, canvas weave, dry brush, wet-paint blooms, chalk dust, concrete, wet asphalt, skin micro-texture, brushed metal, wood grain, glass smudges, plus wool crepe (the Treasurer's suit), pinstripe worsted (her 2008 suit), shetland knit (her 2020 cardigan), cotton poplin (her shirt), gabardine (the Courier's raincoat), merino knit (his sweater), tweed (the Traveller's cap and sport coat), matte foam-core with printed guilloché (the giant check), laid bond paper (the statement, the loan contract, the annual report), newsprint (the newspaper), thermal fax paper (the wire slip), card stock (the boarding pass), stencilled plywood (the SKYMILES crate), carved rubber and lacquered wood (the stamp), green bookcloth (the ledger), painted hangar steel and aircraft aluminium (the hangar and the parked jets). Reuse tiles that earlier episodes already built.
+- On characters, each clothing and skin area gets its matching tile at low opacity (multiply or soft light), clipped to its shape, plus a brush mask that breaks up shadow edges so they look painted, not vector-perfect. Fabric shows seams, stitching, buttons, pockets, buckles, knit patterns and wrinkles that change with the pose.
+- In backgrounds, brushwork follows the form, edges break up, shadows hold painted texture, surfaces show dirt and wear, and fine detail concentrates around the focal point and falls away from it, as in a painting.
+- Texture must be visible in a 100% crop and subtle at phone size.
+
+DEPTH (every shot)
+- Combine depth cues: the real perspective camera (STEP 5), overlap, scale change, atmospheric haze between layers, depth of field with bokeh, cast and contact shadows, light falloff, and a foreground element close to the lens in most shots.
+- Plan the value structure in depth for each shot in the layout: the subject at the focal plane gets the highest contrast; the foreground is darker or out of focus; the background is hazier.
+- Volume: thin fog cards between depth layers; visible light beams (cones from the hangar's rafter work lights, sun shafts through the finance-office blinds, the desk-lamp cone in 2008, lightning through the boardroom glass, low dusk sun across the runway); hangar dust, paper fibres, snow outside the 2008 window, storm rain and wind-blown runway grit catching the light.
+- Bokeh: out-of-focus point lights (the hangar work lights, apron floodlights, the terminal's lit windows, departure-board LEDs, red beacon lights on the parked jets, runway edge lights) become soft discs with a slightly brighter rim, sized by their distance from the focal plane.
+
+PAINTED BACKGROUNDS
+- No flat fills anywhere. Every surface has a gradient, brush texture (feTurbulence into feDisplacementMap on edges, low-opacity noise multiplied over fills) and hand-placed detail: cables, signage, window frames, scuffs, plants, reflections, light pools.
+- Atmospheric perspective: far layers have lower contrast and are tinted toward the sky or ambient colour.
+- One key light, one fill, and practical lights (neon, screens, lamps) casting coloured pools on nearby surfaces.
+- Background plates: render each background layer once as a high-resolution transparent PNG through its own composition (Plate-s01-far, Plate-s01-mid…) with `npx remotion still`, saved to public/plates/delta/. Plates are rendered at 2× pixel density (`--scale=2`) and 1.25–2× the frame size on the axis the camera travels, so texture stays crisp through push-ins. Shots then composite plates + live elements (characters, lights, text, particles). This lets the painting use expensive filters without slowing the render. Keep the plate source code so plates can be re-rendered.
+
+STEP 3 — CHARACTERS (all original designs, never portraits or likenesses of real people)
+- THE TREASURER (the airline's finance officer): late 40s in 2025, slim and upright, a short dark bob streaked with silver and tucked behind one ear, tortoiseshell reading glasses on a thin beaded chain, a navy wool-crepe suit with a single-button blazer over a white cotton-poplin shirt, low block-heel leather pumps. Precise: she taps her pen twice before she writes and never wastes a gesture; when something impresses her, only her eyebrows move. In 2008 (shots 9–11) she is about 17 years younger, with darker, longer hair in a low ponytail, a charcoal pinstripe trouser suit and, at the newsstand, a camel wool coat dusted with snow; quick and tense. In 2020 (shots 13–15, 17) she wears a grey shetland cardigan over the shirt, a pale blue pleated disposable mask pulled down under her chin, her hair grown out and clipped back; tired, shoulders lower, slower to look up.
+- THE COURIER (the one who brings the money): early 30s, tall and lanky with long arms and big hands, dark curly hair, short stubble, a charcoal gabardine raincoat with a belt over a mid-grey merino crew-neck sweater, dark chinos, a worn brown leather messenger bag across his body. Quick and cheerful: he arrives slightly out of breath and always overshoots his stop by half a step. In 2008 (shot 10) he is clean-shaven, with a navy knit beanie with snow melting on it. In 2020 (shots 14, 16) the same raincoat is soaked and wind-whipped, a black cloth mask over his nose and mouth, his hair longer; still upright, still delivering.
+- THE TRAVELLER (a frequent flyer): mid-60s, stocky, a trimmed white beard, a brown tweed flat cap and tweed sport coat over a checked flannel shirt, olive corduroy trousers, a dark grey carry-on roller case. Unhurried: he settles his weight onto his back foot and pats his breast pocket to check for his boarding pass.
+- Minor: a ground-crew worker in an orange hi-vis vest over a navy work jacket, with ear defenders, mostly in silhouette (shot 12); the newsstand clerk, seen from behind in a brown cardigan (shot 9).
+- Every character must read in silhouette alone.
+
+MODEL SHEETS FIRST
+For each main character (in every outfit and mood they appear in), build and render a model sheet: front, 3/4, profile and back views, with a second panel showing the volume construction underneath (ribcage, pelvis, limb cylinders); an expression sheet (neutral, smile, laugh, surprised, unimpressed with half-lidded eyes, tired, plus any expression this episode needs); and a turn test (the head turning from front to profile in 5 steps through the face rig). Minor characters get at least front and 3/4. Save to out/delta/qa/model-<name>.png. Fix proportions, appeal and consistency between views before any shot uses the character.
+
+CONSTRUCTION
+- Realistic proportions with the appeal of a high-end anime feature, never chibi: the Treasurer about 7.5 heads tall and narrow-shouldered, with a straight back that softens into a slight forward stoop in 2020; the Courier about 7.75 heads, long-limbed, with a loose, slightly forward-leaning walk; the Traveller about 7 heads, broad and barrel-chested, with a slight stoop. Build every body from volumes first (ribcage, pelvis, tapered limb cylinders) and check the gesture line before adding detail. Necks, clavicles, shoulders, elbows, wrists, knees and ankles sit in anatomically correct places; elbows line up with the waist and fingertips reach mid-thigh.
+- Faces: small chin, eyes about one fifth of the face width, the nose shown by a soft shadow plane and a small highlight on the tip, a soft shadow under the lower lip. <SLOT: how age and character show in each main face, with restraint>.
+- Eyes (they get close-ups): a thick, tapered upper lash line with a flick at the outer corner, a thin broken lower lash line, an iris with a vertical gradient (dark at the top, lighter at the bottom), a pupil, two highlights (one large, one small), a reflection of the scene's light source, and a soft shadow cast by the upper lid onto the eyeball. Eyelids and eyebrows are separate layers.
+- Hair in pointed clumps with a shadow shape, a highlight band and a few flyaway strands.
+- Clothes have weight and thickness: folds radiate from tension points (shoulders, elbows, belts, behind the knees) and change with every pose. <SLOT: how each main garment behaves, e.g. the trench coat is stiff and swings late, the knit sweater is soft and sags, the blazer creases at the elbows and pulls open when he raises his arms>.
+
+RIG (skinned, never a paper cut-out)
+- Skeleton: pelvis → lower spine → chest (a 3-segment spine), neck, head; clavicles (the shoulders rise when an arm lifts above shoulder height); upper arm, forearm with twist, wrist; thigh, shin, foot, toes.
+- Skinned body: never rotate rigid SVG pieces around pins. Compute each limb's outline every frame from its bones with a width profile (deltoid, upper arm, forearm taper, wrist; thigh, knee, calf, ankle), so elbows and knees bend smoothly: the inner side compresses and creases, the outer side sharpens into the joint. The torso outline follows the three spine bones the same way, so the chest and waist bend and twist. No seams, gaps or overlapping circles at joints, at any angle.
+- Two-bone IK with pole vectors for arms and legs: hands are placed on their targets (<SLOT: every object a hand touches in this episode>) and feet are planted; a foot carrying weight never slides.
+- 2.5D face rig: the eyes, brows, nose, mouth, ears and hairline sit on a virtual ellipsoid and move with head yaw and pitch. During a turn the far eye narrows and moves toward the edge, the nose moves toward the silhouette, the cheek and jaw contour change, the ear shifts, and the hair clumps layer over and under accordingly. For turns beyond about 45°, swap to a dedicated 3/4 or profile head at the fastest point of the turn, where the motion hides the swap.
+- Torso turns work the same way: lapels, buttons, belts and seams slide across the torso shape.
+- Pose library per character, stored as joint angles + IK targets + face values + hand poses in src/data/delta/poses/.
+- Every part draws its own shading stack and texture (STEP 2) from the shot's key-light direction.
+
+HANDS (treat them as their own sub-project)
+- Proportions: the hand is about as long as the face from chin to hairline, and the palm about as long as the middle finger. The middle finger is longest; index and ring are about equal; the pinky's tip reaches the last knuckle of the ring finger. The knuckles form an arc, not a straight line. The thumb starts at the wrist, its tip reaches about the middle knuckle of the index finger, and it sits at roughly 90° to the palm (it opposes the fingers; it never lies flat beside them).
+- Hand rig: wrist, palm, thumb (3 joints: base, middle, tip) and four fingers with 3 joints each. Each finger is one continuous skinned shape built from its bones with a width profile: slight bulges at the knuckles, a narrower middle, a rounded, padded tip, tapering toward the end.
+- Detail: the back of the hand shows nails (correct shape, a highlight, a cuticle line), knuckle creases and wrinkles, and on older characters tendons, veins and softer, older skin; the palm shows the thumb's padded base, the main creases and fingertip pads. Hands get the same shading stack, texture, cast shadows and contact shadows as the rest of the body.
+- Views: back, palm, thumb side, pinky side and 3/4. Choose the view per pose so the hand reads clearly; never show a hand edge-on where the fingers merge into one shape.
+- Curl rules: when fingers curl, the joints fold progressively (base least, tip most), curled fingers converge toward a point near the base of the palm, and each finger toward the pinky curls slightly more than the one before. Relaxed hands are never flat: the fingers rest in a gentle cascade of curls.
+- Grips are layered: the object sits between the hand's layers (palm and far fingers behind it, near fingers and thumb in front), the fingers flatten slightly where they press, and contact shadows sit where skin meets the object. <SLOT: one grip per object held in this episode, in the form "Phone: four fingers behind, the thumb on the screen or edge, the pinky under the bottom edge. Marker: pinched between thumb and index, the middle finger supporting it.">
+- Motion: the wrist leads and the fingers follow 1–3 frames later; when a hand opens or closes, the fingers move in a cascade from index to pinky, never all at once. Fingers never pop between poses; they interpolate through the rig.
+- Pose library (from my reference photos when available, see STEP 3B): relaxed, point, <SLOT: every other hand pose this episode needs>.
+- Close-ups (<SLOT: the shot numbers with hand close-ups>, and any insert) get the full detail level; wide shots simplify detail but keep correct proportions and silhouettes.
+
+ACTING (observed from life, never puppet-like)
+- Nobody is ever perfectly still: breathing moves the chest, shoulders and clavicles (1–2 px, a 3–4 second cycle, a different phase per character), and standing characters make tiny weight shifts between their feet. A held character is a moving hold.
+- Eyes lead: in every look or turn, the eyes move first, the head follows 2–4 frames later, then the torso. While watching or thinking, the eyes make small darts (saccades) every 0.5–1.5 seconds. Blinks take 5–7 frames (a fast close, a slower open), come every 2–4 seconds (seeded) and often accompany a head turn or a change of thought.
+- Asymmetry: no mirrored poses. Weight sits on one leg with the hips and shoulders tilted in opposite directions; the two hands do different things; the two sides of the face are never identical.
+- Faces act in small amounts: brow tension, lid height, the corners of the mouth, a jaw shift. A flicker of the coming emotion appears a few frames before the main expression (a flash of doubt in the eyes before a smile drops).
+- Extreme close-ups on the eyes for dramatic beats.
+- Mouths change only for expressions (smile, laugh, open surprise, flat). Characters never lip-sync: the narration is a voice-over; they act and react.
+- Eyelines: characters look at what matters (<SLOT: the screens, documents and objects characters look at in this episode>), and screen direction stays consistent across cuts.
+
+FRAME RATE
+Characters animate on ones (every frame, 30 per second) for smooth, natural movement; the puppet look is fixed with posing, timing, skinning and overlap, not by dropping frames. Camera, particles, lights, text and effects are also on ones.
+
+STEP 3B — REFERENCE-DRIVEN MOTION (when reference/ exists)
+- Run scripts/extract-pose.py with MediaPipe Pose Landmarker (33 body points) and Hand Landmarker (21 points per hand) on every reference clip and photo, and save per-frame 2D landmarks to src/data/delta/poses/ref/.
+- Smooth the landmarks (One Euro filter), convert them to the rig's joint angles and IK targets, and retarget them to each character's proportions. <SLOT: how each main character moves compared with me, e.g. the mogul moves heavier and slower than I do; the commuter lighter>. Scale timing where age or mood calls for it.
+- Never trace every frame: that looks floaty and rotoscoped. Take the key poses and extremes from the reference, keep its timing, rebuild the breakdowns and in-betweens with the motion rules in STEP 6, and push the poses about 10–20% further than the reference for clarity.
+- Align each reference action to its beat word so its contact or hit frame lands on that word.
+- Use the hand photos to set finger joint angles, view and grip for every pose in the hand library.
+- Without reference, key the action by hand with the timing table in STEP 6.
+
+STEP 4 — PROPS (they must resemble their real-life versions)
+- The hero prop: <SLOT: the hero prop described physically, built as one component with states (for example lit, greyed, flicker), and every shot it appears in>.
+<SLOT: one line per other prop and set, described the way it really looked at the time, with the details that make it real (materials, parts, wear, how it lights or is lit); company names only as plain lettering, not logos; any famous trophy, mascot or signature product design replaced by a clearly generic one>
+- No icons-as-props and no blob shapes.
+
+STEP 5 — CAMERA, LAYOUT AND ANIMATIC
+- Build a reusable <Camera3D>: a real perspective camera in CSS 3D (perspective on the root, transform-style: preserve-3d), with every plate, character and prop placed at its true depth (translateZ, scaled to keep its intended framing size). The camera has a position (x, y, z), rotation, a lens (think 24 mm wide, 35 mm, 50 mm, 85 mm portrait) and a focus distance. Push-ins are dollies (the camera moves, so near layers grow faster than far ones), not zooms. Depth of field: each layer's blur comes from its distance to the focus plane and the shot's aperture; rack focus eases over 8–16 frames with a hint of focus breathing (1–2% scale). Handheld drift from noise2D in @remotion/noise (2–4 px, at most 0.3°), seeded per shot, with a documentary-camera feel: slow and organic on handheld shots, almost none on tripod shots.
+- Depth layers: 5–8 in every exterior, 4+ in every interior, and in most shots a foreground element near the lens that crosses the frame (<SLOT: this episode's foreground elements, e.g. a railing, leaves, cables, bokeh lights, a passing box>).
+- Every shot has a camera plan: start framing, end framing, move type, easing and the beats that trigger changes. No locked-off camera; a deliberate held beat is still a moving hold (drift + atmosphere).
+- Screen direction: progress and time move left to right; <SLOT: the direction of this episode's big movements, e.g. the train arrives left to right>; a whip-pan continues the direction of the motion that motivated it.
+- Layout first: write out/delta/layouts.md with one block per shot: framing (wide, medium, close, extreme close), camera move, layers, character key poses with their beat words, every text with its surface, the transition in and out, and the object that hands off to the next shot.
+- Animatic: render a fast pass with grey placeholder shapes in the correct positions and the real timing (`--scale=0.25`), watch it against the voice and fix the timing here, before painting and animating.
+
+STEP 6 — MOTION LANGUAGE
+- src/lib/ease.ts holds named curves (anticipate, overshoot, settle, slam, whip, float) and a few named spring() configs. Linear motion is allowed only for mechanical constant speed: <SLOT: this episode's mechanical motions, e.g. LED digit rolls, a conveyor belt, a teleprompter scroll, rain>.
+- Every move follows anticipation → action → overshoot → settle.
+- Breakdowns: between every two key poses, add a breakdown pose that defines the arc and the overlap (never a straight interpolation from key to key). Spacing is slow out of a pose, fast through the middle and slow into the next, and no two body parts start or stop on the same frame.
+- Biomechanics: the centre of gravity stays over the supporting foot; before reaching, pulling or lifting, the body shifts its weight first; to lift, the knees bend and the back stays straight; effort shows in the whole body (shoulders tense, neck strains, a short pause before a heavy lift).
+- Timing from life at 30 fps (refine from reference): blink 5–7 frames; eye dart 2–3; head turn 8–14; reach for an object 12–20; tap 4–6; both arms up 10–16; hand opening or closing 6–10; sit-to-stand 30–45; <SLOT: this episode's own key actions with frame counts, e.g. a big yank: 8 frames of wind-up, 3–4 of action, 10–14 of follow-through>.
+- Secondary motion is simulated: bake <SLOT: the hair, cloth and carried items that swing in this episode> with a deterministic spring/verlet simulation in scripts/bake-secondary.ts; save per-frame values to src/data/delta/sim/ and read them in the components. Remotion renders frames in parallel, so anything physical must be baked or computed purely from the frame number.
+- Weight: heavy things (<SLOT: this episode's heavy objects>) start slowly, stop hard and cause a small shake; light things (<SLOT: this episode's light objects>) float, tumble and flutter.
+- Arcs: hands, heads and props travel on curved paths (IK targets follow arcs); never slide a hand in a straight line.
+- Overlapping action: the head leads, the torso follows 2 frames later, arms 2–4 frames later, hair, hems, bags and loose clothing 2–4 frames after that.
+- Smear frames (1–2 frames) on fast moves: <SLOT: this episode's fast moves>.
+- Impact frames (2–3 frames, restrained and filmic: an exposure flash and contrast punch with a touch of speed lines and very slight chromatic aberration) on key hits only, so they keep their punch: <SLOT: 4-6 words from the voice-over where the biggest hits land, in quotation marks>.
+- Screen shake on big hits: decaying over 3–6 frames, maximum 8 px.
+- Motion blur with @remotion/motion-blur during fast moves only (whip-pans, <SLOT: this episode's other fast moves>), with a 180° shutter feel and a low sample count to protect render time.
+- Particles (<SLOT: this episode's particles>) are deterministic and layered in depth: near ones are bigger, blurrier and faster. Each piece tumbles in 3D (scaleX = cos of its spin) and drifts on its own curve.
+
+STEP 7 — KINETIC TYPOGRAPHY INSIDE THE WORLD
+- No captions, no word-by-word subtitles and no floating text cards. Every text sits on a surface in the world.
+- <SurfaceText> places text on any four-corner quad using a perspective transform (matrix3d computed from the four corner points), so it sits exactly on its sign, screen, paper or board and moves with that surface's parallax layer.
+- Light the text by surface type: emissive (screens, LED, neon: glow and bloom, and it lights nearby surfaces), printed (multiplied by the scene light, paper texture, shadowed), handwritten (marker or chalk texture), stamped.
+- Occlusion: foreground objects pass in front of text when natural (<SLOT: 2-4 examples from this episode's shots>).
+- Entrances land on the exact beat frame and match the surface: LED digits roll and land; neon flickers on (2–3 flickers within 6 frames); screens switch on with a one-frame bright pop; printed text arrives with its object; handwriting is written stroke by stroke; stamps slam with a squash. Exits are motivated: switched off, wiped, washed out, torn, fallen away, scrolled off.
+- Handwriting: in a Node script, convert the needed glyphs of Permanent Marker (the .woff from @fontsource/permanent-marker) to outlines with opentype.js and save them to src/data/delta/glyphs.json. Reveal each glyph in writing order through a mask of thick strokes that follow the glyph's centre line, animated with evolvePath from @remotion/paths; the marker or chalk tip follows the leading point (getPointAtLength). Writing finishes on its beat word. If a glyph's centre line is not available, reveal it with a directional wipe along its main stroke, still followed by the pen.
+- Fonts via @remotion/google-fonts: <SLOT: 3-5 fonts, each with the surfaces it is for, always including "Permanent Marker" for the whiteboard, sticky notes, chalk and handwritten marks, e.g. "Oswald" for signs, documents and price tags, "VT323" for LED displays, "Monoton" for neon>. Load only the weights you use, and confirm in the stills that no fallback font appears. Fit long lines with fitText from @remotion/layout-utils.
+- Readability on a phone: every key text and key action stays inside x 48–888, y 288–1248 of the 1080×1920 frame (clear of the Shorts buttons and title). Main words have a cap height of at least 72 px; secondary text (small print, attributions, source tags, sticky notes) at least 34 px and on screen for at least 1.2 seconds. Every text has strong contrast with what is behind it. Background art can fill the whole frame.
+- Add a showSafeZone prop that draws the safe box, for QA stills only.
+
+STEP 8 — TRANSITIONS
+- Lay the shots out on an absolute timeline (<Sequence from={cutFrame}> with premounting), and build each transition as an overlay that straddles the cut, so the audio timeline never shifts. If you use TransitionSeries from @remotion/transitions, remember that transitions overlap the shots and shorten the total: compensate the durations so every cut still lands exactly on its cut frame, and verify it.
+- Allowed transitions, each motivated by the story:
+  - Whip-pan (6–8 frames): accelerate out with motion blur and speed lines, cut at maximum blur on the cut frame, decelerate in, continuing the screen direction.
+  - Light-flash cut: a bright source in shot A blooms toward white over 3–4 frames; cut; shot B blooms down from its own brightest light over 4–6 frames.
+  - Match cut: a shape or motion in shot A matches the position, scale and direction of one in shot B on the exact cut frame.
+  - Continuous camera move: the camera travels from one setup to the next without a cut.
+  - Foreground wipe: an object passes the lens, fills the frame and the cut happens behind it.
+- Never crossfades, dips to black or generic slides.
+
+STEP 9 — SHOTS (CUT word → shot; beats inside)
+
+<SLOT: one numbered shot per voice-over beat, in order, each in exactly this form:
+N. SHOT TITLE — CUT "word" (how it cuts in). FRAMING, place and time of day: what we see, who is there, what they wear and hold, and every in-world text on its surface.
+   Beats: "word" action or text entrance; "word" …; every beat word is a word of this line as spoken.
+   Out: the move, object or light that hands off to the next shot.
+Shot 1 cuts on the first word at frame 0, describes the fully composed frame 0 and builds it as a <HookFrame /> component so the last frames can reproduce it exactly. The last shot arrives at exactly the frame-0 composition, and its last 4 frames render <HookFrame /> exactly, so the Short loops seamlessly. Match the depth of these three example shots from another episode, then delete the examples and this instruction:
+
+1. THE BILLBOARD — CUT "This" (frame 0). LOW WIDE SHOT up at a rooftop billboard on a Hollywood street at night: haze over the sky, palm silhouettes, neon storefronts, a streetlight and overhead wires in the foreground. The billboard shows a phone with the orange "QUIBI" app icon and the headline "$1.75 BILLION. 6 MONTHS."; an LED counter strip runs below it. Cash bills flutter down through the neon in three depths.
+   Frame 0 is fully composed: the headline and the phone lit, the LED counter mid-roll (blurred digits), cash mid-air, the camera at its start framing. Build this state as a <HookFrame /> component so the last frames can reproduce it exactly.
+   Beats: "raised" the camera starts a slow crane-up and push-in; "one point seven five" the digits slow down; "billion" the counter slams onto "$1,750,000,000" (impact frame, LED flash, lens flare across the billboard, small shake).
+   Out: the crane-up continues toward the catwalk.
+
+9. CAN'T CAST — CUT "At". The commuter's apartment in grey daylight, rain on the window. She sits on the sofa in her oversized sweater and messy bun, the remote in one hand and her phone in the other.
+   Beats: "launch" she raises the phone toward the TV; "cast" she taps cast (a pop on her screen); "TV" the TV shows a red "CAN'T CAST" screen and its red glow hits her face; in the pause that follows, she drops the remote and it bounces on the cushion before "You".
+   Out: rack focus to the phone in her hand.
+
+21. UNDERSTOOD — CUT "before". The teleprompter continues: "before they actually understood what it was." with "— JEFFREY KATZENBERG, CNBC, OCT 2020" below it, visible from "before" onward.
+   Beats: "understood" the last words "understood what it was." are underlined with a drawn stroke; on "was" (or on "understood" if fewer than 24 frames remain after "what") the mogul turns to the window, and the camera arcs past him and PULLS BACK through the glass, out over the street, to the billboard. The billboard relights (the orange icon lit again, the headline, the counter rolling), and the framing arrives at exactly the frame-0 composition. The last 4 frames render <HookFrame /> exactly, so the Short loops seamlessly.>
+
+STEP 10 — COMPOSITING AND FINISH
+- Layer order in every shot: plates → haze cards between depth layers → practical light pools → cast and contact shadows → characters (shading stack, texture, rim light, light wrap) → in-world text → atmosphere (particles) → light beams → glow, bloom and halation on emissive surfaces → lens flares → grade → grain → vignette → chromatic aberration (impact frames only).
+- Bloom: a blurred copy of emissive layers composited with a screen blend.
+- <SLOT: this episode's light beams and how they look, e.g. God rays through the apartment blinds: soft-edged shafts with dust drifting in them.>
+- Screen glow on faces: a coloured soft-light shape on the side of the face toward the screen that follows the screen's brightness.
+- Lens flares on <SLOT: this episode's brightest light sources>.
+- Film finish in a reusable <Grade> (per-scene settings in style.ts): a filmic contrast curve with slightly lifted blacks and a soft highlight roll-off; split toning (shadows toward the scene's ambient colour, highlights toward the key light); halation (a thin warm-red glow around the brightest highlights and practical lights); light wrap (bright backgrounds bleed a few pixels over character edges); very subtle gate weave (at most 0.5 px).
+- Grain: reuse the earlier grain component, changing every frame, stronger in mid-tones and shadows than in highlights, at 4–7% opacity; pre-render a set of grain tiles and cycle them if per-frame turbulence slows the render. A gentle lens vignette (10–15%) with slight edge softness.
+- Keep renders fast: no full-frame SVG filters every frame; prefer pre-rendered plates, transforms and opacity.
+
+STEP 11 — AUDIO
+- My voice-over only, at full volume. No music and no sound effects: I add them by hand in Premiere using out/delta/sfx-cues.csv.
+- For the render, use a copy of the voice-over normalised to −14 LUFS (two-pass ffmpeg loudnorm: measure first with print_format=json, then apply the measured values; true peak −1.5 dBTP; 48 kHz), saved as public/vo/delta_norm.wav and played with <Audio> from @remotion/media. Never touch my original file.
+
+STEP 12 — QUALITY GATES (do not skip)
+Save every QA image to out/delta/qa/. Open every image you render and look at it; describe what you actually see in out/delta/review.md before deciding it passes. Never mark anything as passing without looking at it.
+
+Gate A — Design
+1. Model sheets (STEP 3), a prop sheet with every prop from STEP 4, and a hand sheet: every pose in the hand library at 600 px tall in back and palm views, plus each grip holding its real prop → out/delta/qa/hands.png. Check five digits, finger lengths, the knuckle arc, the thumb's origin and opposition, nails on the correct side, and grips that wrap around the object with correct layering and contact shadows. Redo any hand that looks like a mitten or a bunch of sausages.
+2. STYLE FRAMES: one finished still per shot at its key beat, rendered with `npx remotion still`.
+3. Colour script: all the style frames tiled in one image (ffmpeg tile) → out/delta/qa/color-script.png. Check the journey: <SLOT: this episode's colour journey from first shot to last, e.g. neon night → fresh morning → grey lockdown → cold boardroom → dusk → back to neon>.
+4. Value check: every style frame at 135×240 in greyscale. The focal point (a face or the key text) must be the highest-contrast spot in the frame; fix the staging if it is not. Texture and depth check: 100% crops of a face, a hand, a fabric area and a background area from every style frame → out/delta/qa/crops-sNN.png; texture must be visible up close, and every style frame must show at least four depth cues.
+5. Score each style frame 1–5 on: looks like a frame from a premium cinematic animated documentary; characters, hands and props look like their real-life versions; cinematic lighting; depth; painterly texture; composition and readability; text spelled exactly as in IN-WORLD COPY. Redo anything that scores under 4.
+
+Gate B — Timing
+6. Watch the animatic (STEP 5) against the voice. Fix pacing before animating.
+
+Gate C — Animation
+7. Animate, then render a half-resolution draft (`npx remotion render Delta out/delta/draft.mp4 --scale=0.5`).
+8. Contact sheet per shot: every 6th frame tiled → out/delta/qa/contact-sNN.png. Check arcs, spacing, overlap and that nothing pops or slides without weight.
+   Puppet test: watch every character action at full resolution, frame by frame. It fails on rigid parts rotating on pins, seams or gaps at joints, sliding feet, evenly spaced floaty in-betweens, body parts starting and stopping together, mirrored poses, hands popping between poses, fingers moving all at once, or effort without a weight shift.
+   Reference test (when reference exists): render each action beside its reference clip at the same timing → out/delta/qa/ref-sNN.mp4, and compare weight, timing and arcs.
+
+Gate D — Sync
+9. For every beat in out/delta/timing-report.md, render the frame before the beat and the beat frame side by side. The hit must happen on the beat frame: not early (except anticipation) and not late. Fix every miss.
+
+Gate E — Automated checks
+10. Static frames: render a QA draft with grain and handheld drift turned off and run ffmpeg freezedetect (n=0.001:d=1). No frozen segment may last 1 second or more.
+11. Loop: compare frame 0 with the last frame using ffmpeg ssim (target ≥ 0.98) and view them side by side.
+12. Duration: ffprobe the final file; it must equal durationInFrames / 30.
+13. Copy: run the copy.ts check script.
+14. Safe zone: one still per shot with showSafeZone on; no key text or action outside x 48–888, y 288–1248, and nothing important cut off by the frame edges.
+15. Audio: the MP4 has one audio stream at about −14 LUFS (ffmpeg ebur128); the silent MOV has no audio stream.
+
+Gate F — Checklist review (fix every failure, up to 3 full passes)
+- Frame 0 shows the hook text and <SLOT: the hero prop>.
+- No static frames; something meaningful moves at least every second, and a new shot or new action lands every 2–3 seconds.
+- The film reads as one continuous story in one world; every cut is motivated and lands on its cut frame.
+- Every in-world text is readable on a phone, perspective-matched, lit by its scene, spelled exactly as written here, and enters on its exact word.
+- Characters look like characters from a premium cinematic animated documentary (not clip art or paper puppets), keep their design across shots, move with real weight and timing, breathe, blink and react; hands have correct anatomy and truly grip their props; everything animates on ones and stays smooth at 30 fps.
+- Every frame shows real depth (camera perspective, depth of field, haze, overlap, cast and contact shadows) and painterly texture.
+- Characters and props resemble their real-life versions.
+- No real logos, <SLOT: this episode's protected designs to avoid, each as "no …", e.g. no golden arches, no real credit-card designs>, no real currency design, no likeness of a real person.
+- No element cut off by the frame edges; key text inside x 48–888, y 288–1248.
+- Transitions are whip-pans, light-flash cuts, match cuts, continuous camera moves or foreground wipes; never fades.
+- The final frame matches frame 0. Total duration = audio duration (+4 frames).
+
+AVOID (this is what makes it look cheap)
+- Flat single-colour backgrounds, uniform line weight, pure black lines, grey shadows.
+- Clean vector surfaces: flat fills, plastic gradients, razor-sharp shadow edges with no texture, everything in focus at the same depth.
+- Elements that pop, scale or fade in from the centre like a slideshow; text floating in space.
+- Characters built from circles and rectangles; paper cut-out motion (rigid pieces rotating on pins, visible joint seams, the whole body moving as one block).
+- Mitten or sausage hands, fingers of equal length, a flat thumb lying beside the fingers, fingers that open or close all at once, objects floating in front of a hand instead of being gripped.
+- Floaty, evenly spaced in-betweens with no breakdown poses; sliding feet; mirrored (twinned) poses; perfect stillness.
+- Linear easing on organic motion; everything starting on the same frame; everything moving at once.
+- Locked-off cameras and frozen frames.
+- Any fact, number, date or name not in this prompt.
+
+OUTPUT
+- Final render: npx remotion render Delta out/delta/delta.mp4 --codec=h264 --crf=16 --image-format=png --color-space=bt709
+- Also out/delta/delta_master.mov (--codec=prores --prores-profile=hq --image-format=png) and out/delta/delta_silent.mov (ProRes HQ with --muted, no audio) for my Premiere edit.
+- out/delta/review.md: what you reused and built, every gate with what you checked, what you fixed and how many passes it took, the style-frame scores, and anything you could not get right.
+- Tell me the final duration in seconds, the file paths, and summarise out/delta/review.md.
