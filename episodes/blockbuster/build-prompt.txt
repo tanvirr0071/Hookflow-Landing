@@ -1,0 +1,439 @@
+Build a YouTube Short in Remotion from my voice-over: Episode 6 of "Billion-Dollar Mistakes", "Blockbuster Could've Bought Netflix for $50 Million".
+
+THE GOAL
+It must look like a premium cinematic animated documentary short: painterly, richly textured, deep, lit like a film, with character acting so natural it feels observed from real life. Character design keeps the clean appeal of a high-end anime feature, but every frame is rendered with volume, texture and atmosphere. It must never look like flat vector art, motion graphics, an explainer, a slideshow or a paper cut-out puppet. It plays as one continuous story that moves with the voice: the same world, the same characters and the same hero prop carry the viewer from shot to shot, and every shot hands off to the next. Every cut, every action and every piece of text is synced to the voice-over to the frame.
+
+Work like a real feature-animation studio, in this order, and do not skip ahead:
+timing → reference (motion and hands) → design (model sheets, hand sheet, props, texture kit, background plates) → layout and animatic → key poses → breakdowns and in-betweens → secondary motion → lighting, texture and compositing → QA.
+Each stage has a quality gate (STEP 12). Do not start a stage until the previous gate passes.
+
+PRIORITIES WHEN SOMETHING HAS TO GIVE
+1. Sync and facts are never compromised.
+2. Believable movement and hands. A character who moves with real weight in a simple frame beats a detailed character who moves like a paper puppet.
+3. Quality over quantity. Fewer, better drawings, well staged, beat many crude ones. Use real animation staging cheats freely: silhouettes against bright windows, backs of heads, over-the-shoulder framing, characters cropped by foreground objects, and moving holds.
+4. Every frame must survive a pause. If a paused frame looks like a vector explainer, a PowerPoint slide, clip art or a cut-out puppet, it fails.
+
+INPUT
+- Voice-over: voiceover/blockbuster.mp3 (ElevenLabs, English). It is my file: never edit, replace or regenerate it, and never create a voice. Copy it to public/vo/blockbuster.mp3.
+- If there is no Remotion project in this folder, create one with `npx create-video@latest` (blank template, TypeScript). Run `npx remotion skills add` and follow /remotion-best-practices.
+- Free tools only: no paid APIs, no stock footage, no AI images. Install what is missing: `brew install ffmpeg cmake` and `npx remotion add @remotion/media @remotion/media-utils @remotion/install-whisper-cpp @remotion/google-fonts @remotion/transitions @remotion/noise @remotion/motion-blur @remotion/paths @remotion/shapes @remotion/layout-utils @remotion/animation-utils`. Also `npm i opentype.js @fontsource/permanent-marker` (for handwriting, see STEP 7).
+- If I have placed character or prop artwork in public/assets/ (SVG or PNG), use it instead of drawing that item from scratch.
+- Reference (my own recordings, not stock): reference/blockbuster/sNN_<action>.mp4 are phone clips of me acting the key actions (spinning a disc in its paper sleeve between the fingers and catching it, uncapping a pen and writing on a legal pad, leaning in with both palms flat on a table, pressing the lips and lifting two fingers to the mouth to hold back a laugh, writing on a whiteboard, slamming a ledger shut with a flat palm, pushing a pin into a wall map, tossing a heavy report onto a table, slamming a rubber stamp, wiping a disc and snapping it into its case), and reference/hands/<pose>.jpg are photos of my hand in each pose of the hand library (STEP 3). When they exist, they are the source for poses, timing and hand shapes (STEP 3B). When one is missing, key that action by hand with the timing table in STEP 6.
+- For reference analysis, install the free MediaPipe package: `pip3 install mediapipe opencv-python numpy`.
+
+STEP 0 — PROJECT AUDIT AND STRUCTURE
+- Read every file in src/components/ and src/lib/ from earlier episodes (grain, flares, speed lines, rigs and anything else). Reuse what fits. Upgrade components in place without breaking earlier episodes: add optional props, never rename or remove existing ones. Log what you reused, upgraded and built new in out/blockbuster/review.md.
+- Structure:
+  - src/blockbuster/Blockbuster.tsx (the composition), src/blockbuster/shots/Shot01<Name>.tsx … (one file per shot, named after the shot titles in STEP 9)
+  - src/data/blockbuster/words.json, timeline.ts, copy.ts, glyphs.json, poses/ (keyed and reference-extracted poses), sim/ (baked secondary motion)
+  - src/lib/ (shared, reusable across episodes): ease.ts, Camera3D.tsx, SurfaceText.tsx, HandWrite.tsx, Particles.tsx, Grade.tsx, rig/ (Skeleton, IK2Bone, SkinnedLimb, HandRig, FaceRig, ShadingStack), textures/
+  - scripts/: extract-pose.py (MediaPipe), bake-secondary.ts, build-glyphs.ts, build-textures.ts
+  - src/components/characters/, props/, backgrounds/, fx/ (reusable in later videos)
+- Determinism: never use Math.random(). Use random(seed) from remotion for every particle, blink and drift, so every render is identical.
+
+STEP 1 — TIMING MAP (do this first)
+1. Get the exact audio duration with getAudioDurationInSeconds from @remotion/media-utils and confirm it with ffprobe (they must agree within one frame).
+2. Composition "Blockbuster": 1080x1920 at 30 fps. durationInFrames = Math.ceil(duration * 30) + 4. The last 4 frames are the loop hold (see the last shot).
+3. Transcribe: make a 16 kHz mono WAV copy of the voice-over in a temp folder (whisper.cpp requires it). Install whisper.cpp and the large-v3-turbo model with @remotion/install-whisper-cpp and transcribe with tokenLevelTimestamps: true; use the DTW token timestamps (t_dtw) where present. Merge sub-word tokens into words.
+4. Align Whisper's words to the script below with a sequence alignment. The script wins: "Blockbuster" may come out as "Block buster" (two words) and "Blockbuster's" as "Blockbusters", "Netflix's" as "Netflix" or "Netflixes", "Reed" as "Read", "Hastings" as "Haystings" or "Hastings'", "co-founder" as "cofounder" or "co founder", "ex-CFO" as "ex CFO", "X CFO" or "XCFO", "CFO" as "C.F.O.", "Bend" as "Ben" and "DVDs" as "DVD's" or "D.V.D.s"; numbers may come out as digits ("$50 million", "50 million", "2000", "$57 million", "9,000", "$6 billion", "2 million", "2010", "$45.2 billion", "10 hours"), and one digit token may cover several script words ("2000" for "two thousand", "2010" for "twenty ten", "57" for "fifty-seven", "45.2" for "forty-five point two"); map them to the script's words. Save src/data/blockbuster/words.json as [{ word, scriptIndex, startMs, endMs, rawFrame, frame }].
+5. Onset refinement: Whisper word starts are often 40–120 ms off. Decode the voice-over to PCM, compute a 10 ms RMS envelope, and snap every cut word and beat word to the nearest speech onset within ±3 frames. Run ffmpeg silencedetect (noise=-35dB:d=0.18) and record every pause. Keep both the raw and the refined frame.
+6. Build src/data/blockbuster/timeline.ts: for every shot its cut word, cut frame, end frame (the next shot's cut frame) and every beat word inside it with its refined frame, plus helpers such as beat("s05", "word"). All animation reads from this file. Never hard-code seconds or absolute frames in components; offsets relative to a beat (beat - 3) are fine.
+7. Cut rule: a shot cuts in on its CUT word (usually the first word of the line). Actions land on their BEAT words. A big hit never lands on a shot's first frame: leave at least 6 frames between the cut and the first big hit so the anticipation reads.
+8. Sync rule: every action tied to a word lands ON that word's refined start frame. Big actions get 2–4 frames of anticipation before the hit (a wind-up, a squash, a held breath), then follow-through and settle over 6–12 frames after it.
+9. Pace: a new shot or a clear new action every 2–3 seconds. If a shot runs past 3 seconds on my voice, add a camera change or a new action on its next beat word. Something meaningful moves at least every second.
+10. Write out/blockbuster/timing-report.md (shot, cut word, word time, raw frame, refined frame, every beat word → frame, every pause with its length) and out/blockbuster/sfx-cues.csv (timecode HH:MM:SS:FF at 30 fps, frame, shot, action, suggested sound: elevator chime, felt-tip squeak, ledger slam, heavy report thud, rubber-stamp slam, CRT power-on whine, wall-clock tick, keep-case snap…) so I can add SFX by hand.
+
+VOICE-OVER SCRIPT (for reference; the audio is the source of truth)
+Blockbuster could have bought Netflix for fifty million.
+September two thousand, Dallas.
+Netflix's founders flew in with a pitch.
+Blockbuster's lawyer asked their price.
+Reed Hastings said, "Fifty million."
+A co-founder says Blockbuster's CEO
+was "struggling not to laugh."
+Netflix's ex-CFO said Blockbuster basically
+"laughed us out of their office."
+But that no made sense at the time.
+In two thousand, Netflix lost fifty-seven million.
+More than its own price tag.
+Blockbuster's peak: about nine thousand stores.
+And six billion dollars a year.
+Its own online service hit two million subscribers.
+Hastings admitted, "If it hadn't been for their debt,
+they could have killed us."
+In twenty ten, Blockbuster filed for bankruptcy.
+Last year, Netflix brought in forty-five point two billion.
+Fifty million is under ten hours of that.
+One Blockbuster is left, in Bend, Oregon.
+It still rents the DVDs Netflix gave up.
+
+FACT LOCK
+Every number, date, quote and name in this prompt is fact-checked. Do not add any number, date, name or claim that is not in this prompt (the window poster's painted tower, the other rows of the lobby directory, the legal pad's ruled lines, the memoir's body text, the newspaper's columns and photo, the ledger's other lines and columns, the map's coastlines and pins, the annual report's cover art, the web page around the monitor's counter, the body text of the court filing, the TV's background graphics, the clock's tick marks, the DVD spines on the racks and the Clerk's name badge use neutral filler graphics, not invented facts). Put every in-world string in src/data/blockbuster/copy.ts exactly as written below, character for character (curly quotes “ ”, middle dot ·, en dash –, em dash —, tilde ~). Components import strings from copy.ts; no string literals for in-world text inside components. Write a small check script that compares copy.ts against this list and fails on any difference. Keep "≈" (in "≈ 9,000 STORES · 2004" and "$50M ≈ 9.7 HOURS OF NETFLIX REVENUE"), the source tag "VIA CNBC" and the three attribution lines "— MARC RANDOLPH, NETFLIX CO-FOUNDER, “THAT WILL NEVER WORK”" (under the memoir line), "— BARRY McCARTHY, 2008 INTERVIEW, VIA CNBC" (under the newspaper pull quote) and "— REED HASTINGS, 2009, VIA CNBC" (under the quote card) wherever they appear; every quote keeps its curly quotes, and "McCARTHY" and "McCarthy" keep their lower-case "c".
+
+IN-WORLD COPY (exact)
+NETFLIX FOR $50 MILLION?
+DALLAS · SEPT 2000
+FLOOR 23
+PRICE?
+$50 MILLION
+BLOCKBUSTER · CEO
+“STRUGGLING NOT TO LAUGH”
+— MARC RANDOLPH, NETFLIX CO-FOUNDER, “THAT WILL NEVER WORK”
+BARRY McCARTHY · NETFLIX CFO
+“LAUGHED US OUT OF THEIR OFFICE”
+— BARRY McCARTHY, 2008 INTERVIEW, VIA CNBC
+MADE SENSE?
+NETFLIX 2000 NET LOSS: $57.4M
+ASKING PRICE: $50M
+≈ 9,000 STORES · 2004
+REVENUE $6.1B · 2004
+BLOCKBUSTER ONLINE · 2,000,000 SUBSCRIBERS
+“IF IT HADN’T BEEN FOR THEIR DEBT,
+THEY COULD HAVE KILLED US.”
+— REED HASTINGS, 2009, VIA CNBC
+CHAPTER 11 · SEPT 23, 2010
+NETFLIX 2025 REVENUE: $45.2B
+$50M ≈ 9.7 HOURS OF NETFLIX REVENUE
+THE LAST BLOCKBUSTER · BEND, OREGON
+DVD RENTALS
+NETFLIX’S LAST DISC: SEPT 29, 2023
+
+STEP 2 — LOOK BIBLE (before any shot is animated)
+Write src/blockbuster/style.ts with the tokens below, then build and review the design stills in STEP 12, Gate A.
+
+THE WORLD (one geography, so camera moves and cuts make sense)
+- THE STORE, present day (shots 1, 19–22): the last rental store, one unit in a low strip mall in Bend, Oregon, its glass front facing a wet parking lot with a lamppost and a parked car in front of it and ponderosa pines behind the mall. The sign runs along the fascia above the window (shot 21). Inside, the counter sits at the back facing the window, with the boxy TV on a bracket above it (shot 19) and the wall clock to its right (shot 20); wire racks run between the counter and the window, the "DVD RENTALS" rack nearest the window (shot 22). The poster is taped inside the window facing the lot, so from the lot you look through it to the counter (shots 1, 22).
+- THE TOWER, Dallas, September 2000 (shots 2–6, 8, 10–15): a steel-and-glass cube downtown, the same tower that is painted on the store's poster, so the poster and the lobby's glass wall match cut (shots 1–2). The lobby (shot 2) leads to the elevator bank (shot 3), which opens on the 23rd floor. There the conference room (shots 4–6, 8) has its glass wall at the head of the long walnut table, looking out over the hazy downtown skyline: the Netflix side sits on the left, the Lawyer on the right, the CEO at the head with the window behind him. Across the corridor, the boardroom (shots 10–12, 14, 15) shares the same glass wall; the wall map hangs in the corridor between the two rooms (shot 13).
+- THE TABLE, LATER (shots 7, 9, 16–18): the same conference room in the years after, empty, the chairs pushed in, lit by dusk through the same glass wall and, on a night in 2010, by one cold downlight. The later accounts of the meeting (the memoir, the newspaper, the quote card, the court filing) land one by one on the spot where the legal pad lay, beside the hero disc the Founder set down there.
+- Time moves through the same rooms: the boardroom is seen on the afternoon of the meeting (shots 10–12), in 2004 (shot 14) and a few years later (shot 15), the corridor in 2004 (shot 13). Same walls, same window, same tables; only light, props and wear change.
+- Reuse the same component for anything that appears twice: the store window with the poster and its ledge (shots 1, 22), the store interior with its counter, TV, clock and racks (shots 19, 20, 22), the strip-mall exterior (shots 1, 21, 22), the conference room and its walnut table (shots 4–9, 16–18), the boardroom with its whiteboard, table and sideboard (shots 10–12, 14, 15), the 23rd-floor glass wall and skyline (shots 4–10, 14–18), the legal pad (shots 4–6), the memoir and the newspaper (shots 7, 9, 16, 18), the quote card (shots 16–18), the <HeroDisc> hero prop (shots 1–3, 5, 7, 9, 16, 18, 19, 22), the Founder, the Co-founder, the CFO, the Lawyer, the CEO and the Clerk.
+
+PALETTE AND LIGHT (per scene: key light colour and direction, shadow tint, rim colour, line colour)
+- Store exterior, night drizzle (shots 1, 21, end of 22): key the store window's cool white-green fluorescent spill from behind the glass, low and frontal, with the lamppost's sodium amber from the left; shadow tint deep blue-teal; rim sodium amber; line colour dark petrol blue. The poster's price line, the price tag's string and the stamp's ink carry the episode's accent colour, price-tag vermilion #D9542B.
+- Tower lobby, morning (shot 2): key low gold sun from the left through the glass wall, raking in long mullion stripes; shadow tint cool slate blue; rim warm gold; line colour burnt sienna.
+- Elevator (shot 3): key warm overhead downlights, with a warm bounce off the brushed steel; shadow tint deep bronze brown; rim the amber glow of the floor readout; line colour dark umber.
+- Conference room, morning (shots 4–6, 8): key bright hazy morning sun through the glass wall at the head of the table (frame right), backlighting the CEO; fill a soft bounce off the walnut and the pad; shadow tint soft blue-violet; rim pale gold; line colour plum brown.
+- The table later, dusk (shots 7, 9, 16, 17): key low orange-pink dusk sun from the right through the half-drawn blinds, raking across the table; shadow tint dusk purple; rim hot coral; line colour deep maroon.
+- The table, 2010 night (shot 18): key one cold white downlight from directly above; shadow tint blue-black navy; rim sodium orange from the city glow below the glass; line colour charcoal blue.
+- Boardroom, afternoon of the meeting (shots 10–12): key flat white afternoon daylight from the glass wall on the left, with the brass banker's lamp as a warm practical pool on the ledger; shadow tint cool grey-green; rim warm lamp gold; line colour olive brown.
+- Corridor map wall, 2004 evening (shot 13): key cool evening window light from the right, then the brass picture light's warm wash from above once it is on; shadow tint deep teal; rim cool window blue; line colour dark bronze.
+- Boardroom, 2004 (shot 14): key a warm overhead pendant from above; shadow tint warm umber; rim cool window blue; line colour dark walnut.
+- Boardroom, evening a few years later (shot 15): key the monitor's blue-white glow from the left on the CEO's face; shadow tint indigo; rim screen cyan; line colour ink navy.
+- Store interior, night (shots 19, 20, 22): key low fluorescent tubes overhead, cool white with a faint green cast, with the CRT's blue-white glow as a practical on the Clerk; shadow tint muted teal; rim warm sodium amber spilling in through the window; line colour dark petrol.
+
+RENDERING STYLE (painterly and cinematic, not flat cel)
+- Line art is thin, coloured and secondary to light: lines use the darkest local colour (never pure black), are heavier in shadow and on outer contours, thin out or break where light hits an edge, and taper at the ends (build them as filled shapes, not uniform strokes). Forms are defined mainly by light and shadow.
+- A reusable <ShadingStack> renders every character part and prop in this order: base colour → form shadow with a soft terminator (2–6 px feathered edge; colour = base tinted by the scene's shadow colour, never grey) → a darker core shadow and ambient occlusion in creases (under the chin and hair, inside the elbow, between the fingers, where a body meets a seat) → on skin, a warm, slightly saturated band along the terminator → bounce light on undersides from the floor or nearby colours → highlight → rim light in the key light's colour → specular glints on eyes, hair, lips, nails, a watch and phone glass.
+- Store the key-light direction per shot in style.ts; shadow and light shapes follow it, so a character who turns toward the light brightens on that side.
+- Cast shadows: characters and props cast soft shadows onto floors, walls, desks and each other, matching the key light's direction and softness. Contact shadows sit wherever something touches a surface: the Founder's palms flat on the walnut table, the legal pad, the pen and the disc lying on the table, the annual report landing on the boardroom table, and the keep-case leaning on the store's window ledge.
+
+TEXTURE (every surface, characters included)
+- Build a texture kit once, procedurally and seeded (no outside images), with scripts/build-textures.ts, and pre-render it as seamless PNG tiles: paper grain, canvas weave, dry brush, wet-paint blooms, chalk dust, concrete, wet asphalt, skin micro-texture, brushed metal, wood grain, glass smudges, plus wool flannel (the Lawyer's navy suit), silk twill (his tie), cashmere knit (the CEO's sweater), merino knit (his 2004 V-neck), cotton poplin (the CEO's shirt), burgundy suede (his loafers), cotton jersey (the Founder's T-shirt), washed cotton twill (the Founder's overshirt and chinos), oxford cloth (the CFO's shirt), denim chambray (the Co-founder's shirt), cotton piqué (the Clerk's polo), brushed-back fleece (his hoodie), rib knit (his beanie), polished granite (the lobby floor), black felt with plastic letters (the directory), walnut veneer and engraved brass (the conference table and the nameplate), yellow ruled pad paper (the legal pad), cream book paper (the memoir), newsprint (the newspaper), green bookcloth and ledger paper (the ledger), manila card and cotton string (the price tag), cork and printed map paper (the wall map), matte coated card (the annual report and the quote card), bond paper and stamp ink (the court filing), polycarbonate with a rainbow diffraction sheen (the hero disc), clear polypropylene (the keep-case), CRT glass with scanlines (the TV), powder-coated wire (the racks), popcorn-ceiling stucco and worn carpet (the store), beige stucco (the strip mall). Reuse tiles that earlier episodes already built.
+- On characters, each clothing and skin area gets its matching tile at low opacity (multiply or soft light), clipped to its shape, plus a brush mask that breaks up shadow edges so they look painted, not vector-perfect. Fabric shows seams, stitching, buttons, pockets, buckles, knit patterns and wrinkles that change with the pose.
+- In backgrounds, brushwork follows the form, edges break up, shadows hold painted texture, surfaces show dirt and wear, and fine detail concentrates around the focal point and falls away from it, as in a painting.
+- Texture must be visible in a 100% crop and subtle at phone size.
+
+DEPTH (every shot)
+- Combine depth cues: the real perspective camera (STEP 5), overlap, scale change, atmospheric haze between layers, depth of field with bokeh, cast and contact shadows, light falloff, and a foreground element close to the lens in most shots.
+- Plan the value structure in depth for each shot in the layout: the subject at the focal plane gets the highest contrast; the foreground is darker or out of focus; the background is hazier.
+- Volume: thin fog cards between depth layers; visible light beams (morning sun shafts through the lobby glass wall and across the conference table, low dusk beams raking across the empty table later, the brass picture light's cone over the map, the cold downlight cone over the table in 2010, the lamppost's sodium cone and the window's fluorescent spill in the parking-lot drizzle); dust motes in the sunbeams and dusk beams, paper dust from the ledger slam and the report's landing, drizzle in the parking-lot light and rain beads on the window glass catching the light.
+- Bokeh: out-of-focus point lights (the lamppost, the store's fluorescent tubes seen through the glass, tail lights on the road beyond the parking lot, the elevator call buttons, the downtown windows below the 23rd floor at dusk and night, the CRT's red power LED) become soft discs with a slightly brighter rim, sized by their distance from the focal plane.
+
+PAINTED BACKGROUNDS
+- No flat fills anywhere. Every surface has a gradient, brush texture (feTurbulence into feDisplacementMap on edges, low-opacity noise multiplied over fills) and hand-placed detail: cables, signage, window frames, scuffs, plants, reflections, light pools.
+- Atmospheric perspective: far layers have lower contrast and are tinted toward the sky or ambient colour.
+- One key light, one fill, and practical lights (neon, screens, lamps) casting coloured pools on nearby surfaces.
+- Background plates: render each background layer once as a high-resolution transparent PNG through its own composition (Plate-s01-far, Plate-s01-mid…) with `npx remotion still`, saved to public/plates/blockbuster/. Plates are rendered at 2× pixel density (`--scale=2`) and 1.25–2× the frame size on the axis the camera travels, so texture stays crisp through push-ins. Shots then composite plates + live elements (characters, lights, text, particles). This lets the painting use expensive filters without slowing the render. Keep the plate source code so plates can be re-rendered.
+
+STEP 3 — CHARACTERS (all original designs, never portraits or likenesses of real people)
+- THE FOUNDER (the Netflix founder who names the price): about 40, lean runner's build, thick wavy chestnut hair pushed back off a high forehead, a short trimmed beard, a heathered grey cotton-jersey T-shirt under an open, untucked olive washed-twill overshirt with the sleeves pushed up, faded khaki chinos, worn white canvas sneakers, a sport watch on a black rubber strap. Restless: he bounces lightly on the balls of his feet and keeps the disc moving in his fingers, and goes completely still, palms flat, when he names the price.
+- THE CEO (Blockbuster's chief executive): mid-50s, tall and broad-shouldered with a slight paunch, a clean-shaven head with a deep tan, heavy dark eyebrows and a neat salt-and-pepper goatee; dressed casually but expensively, no suit: a cream cashmere crew-neck over an open-collared pale-blue poplin shirt, tailored charcoal wool trousers, polished burgundy suede loafers, a heavy gold watch. Relaxed and amused: he sits deep in his chair with one ankle on his knee and his fingers steepled, and takes his time. In 2004 (shots 13, 14) a charcoal merino V-neck over a lavender shirt, the goatee greyer; a few years later (shot 15) rolled shirtsleeves, the goatee nearly white, leaning forward, energised.
+- THE LAWYER (Blockbuster's lawyer): early 60s, slight and narrow-shouldered, thin grey hair combed flat with a precise side parting, gold wire-rim glasses, a navy wool-flannel suit, a crisp white shirt, a burgundy silk tie with a gold tie bar, black cap-toe oxfords. Precise: he squares the pad to the table edge before he writes and never makes a gesture bigger than it needs to be. Jacket off in shots 10–12: shirtsleeves, the tie loosened a finger's width.
+- THE CLERK (the last store's clerk, present day): early 20s, tall and lanky with a slouch, shaggy dark-blond hair under a charcoal knit beanie, faint freckles, a plain royal-blue cotton-piqué polo with no logo under an open heather-grey zip hoodie with frayed cuffs, khaki work trousers, scuffed canvas skate shoes, a plain white name badge with filler lettering. Unhurried and gentle: he handles every disc by its edges, like something that matters.
+- Minor: THE CO-FOUNDER (the second Netflix founder), late 30s, straight black hair tied back in a short ponytail, a faded denim-chambray shirt, a spiral notebook, mostly seen from behind and over the shoulder (shots 2–6); THE CFO (Netflix's CFO), early 40s, broad and ruddy with short red-blond hair and freckled forearms, a blue oxford-cloth shirt with rolled sleeves and no tie, stone chinos, a brown leather folio, a paper visitor badge clipped to his breast pocket, hidden behind the folio or out of focus until shot 8 (shots 2–5, 8); a lobby security guard in a grey uniform blazer, in silhouette (shot 2); a filing clerk seen only as a forearm in a white shirt cuff with a steel watch (shot 18).
+- Every character must read in silhouette alone.
+
+MODEL SHEETS FIRST
+For each main character (in every outfit and mood they appear in), build and render a model sheet: front, 3/4, profile and back views, with a second panel showing the volume construction underneath (ribcage, pelvis, limb cylinders); an expression sheet (neutral, smile, laugh, surprised, unimpressed with half-lidded eyes, tired, plus any expression this episode needs); and a turn test (the head turning from front to profile in 5 steps through the face rig). Minor characters get at least front and 3/4. Save to out/blockbuster/qa/model-<name>.png. Fix proportions, appeal and consistency between views before any shot uses the character.
+
+CONSTRUCTION
+- Realistic proportions with the appeal of a high-end anime feature, never chibi: the Founder about 7.5 heads tall, lean and long-legged; the CEO about 7.25 heads, broad-shouldered and heavy through the middle, sitting low and wide; the Lawyer about 7 heads, narrow, with slightly rounded shoulders; the Clerk about 7.75 heads, long-limbed, with a slouch that drops one shoulder. Build every body from volumes first (ribcage, pelvis, tapered limb cylinders) and check the gesture line before adding detail. Necks, clavicles, shoulders, elbows, wrists, knees and ankles sit in anatomically correct places; elbows line up with the waist and fingertips reach mid-thigh.
+- Faces: small chin, eyes about one fifth of the face width, the nose shown by a soft shadow plane and a small highlight on the tip, a soft shadow under the lower lip. The Founder has a lean face with high cheekbones, a quick, crooked half-smile and faint lines at the eyes; the CEO a heavy, tanned face with deep smile lines, heavy upper lids and a dimpled chin that betrays every suppressed smile; the Lawyer a narrow face with fine wrinkles, thin lips, a vertical crease between the brows and eyes slightly magnified by his glasses; the Clerk a soft young face with faint freckles, a sleepy lid height and a slow, lopsided smile.
+- Eyes (they get close-ups): a thick, tapered upper lash line with a flick at the outer corner, a thin broken lower lash line, an iris with a vertical gradient (dark at the top, lighter at the bottom), a pupil, two highlights (one large, one small), a reflection of the scene's light source, and a soft shadow cast by the upper lid onto the eyeball. Eyelids and eyebrows are separate layers.
+- Hair in pointed clumps with a shadow shape, a highlight band and a few flyaway strands.
+- Clothes have weight and thickness: folds radiate from tension points (shoulders, elbows, belts, behind the knees) and change with every pose. The Founder's open overshirt is soft and light, swings late and flaps when he turns, and his T-shirt pulls across the shoulders when he leans in on his palms; the CEO's cashmere sweater is soft and heavy, drapes over his middle and bunches at the elbows when he steeples his fingers, and his trousers break cleanly over the loafers; the Lawyer's flannel suit holds its shape, creases at the elbows and pulls at the button when he leans over the pad, and his tie swings when he bends; the Clerk's hoodie is loose and soft, its drawstrings and cuffs swing, and it rides up when he reaches to the window ledge.
+
+RIG (skinned, never a paper cut-out)
+- Skeleton: pelvis → lower spine → chest (a 3-segment spine), neck, head; clavicles (the shoulders rise when an arm lifts above shoulder height); upper arm, forearm with twist, wrist; thigh, shin, foot, toes.
+- Skinned body: never rotate rigid SVG pieces around pins. Compute each limb's outline every frame from its bones with a width profile (deltoid, upper arm, forearm taper, wrist; thigh, knee, calf, ankle), so elbows and knees bend smoothly: the inner side compresses and creases, the outer side sharpens into the joint. The torso outline follows the three spine bones the same way, so the chest and waist bend and twist. No seams, gaps or overlapping circles at joints, at any angle.
+- Two-bone IK with pole vectors for arms and legs: hands are placed on their targets (the disc and its paper sleeve, the elevator call button, the pen and its cap, the legal pad, the walnut table top, the folio, the notebook, the marker and its tray, the ledger's page and cover, the price tag's string, the map pin and the picture-light switch, the annual report, the rubber stamp and its ink pad, the court filing, the cleaning cloth, the keep-case and the window ledge) and feet are planted; a foot carrying weight never slides.
+- 2.5D face rig: the eyes, brows, nose, mouth, ears and hairline sit on a virtual ellipsoid and move with head yaw and pitch. During a turn the far eye narrows and moves toward the edge, the nose moves toward the silhouette, the cheek and jaw contour change, the ear shifts, and the hair clumps layer over and under accordingly. For turns beyond about 45°, swap to a dedicated 3/4 or profile head at the fastest point of the turn, where the motion hides the swap.
+- Torso turns work the same way: lapels, buttons, belts and seams slide across the torso shape.
+- Pose library per character, stored as joint angles + IK targets + face values + hand poses in src/data/blockbuster/poses/.
+- Every part draws its own shading stack and texture (STEP 2) from the shot's key-light direction.
+
+HANDS (treat them as their own sub-project)
+- Proportions: the hand is about as long as the face from chin to hairline, and the palm about as long as the middle finger. The middle finger is longest; index and ring are about equal; the pinky's tip reaches the last knuckle of the ring finger. The knuckles form an arc, not a straight line. The thumb starts at the wrist, its tip reaches about the middle knuckle of the index finger, and it sits at roughly 90° to the palm (it opposes the fingers; it never lies flat beside them).
+- Hand rig: wrist, palm, thumb (3 joints: base, middle, tip) and four fingers with 3 joints each. Each finger is one continuous skinned shape built from its bones with a width profile: slight bulges at the knuckles, a narrower middle, a rounded, padded tip, tapering toward the end.
+- Detail: the back of the hand shows nails (correct shape, a highlight, a cuticle line), knuckle creases and wrinkles, and on older characters tendons, veins and softer, older skin; the palm shows the thumb's padded base, the main creases and fingertip pads. Hands get the same shading stack, texture, cast shadows and contact shadows as the rest of the body.
+- Views: back, palm, thumb side, pinky side and 3/4. Choose the view per pose so the hand reads clearly; never show a hand edge-on where the fingers merge into one shape.
+- Curl rules: when fingers curl, the joints fold progressively (base least, tip most), curled fingers converge toward a point near the base of the palm, and each finger toward the pinky curls slightly more than the one before. Relaxed hands are never flat: the fingers rest in a gentle cascade of curls.
+- Grips are layered: the object sits between the hand's layers (palm and far fingers behind it, near fingers and thumb in front), the fingers flatten slightly where they press, and contact shadows sit where skin meets the object. Disc, bare: held by its rim between the thumb pad and the middle finger, the index fingertip resting in the centre hole, never touching the silver face. Disc in its paper sleeve: spun between the index and middle fingertips, then caught flat between the thumb and index. Pen: a tripod grip between thumb, index and middle finger, the side of the hand resting on the pad; the cap pinched in the other hand. Marker: a fist-like pinch between thumb and index, the middle finger supporting it underneath, ring and pinky curled against the palm. Legal pad: a flat palm on the top sheet, four fingers spread, sliding it. Folio: held against the chest, four fingers wrapped around its spine and the thumb on the cover, then tucked under the arm. Notebook: held open on the forearm, the thumb across the page, the pen in the other hand. Ledger: a fingertip running down the column, then a flat palm on the cover for the slam. Price tag: its red string pinched between thumb and index, the tag dangling and swinging. Map pin: its head pinched between the thumb tip and the index tip, the thumb pad pressing it home. Annual report: both hands at its lower corners for the toss, then four fingertips on the cover sliding it. Rubber stamp: the palm cupped over the round wooden knob, the fingers wrapped down the handle, the thumb braced on the far side. Court filing: pushed with a flat palm and spread fingers. Cleaning cloth: bunched in the fingertips, the disc held by its rim in the other hand. Keep-case: cradled open in one palm while the other hand presses the disc onto the hub with the middle finger at the centre, then the thumb snaps the lid shut.
+- Motion: the wrist leads and the fingers follow 1–3 frames later; when a hand opens or closes, the fingers move in a cascade from index to pinky, never all at once. Fingers never pop between poses; they interpolate through the rig.
+- Pose library (from my reference photos when available, see STEP 3B): relaxed, point, button tap, disc spin, rim catch, disc set-down, pen uncap, pen tripod, palms flat on the table, notebook hold, two fingers to the lips, steepled fingers, open-palm gesture, folio tuck, marker uncap, marker write, marker toss, fingertip line run, double tap, string pinch, flat-palm slam, pin push, switch flick, two-hand toss, fingertip slide, cupped stamp knob, flat-palm push, cloth wipe, hub press, lid snap.
+- Close-ups (shots 3, 4, 5, 6, 10, 11, 12, 13, 14, 18, 19 and 22, and any insert) get the full detail level; wide shots simplify detail but keep correct proportions and silhouettes.
+
+ACTING (observed from life, never puppet-like)
+- Nobody is ever perfectly still: breathing moves the chest, shoulders and clavicles (1–2 px, a 3–4 second cycle, a different phase per character), and standing characters make tiny weight shifts between their feet. A held character is a moving hold.
+- Eyes lead: in every look or turn, the eyes move first, the head follows 2–4 frames later, then the torso. While watching or thinking, the eyes make small darts (saccades) every 0.5–1.5 seconds. Blinks take 5–7 frames (a fast close, a slower open), come every 2–4 seconds (seeded) and often accompany a head turn or a change of thought.
+- Asymmetry: no mirrored poses. Weight sits on one leg with the hips and shoulders tilted in opposite directions; the two hands do different things; the two sides of the face are never identical.
+- Faces act in small amounts: brow tension, lid height, the corners of the mouth, a jaw shift. A flicker of the coming emotion appears a few frames before the main expression (a flash of doubt in the eyes before a smile drops).
+- Extreme close-ups on the eyes for dramatic beats.
+- Mouths change only for expressions (smile, laugh, open surprise, flat). Characters never lip-sync: the narration is a voice-over; they act and react.
+- Eyelines: characters look at what matters (the legal pad and the price written on it, the Founder across the table, the CEO at the head of the table, the nameplate, the elevator readout, the whiteboard, the ledger line, the map and its pins, the monitor, the TV above the counter, the wall clock, and the disc in the Clerk's hands), and screen direction stays consistent across cuts.
+
+FRAME RATE
+Characters animate on ones (every frame, 30 per second) for smooth, natural movement; the puppet look is fixed with posing, timing, skinning and overlap, not by dropping frames. Camera, particles, lights, text and effects are also on ones.
+
+STEP 3B — REFERENCE-DRIVEN MOTION (when reference/ exists)
+- Run scripts/extract-pose.py with MediaPipe Pose Landmarker (33 body points) and Hand Landmarker (21 points per hand) on every reference clip and photo, and save per-frame 2D landmarks to src/data/blockbuster/poses/ref/.
+- Smooth the landmarks (One Euro filter), convert them to the rig's joint angles and IK targets, and retarget them to each character's proportions. The CEO moves heavier and slower than I do, settling into his chair with large, relaxed, unhurried gestures; the Founder lighter and quicker, with small restless moves that stop dead when he names the price; the Lawyer smaller and more precise, with no wasted motion; the Clerk looser and slower, gentle with every disc. Scale timing where age or mood calls for it.
+- Never trace every frame: that looks floaty and rotoscoped. Take the key poses and extremes from the reference, keep its timing, rebuild the breakdowns and in-betweens with the motion rules in STEP 6, and push the poses about 10–20% further than the reference for clarity.
+- Align each reference action to its beat word so its contact or hit frame lands on that word.
+- Use the hand photos to set finger joint angles, view and grip for every pose in the hand library.
+- Without reference, key the action by hand with the timing table in STEP 6.
+
+STEP 4 — PROPS (they must resemble their real-life versions)
+- The hero prop: <HeroDisc>, a DVD: a silver data side with a fine rainbow diffraction sheen that sweeps across it as the angle changes, a clear centre ring with a moulded stacking ring, a plain silver label side with no artwork. Built as one component with states: sleeved (in a plain white paper sleeve with a round clear window), spinning (a motion-blurred rim with a rainbow streak), bare (held by the rim, the sheen alive), dim (lying on the table later, dusty, the sheen dull in low light) and cased (in a generic clear keep-case with a centre hub, an empty clear outer sleeve and no artwork, leaning on the store's window ledge with the poster's backlight glinting through it). It appears in shots 1 (cased), 2 and 3 (sleeved, spinning in shot 3), 5 (bare, set on the table), 7, 9, 16 and 18 (dim, on the table later), 19 (bare, being wiped) and 22 (bare, then cased).
+- The window poster (shots 1, 22): a printed paper poster with a matte finish, taped inside the glass with yellowed clear tape at the corners, slightly rippled by damp and sun-faded along its top edge; the headline in big condensed letters over a painted, neutral illustration of the steel-and-glass tower against a hazy sky; backlit by the store's fluorescent tubes so the paper glows and the taped corners show as darker squares.
+- The store (shots 1, 19–22): one unit in a low beige-stucco strip mall, a glass front with an aluminium door and push bar; inside, a popcorn ceiling with low fluorescent tubes in yellowed plastic diffusers, rows of chrome-grey wire metal racks of generic DVD cases with filler spines, a bargain bin of old VHS tapes, a laminate counter with a beige cash register and a stack of cases waiting to be shelved, carpet worn into paths between the racks. The sign is a plain rectangular backlit lightbox along the fascia: a white acrylic face with plain dark lettering, fluorescent tubes behind it, a few dead moths in the bottom of the box; a generic box, not the brand's ticket-shaped sign.
+- The TV (shot 19): a boxy silver-grey CRT television on a steel wall bracket above the counter, curved glass with visible scanlines and a faint reflection of the fluorescent tubes, a red power LED; it powers on from a bright horizontal line.
+- The wall clock (shot 20): a plain round office wall clock, a white face with black tick marks and no numerals, black hour and minute hands, a thin red second hand, a slightly yellowed plastic rim and a dusty domed cover glass; the copy printed across the lower half of the face.
+- The rack sign (shot 22): a printed card sign in a clear acrylic holder clipped to the top of the rack nearest the window, its corners scuffed, the small print in a line under the headline.
+- The tower lobby (shot 2): a polished granite floor, tall glass walls with dark aluminium mullions, a dark wood security desk, potted ficus trees and a bank of brushed-steel elevator doors with round lit call buttons; the directory is a black grooved felt letter board behind a hinged glass door in a brass frame, with white press-in plastic letters, a few of them slightly crooked.
+- The elevator (shot 3): brushed-steel walls with soft reflections, a brass handrail, warm downlights, and above the doors a floor readout of amber segment lights in a black glass strip with an arrow.
+- The conference room (shots 4–9, 16–18): a long polished walnut table, black leather high-back swivel chairs of the time, a water carafe and tumblers on a tray, a grey triangular conference speakerphone, a heavy wooden door, the glass wall with aluminium mullions over the hazy downtown skyline; later, the chairs pushed in, a film of dust on the table, the blinds half drawn.
+- The nameplate (shot 6): a walnut block with a bevelled, engraved brass plate that catches the light.
+- The legal pad (shots 4–6): a yellow legal pad with faint blue rules and a red double margin line, a glued top binding with a few sheets folded back, written with a black felt-tip pen with a clip.
+- The visitor badge (shot 8): a typed paper visitor pass in a clear plastic sleeve on a metal spring clip, slightly curled.
+- The memoir (shots 7, 9, 16, 18): a hardback lying open in the middle, cream book paper curling at the gutter, the quoted line set larger than the body text, a soft graphite pencil underline; no cover visible.
+- The newspaper (shots 9, 16, 18): a broadsheet folded in quarters, newsprint with ink rub at the folds, columns and a photo of neutral filler, the pull quote set in a larger serif between two rules; the masthead folded out of view.
+- The whiteboard (shot 10): a wall-mounted dry-erase board with an aluminium frame and a pen tray holding markers and a felt eraser, ghosts of old erased writing; the black marker is running low, so its stroke is dry and chalky.
+- The ledger (shots 11, 12): a heavy accounting ledger bound in green bookcloth with red leather corners, ruled pages with columns, the line typed on a pasted-in sheet, lit by a brass banker's lamp with a green glass shade.
+- The price tag (shot 12): a manila card tag with a reinforced eyelet and a red cotton string, hand-lettered in black marker.
+- The wall map (shot 13): a big framed paper map with neutral coastlines and no labels, mounted on cork and dense with small round-head pins that glint, under a brass picture light, its light switch on the wall beside the frame; the label strip printed in white on a dark rail along the frame's bottom.
+- The annual report (shot 14): thick and perfect-bound, a matte coated cover with a neutral abstract image and the cover line printed large; no logo.
+- The monitor (shot 15): a silver-and-black flat LCD monitor of the time on a stand on the boardroom sideboard, showing a plain web page of filler blocks around the counter.
+- The quote card (shots 16–18): heavy cream card stock in a clear acrylic stand, printed in a serif, the attribution smaller beneath the second line.
+- The court filing and stamp (shot 18): a thick stack of bond paper with a blue backing sheet and a staple, filler body text, no court seal; a rubber stamp with a round lacquered wooden knob, and a red ink pad in a tin case; the stamp prints in red with uneven ink and a slightly doubled edge.
+- No icons-as-props and no blob shapes.
+
+STEP 5 — CAMERA, LAYOUT AND ANIMATIC
+- Build a reusable <Camera3D>: a real perspective camera in CSS 3D (perspective on the root, transform-style: preserve-3d), with every plate, character and prop placed at its true depth (translateZ, scaled to keep its intended framing size). The camera has a position (x, y, z), rotation, a lens (think 24 mm wide, 35 mm, 50 mm, 85 mm portrait) and a focus distance. Push-ins are dollies (the camera moves, so near layers grow faster than far ones), not zooms. Depth of field: each layer's blur comes from its distance to the focus plane and the shot's aperture; rack focus eases over 8–16 frames with a hint of focus breathing (1–2% scale). Handheld drift from noise2D in @remotion/noise (2–4 px, at most 0.3°), seeded per shot, with a documentary-camera feel: slow and organic on handheld shots, almost none on tripod shots.
+- Depth layers: 5–8 in every exterior, 4+ in every interior, and in most shots a foreground element near the lens that crosses the frame (the rain-beaded lamppost and the parked car's hood, the lobby ficus leaves, the elevator door edges, the Co-founder's shoulder, the water carafe, the heavy conference-room door, the CEO's raised hand, the closing ledger cover, drizzle and rain beads on the window glass).
+- Every shot has a camera plan: start framing, end framing, move type, easing and the beats that trigger changes. No locked-off camera; a deliberate held beat is still a moving hold (drift + atmosphere).
+- Screen direction: progress and time move left to right; the Netflix team crosses the lobby left to right and sits on the left side of the table looking right, while Blockbuster's side looks back right to left; the cuts forward to the table later sweep left to right (the door's shadow, the tower's shadow on "killed") and the whip-pan back to the day of the meeting runs right to left; the annual report flies left to right into shot 14; the camera pans right from the TV to the clock and the window; a whip-pan continues the direction of the motion that motivated it.
+- Layout first: write out/blockbuster/layouts.md with one block per shot: framing (wide, medium, close, extreme close), camera move, layers, character key poses with their beat words, every text with its surface, the transition in and out, and the object that hands off to the next shot.
+- Animatic: render a fast pass with grey placeholder shapes in the correct positions and the real timing (`--scale=0.25`), watch it against the voice and fix the timing here, before painting and animating.
+
+STEP 6 — MOTION LANGUAGE
+- src/lib/ease.ts holds named curves (anticipate, overshoot, settle, slam, whip, float) and a few named spring() configs. Linear motion is allowed only for mechanical constant speed: the elevator readout's arrow ticking, the monitor's counter roll, the CRT's scanline roll, the clock hands' constant sweep until the hard stop, and the drizzle.
+- Every move follows anticipation → action → overshoot → settle.
+- Breakdowns: between every two key poses, add a breakdown pose that defines the arc and the overlap (never a straight interpolation from key to key). Spacing is slow out of a pose, fast through the middle and slow into the next, and no two body parts start or stop on the same frame.
+- Biomechanics: the centre of gravity stays over the supporting foot; before reaching, pulling or lifting, the body shifts its weight first; to lift, the knees bend and the back stays straight; effort shows in the whole body (shoulders tense, neck strains, a short pause before a heavy lift).
+- Timing from life at 30 fps (refine from reference): blink 5–7 frames; eye dart 2–3; head turn 8–14; reach for an object 12–20; tap 4–6; both arms up 10–16; hand opening or closing 6–10; sit-to-stand 30–45; the disc spin and catch: 4 frames of wind-up, 8 of spin, a 2–3-frame dead stop between thumb and index; writing "PRICE?" or "$50 MILLION" on the pad: 18–24 frames; the suppressed laugh: the lips press over 6 frames, a 2–3-frame twitch at the mouth corner, the fingers rise to the lips over 12–16; writing "MADE SENSE?" on the whiteboard: 24–36 frames; the ledger slam: 4 frames of lift, 3 of fall, 8–10 of settle with a puff of paper dust; the pin push: 3 frames to press, 4 to release; the report toss: 6 frames of wind-up, 5–6 of flight, a hard landing, 10–12 of settle; the stamp slam: 8 frames of lift and inking, 3 of drop, a 2-frame squash, 8–10 of lift-off; the clock sweep: about 30–40 frames from twelve to the hard stop; the case snap: 3–4 frames.
+- Secondary motion is simulated: bake the Founder's open overshirt, the Co-founder's ponytail, the Lawyer's tie, the CFO's visitor badge on its clip, the price tag on its string, the memoir's page corner, the newspaper's fold, the Clerk's hoodie and its drawstrings, and his shaggy hair with a deterministic spring/verlet simulation in scripts/bake-secondary.ts; save per-frame values to src/data/blockbuster/sim/ and read them in the components. Remotion renders frames in parallel, so anything physical must be baked or computed purely from the frame number.
+- Weight: heavy things (the annual report, the ledger's cover, the rubber stamp, the heavy conference-room door, the elevator doors) start slowly, stop hard and cause a small shake; light things (the price tag on its string, the memoir's page corner, the newspaper's fold, the disc's paper sleeve, the CFO's visitor badge, dust motes) float, tumble and flutter.
+- Arcs: hands, heads and props travel on curved paths (IK targets follow arcs); never slide a hand in a straight line.
+- Overlapping action: the head leads, the torso follows 2 frames later, arms 2–4 frames later, hair, hems, bags and loose clothing 2–4 frames after that.
+- Smear frames (1–2 frames) on fast moves: the disc spinning in its sleeve (shot 3), the ledger slammed shut (shot 12), the annual report's toss and landing (shots 13, 14), the stamp's drop (shot 18), the clock hands' sweep (shot 20), the keep-case lid snapping shut (shot 22).
+- Impact frames (2–3 frames, restrained and filmic: an exposure flash and contrast punch with a touch of speed lines and very slight chromatic aberration) on key hits only, so they keep their punch: "Fifty million" (shot 5, the underline on "million"), "fifty-seven million" (shot 11), "billion" (shot 14, the report landing), "bankruptcy" (shot 18), "forty-five point two billion" (shot 19).
+- Screen shake on big hits: decaying over 3–6 frames, maximum 8 px.
+- Motion blur with @remotion/motion-blur during fast moves only (whip-pans, the disc's spin (shot 3), the annual report's flight (shots 13, 14), the stamp's drop (shot 18), the clock hands' sweep (shot 20) and the fast pull-back through the window (shot 22)), with a 180° shutter feel and a low sample count to protect render time.
+- Particles (dust motes in the sunbeams and dusk beams, paper dust from the ledger slam and the report's landing, drizzle in the parking-lot light, rain beads sliding down the window glass) are deterministic and layered in depth: near ones are bigger, blurrier and faster. Each piece tumbles in 3D (scaleX = cos of its spin) and drifts on its own curve.
+
+STEP 7 — KINETIC TYPOGRAPHY INSIDE THE WORLD
+- No captions, no word-by-word subtitles and no floating text cards. Every text sits on a surface in the world.
+- <SurfaceText> places text on any four-corner quad using a perspective transform (matrix3d computed from the four corner points), so it sits exactly on its sign, screen, paper or board and moves with that surface's parallax layer.
+- Light the text by surface type: emissive (screens, LED, neon: glow and bloom, and it lights nearby surfaces), printed (multiplied by the scene light, paper texture, shadowed), handwritten (marker or chalk texture), stamped.
+- Occlusion: foreground objects pass in front of text when natural (the ficus leaves crossing the lobby directory in shot 2, the Lawyer's hand and pen passing over "PRICE?" in shot 4, the water carafe crossing the nameplate in shot 6, the Clerk's arm passing in front of the rack sign in shot 22).
+- Entrances land on the exact beat frame and match the surface: LED digits roll and land; neon flickers on (2–3 flickers within 6 frames); screens switch on with a one-frame bright pop; printed text arrives with its object; handwriting is written stroke by stroke; stamps slam with a squash. Exits are motivated: switched off, wiped, washed out, torn, fallen away, scrolled off.
+- Handwriting: in a Node script, convert the needed glyphs of Permanent Marker (the .woff from @fontsource/permanent-marker) to outlines with opentype.js and save them to src/data/blockbuster/glyphs.json. Reveal each glyph in writing order through a mask of thick strokes that follow the glyph's centre line, animated with evolvePath from @remotion/paths; the marker or chalk tip follows the leading point (getPointAtLength). Writing finishes on its beat word. If a glyph's centre line is not available, reveal it with a directional wipe along its main stroke, still followed by the pen.
+- Fonts via @remotion/google-fonts: "Oswald" for the poster, the lobby directory, the nameplate, the map's label strip, the annual report cover, the monitor, the stamp, the TV, the clock face, the store sign and the rack sign (confirm it carries the ≈ and · glyphs in the stills); "Libre Baskerville" for the memoir page, the newspaper pull quote and the quote card; "Courier Prime" for the visitor badge and the typed ledger line; "VT323" for the elevator's floor readout; "Permanent Marker" for the legal pad, the whiteboard and the price tag. Load only the weights you use, and confirm in the stills that no fallback font appears. Fit long lines with fitText from @remotion/layout-utils.
+- Readability on a phone: every key text and key action stays inside x 48–888, y 288–1248 of the 1080×1920 frame (clear of the Shorts buttons and title). Main words have a cap height of at least 72 px; secondary text (small print, attributions, source tags, sticky notes) at least 34 px and on screen for at least 1.2 seconds. Every text has strong contrast with what is behind it. Background art can fill the whole frame.
+- Add a showSafeZone prop that draws the safe box, for QA stills only.
+
+STEP 8 — TRANSITIONS
+- Lay the shots out on an absolute timeline (<Sequence from={cutFrame}> with premounting), and build each transition as an overlay that straddles the cut, so the audio timeline never shifts. If you use TransitionSeries from @remotion/transitions, remember that transitions overlap the shots and shorten the total: compensate the durations so every cut still lands exactly on its cut frame, and verify it.
+- Allowed transitions, each motivated by the story:
+  - Whip-pan (6–8 frames): accelerate out with motion blur and speed lines, cut at maximum blur on the cut frame, decelerate in, continuing the screen direction.
+  - Light-flash cut: a bright source in shot A blooms toward white over 3–4 frames; cut; shot B blooms down from its own brightest light over 4–6 frames.
+  - Match cut: a shape or motion in shot A matches the position, scale and direction of one in shot B on the exact cut frame.
+  - Continuous camera move: the camera travels from one setup to the next without a cut.
+  - Foreground wipe: an object passes the lens, fills the frame and the cut happens behind it.
+- Never crossfades, dips to black or generic slides.
+
+STEP 9 — SHOTS (CUT word → shot; beats inside)
+
+1. THE WINDOW — CUT "Blockbuster" (frame 0). LOW MEDIUM-WIDE SHOT outside the last rental store in Bend, Oregon, at night in a thin cold drizzle: the store's glass front seen across the wet parking lot, a rain-beaded lamppost and the wet edge of a parked car's hood crossing the lower left of the frame close to the lens, out of focus; ponderosa pines black against a deep blue sky along the top edge. Behind the glass: low fluorescent tubes under a popcorn ceiling, rows of wire metal racks, the counter at the back. Taped inside the window, the printed poster "NETFLIX FOR $50 MILLION?" over its painted steel-and-glass tower, glowing with the backlight; on the window ledge inside the glass below it, the hero disc in its clear keep-case leans against the pane; the Clerk stands just behind the glass to the right of the poster, a silhouette in his beanie and hoodie, his hand just leaving the case. Drizzle falls through the lamppost's cone in three depths; rain beads slide down the outside of the glass.
+   Frame 0 is fully composed: the poster lit, the disc's rainbow glint mid-sweep across the case, the Clerk's hand just leaving it, drizzle mid-fall, the camera at its start framing. Build this state as a <HookFrame /> component so the last frames can reproduce it exactly.
+   Beats: "could" the camera starts a slow dolly push-in toward the poster, and the Clerk straightens and steps back from the glass toward the counter; "bought" the rainbow glint sweeps across the disc as the push-in changes the angle; "Netflix" the fluorescent tube behind the poster flickers twice and steadies, the poster glowing brighter; "fifty million" the push-in settles on the poster's price line, a soft glint flare crossing the wet glass.
+   Out: the push-in continues into the poster's painted tower until its painted glass grid fills the frame.
+
+2. THE LOBBY — CUT "September" (match cut: the painted glass grid of the poster's tower becomes, at the same position and scale, the real mullion grid of the tower's lobby glass wall). WIDE SHOT inside the steel-and-glass tower's lobby in Dallas, morning: low gold sun through the tall glass wall throws long mullion shadows across the polished granite floor; the security desk with the guard in silhouette; potted ficus leaves crossing the foreground close to the lens; on the wall by the elevator bank, the black felt directory board behind its glass door reads "DALLAS · SEPT 2000" in its header row, the rows below neutral filler. The Founder, the Co-founder and the CFO cross the lobby left to right toward the elevators, casually dressed, the Founder half a step ahead with the hero disc in its paper sleeve in his hand.
+   Beats: "two thousand" rack focus from the ficus leaves to the directory as a sunbeam slides across its glass door, "DALLAS · SEPT 2000" sharp and lit, the leaves still crossing in front of it while the camera tracks right with the three; "Dallas" the Founder taps the elevator call button and its ring lights.
+   Out: the elevator doors slide open toward the camera; the camera moves in and the door edges cross the lens.
+
+3. FLOOR 23 — CUT "Netflix's" (foreground wipe on the door edges). CLOSE, inside the elevator going up: brushed-steel walls holding soft reflections of the three, a brass handrail, warm downlights; above the doors, the floor readout's black glass strip with an amber arrow. The Founder in front spins the disc in its white paper sleeve between his index and middle fingertips; behind him the Co-founder with his notebook, and the CFO with his folio held against his chest, his badge hidden behind it.
+   Beats: "founders" the Co-founder's eyes go up to the readout and his head follows; "flew" the amber arrow ticks upward and the cab's slight lift settles the three on their feet; "pitch" the readout lights "FLOOR 23" with a one-frame pop, and the Founder stops the spinning sleeve dead between his thumb and index finger.
+   Out: the doors part at the centre and the bright gap of morning light floods the lens (light-flash cut).
+
+4. PRICE? — CUT "Blockbuster's" (the flash blooms down from the conference room's glass wall). OVER-THE-SHOULDER on the Lawyer at the right side of the long walnut table on the 23rd floor, morning sun behind the glass wall at the head of the table, the hazy downtown skyline beyond; the yellow legal pad squared to the table edge in front of him, the black felt-tip pen in his hand; across the table, soft in the background, the Founder, the Co-founder and the CFO settle into their chairs on the left side.
+   Beats: "lawyer" he uncaps the pen and sets the cap down beside the pad; "asked" his eyes rise over his glasses to the Netflix side, his head following; "price" he writes "PRICE?" stroke by stroke, his hand and pen passing over the letters, the question mark dotted on "price".
+   Out: rack focus across the table to the Founder.
+
+5. FIFTY MILLION — CUT "Reed". MEDIUM, over the Lawyer's shoulder with the pad in the near foreground: across the table the Founder sits forward, the CFO beside him in the middle of opening his folio, the Co-founder beyond them, all side-lit by the window.
+   Beats: "Hastings" the Founder slides the bare disc out of its sleeve and sets it on the table; "said" he leans in with both palms flat on the walnut on either side of the disc and goes completely still, while the CFO stops with his folio half open, and the camera racks focus to the pad as the Lawyer's pen touches down under "PRICE?"; "Fifty million" the pen writes "$50 MILLION" stroke by stroke and finishes with a hard underline that lands on "million" (impact frame, small shake).
+   Out: the Lawyer spins the pad around and slides it up the table to the right, out of frame.
+
+6. THE CEO — CUT "A". MEDIUM over the Co-founder's shoulder (the back of his head and his ponytail soft in the foreground) to the CEO at the head of the table, backlit by the bright glass wall, sitting deep in his chair with one ankle on his knee, a burgundy suede loafer catching the rim light; on the table in front of him, the walnut nameplate "BLOCKBUSTER · CEO"; the water carafe on its tray in the near foreground.
+   Beats: "co-founder" the Co-founder's pen stops on his notebook and his head tilts toward the CEO; "says" the legal pad slides in and stops against the nameplate, "PRICE?" and "$50 MILLION" turned toward the CEO; "Blockbuster's" the camera dollies in, the carafe crossing the nameplate in the foreground, and the CEO's eyes drop to the pad; "CEO" the nameplate sharpens as his lips press together, the corner of his mouth twitches, his eyes crinkle and two fingers rise to his lips.
+   Out: the dolly carries on into his raised hand until it fills the lens (foreground wipe).
+
+7. STRUGGLING — CUT "was" (behind the hand, the cut to later). CLOSE, the same spot on the same table years later, at dusk: the room empty, the chairs pushed in, a film of dust on the walnut; where the pad lay, an open hardback memoir with the line "“STRUGGLING NOT TO LAUGH”" set large and underlined in soft pencil, and "— MARC RANDOLPH, NETFLIX CO-FOUNDER, “THAT WILL NEVER WORK”" printed below it, both legible from the cut; beside the book, the hero disc, dim.
+   Beats: "struggling" a low orange dusk beam slides across the page from the right, lighting the line word by word; "not" the page corner lifts in the draught from the air vent and settles; "laugh" the beam covers the whole line and the pencil underline catches a graphite glint.
+   Out: the dusk beam flares across the glass wall (light-flash cut).
+
+8. THE BADGE — CUT "Netflix's" (the morning glare off the glass wall blooms down). MEDIUM, back in the morning meeting: the CFO standing on the left side of the table, his folio open in one hand, his paper visitor badge "BARRY McCARTHY · NETFLIX CFO" clipped to his breast pocket; the CEO at the head of the table in the background, soft.
+   Beats: "ex-CFO" rack focus onto the badge, which swings on its clip as he straightens; "said" his eyes go to the CEO and his head follows; "Blockbuster" in the background the CEO leans back in his chair, fingers steepled; "basically" the CEO opens one palm toward the door with a polite smile, and the CFO closes his folio with a soft clap and tucks it under his arm.
+   Out: the CFO pulls the heavy conference-room door open toward the camera and it swings across the lens (foreground wipe).
+
+9. THE CLIPPING — CUT "laughed" (behind the door, the cut to later). CLOSE, the table later at dusk, the camera a little further along: a broadsheet newspaper folded in quarters lies beside the memoir and the dim disc, its pull quote "“LAUGHED US OUT OF THEIR OFFICE”" between two rules with "— BARRY McCARTHY, 2008 INTERVIEW, VIA CNBC" below it, legible from the cut.
+   Beats: "laughed" the door's shadow slides off the table left to right, uncovering the newspaper; "out" the top fold lifts in the draught and flops flat, a puff of dust rising into the beam; "office" the camera's slow push-in settles and the dusk beam lies across the pull quote.
+   Out: whip-pan right to left (back in time).
+
+10. MADE SENSE? — CUT "But" (the whip-pan decelerates in). MEDIUM, the boardroom across the corridor on the afternoon of the meeting: flat white daylight through the glass wall on the left; the Lawyer, jacket off, at the whiteboard, three-quarter back to camera; in the near foreground, soft, the CEO seated at the table, his loafer bouncing.
+   Beats: "no" the Lawyer uncaps the marker with a pop; "made" he starts writing "MADE SENSE?" in dry, chalky marker strokes; "sense" the words finish; "time" he dots the question mark with a hard tap and steps aside, the whole line clear.
+   Out: he tosses the marker into the tray and the camera tilts down past the tray to the table, the cut hidden in the fastest part of the tilt (continuous camera move).
+
+11. THE LEDGER — CUT "In". CLOSE, top-down at three-quarters on the boardroom table: the green ledger lies open in the pool of the brass banker's lamp, the Lawyer's hand at the left edge; among neutral filler lines, the typed line "NETFLIX 2000 NET LOSS: $57.4M".
+   Beats: "two thousand" his index fingertip runs down the column, passing over the lines; "lost" his finger stops on the line and taps it twice; "fifty-seven million" he lifts his finger away and the line sits fully revealed in the lamp's pool (impact frame, lamp flare, small shake).
+   Out: from the top of the frame his other hand lowers the price tag on its string.
+
+12. THE PRICE TAG — CUT "More" (continuous camera move: the camera eases back as the tag drops). CLOSE, the same ledger, a touch wider: the manila price tag drops onto the page beside the loss line, "ASKING PRICE: $50M" hand-lettered on it.
+   Beats: "than" the tag lands, bounces and swings on its red string; "own" it settles, the string curling across the page; "price tag" the camera tilts so the loss line sits just above the tag, both sharp and legible side by side.
+   Out: the Lawyer slams the ledger shut with a flat palm, a puff of paper dust, and the closing cover sweeps across the lens (foreground wipe).
+
+13. THE MAP — CUT "Blockbuster's". MEDIUM-WIDE, the corridor between the conference room and the boardroom, on an evening in 2004: a big framed wall map dense with thousands of small pins; the CEO, in his 2004 charcoal V-neck, stands at it with one more pin pinched between thumb and index; the label strip along the frame's bottom rail is still in shadow under the unlit picture light.
+   Beats: "peak" the camera cranes back and the pins catch the window light in a ripple left to right; "about" the CEO pushes the pin home with his thumb; "nine thousand stores" he flicks the switch beside the map, the brass picture light blooms on and the label strip lights up, "≈ 9,000 STORES · 2004" sharp in its glow.
+   Out: he turns from the map, takes the annual report off the side table and tosses it; the camera whip-pans left to right with its flight.
+
+14. THE REPORT — CUT "And" (the whip-pan decelerates in). LOW CLOSE at table height on the boardroom table in 2004, under the warm overhead pendant: the water carafe and tumblers soft in the foreground.
+   Beats: "six" the thick annual report flies into frame from the left, tumbling slightly (smear); "billion" it slams flat onto the table, cover up: "REVENUE $6.1B · 2004" (impact frame, a puff of dust, the water in the carafe shivering, small shake); "year" the CEO's fingertips enter from the right, slide it a few centimetres toward the lens and tap the cover twice.
+   Out: rack focus past the report to the dark monitor on the sideboard behind.
+
+15. ONLINE — CUT "Its". MEDIUM CLOSE, the same boardroom a few years later, in the evening: the flat monitor on the sideboard, the windows behind it dark blue; the CEO, in rolled shirtsleeves, leans in from the right.
+   Beats: "online" the screen wakes with a one-frame bright pop and its blue-white glow hits the CEO's face; "service" the counter on the screen rolls, its digits an unreadable blur; "two million subscribers" the counter lands and the screen reads "BLOCKBUSTER ONLINE · 2,000,000 SUBSCRIBERS", and the CEO allows himself a small, satisfied smile, the glow brightening on his cheek.
+   Out: the screen's white field blooms toward white (light-flash cut).
+
+16. THE QUOTE CARD — CUT "Hastings" (the flash blooms down from the low dusk sun). CLOSE, the table later at dusk: a cream quote card in a clear acrylic stand beside the memoir, the newspaper and the dim disc, framed tight on its first line, "“IF IT HADN’T BEEN FOR THEIR DEBT,", the rest of the card below the frame edge.
+   Beats: "admitted" the dusk beam reaches the card and warms it; "debt" the camera's slow push-in lands on the line and the beam brightens across it.
+   Out: the camera tilts down the card (continuous camera move).
+
+17. KILLED US — CUT "they" (the tilt continues). CLOSE on the card's second line, "THEY COULD HAVE KILLED US.”", with "— REED HASTINGS, 2009, VIA CNBC" printed beneath, both legible from the cut.
+   Beats: "could" the tilt settles; "killed" the sun drops behind a neighbouring tower and its hard shadow sweeps across the table left to right, leaving the card in a last slit of warm light; "us" the slit holds across the second line and the attribution.
+   Out: the light drains to night across the table while the camera rises and widens (continuous camera move).
+
+18. CHAPTER 11 — CUT "In" (the continuous move arrives at night). HIGH THREE-QUARTER MEDIUM on the table on a night in 2010: the room dark but for one cold downlight over the table and the city glow below the glass; the memoir, the newspaper, the quote card and the dim disc pushed to the edge of the light.
+   Beats: "twenty ten" a forearm in a white shirt cuff pushes a thick court filing with a blue backing sheet into the light, nudging the old papers aside; "filed" the hand lifts the rubber stamp and presses it onto the red ink pad; "bankruptcy" the stamp slams onto the filing, "CHAPTER 11 · SEPT 23, 2010" in red (impact frame, the stamp squashing, the disc jumping on the table, small shake); the hand lifts away and the stamped filing holds through the pause.
+   Out: the downlight clicks off, and the dark glass gleam left in frame match-cuts to the dark curved glass of a TV screen.
+
+19. THE TV — CUT "Last" (match cut on the dark glass). MEDIUM, low, the store interior at night, present day: the boxy CRT TV on its bracket above the counter, the popcorn ceiling and fluorescent tubes above it; below, the Clerk behind the counter wiping the bare hero disc with a cloth.
+   Beats: "year" the TV clicks on, the picture expanding from a bright horizontal line with a one-frame pop; "Netflix" the Clerk glances up at it, his head following his eyes; "brought" the scanlines roll; "forty-five point two billion" the screen settles on "NETFLIX 2025 REVENUE: $45.2B" (impact frame, CRT flash, its blue light washing over the Clerk's face and the disc).
+   Out: the Clerk's eyes move to the wall clock to the right of the TV and the camera pans right with his eyeline (continuous camera move).
+
+20. THE CLOCK — CUT "Fifty" (the pan arrives). CLOSE on the wall clock beside the TV: "$50M ≈ 9.7 HOURS OF NETFLIX REVENUE" printed across the lower half of its face, legible from the cut; both hands at twelve.
+   Beats: "Fifty million" the hour and minute hands start to sweep clockwise from twelve, fast and mechanical, the minute hand a blur; "under" the sweep holds its constant speed; "ten hours" the hour hand stops hard just short of ten with a tick and a small shiver; "that" the red second hand goes back to its normal tick.
+   Out: the pan carries on right off the clock to the front window, passes out through the glass and rises toward the sign (continuous camera move).
+
+21. THE LAST STORE — CUT "One" (the continuous move arrives outside). WIDE, outside at night in the drizzle: the low strip mall, its neighbouring units dark, ponderosa pines black against the deep blue sky; along the fascia above the store's window, the plain rectangular lightbox sign "THE LAST BLOCKBUSTER · BEND, OREGON".
+   Beats: "Blockbuster" the sign flickers on, two flickers within six frames, then steady; "left" the camera starts a slow crane down from the sign; "Oregon" the crane settles at window height, the sign's glow pooling on the wet asphalt, the Clerk's silhouette crossing inside toward the racks by the window.
+   Out: the camera dollies forward through the glass door into the store (continuous camera move).
+
+22. GAVE UP — CUT "It" (the dolly arrives inside). MEDIUM, inside the store by the window: the Clerk at the rack nearest the window, its rack sign at the top of the frame reading "DVD RENTALS" with the small print "NETFLIX’S LAST DISC: SEPT 29, 2023" under it, legible from the cut; the hero disc in one hand, its open keep-case in the other; the back of the window poster glowing beyond him.
+   Beats: "still" he presses the disc onto the case's hub; "rents" he snaps the case shut (smear on the lid), his arm passing in front of the rack sign; "DVDs" he leans the case on the window ledge below the poster as the camera starts to pull back toward the glass; "Netflix" the camera PULLS BACK through the window glass, out into the drizzle, past the lamppost and the parked car; "up" the framing arrives at exactly the frame-0 composition: the poster lit, the disc's glint mid-sweep across the case, the Clerk's hand just leaving it, drizzle mid-fall. The last 4 frames render <HookFrame /> exactly, so the Short loops seamlessly.
+   Out: <HookFrame /> hands off to frame 0 of shot 1.
+
+STEP 10 — COMPOSITING AND FINISH
+- Layer order in every shot: plates → haze cards between depth layers → practical light pools → cast and contact shadows → characters (shading stack, texture, rim light, light wrap) → in-world text → atmosphere (particles) → light beams → glow, bloom and halation on emissive surfaces → lens flares → grade → grain → vignette → chromatic aberration (impact frames only).
+- Bloom: a blurred copy of emissive layers composited with a screen blend.
+- Morning sun shafts through the lobby glass wall and across the conference table: long, soft-edged gold shafts with dust motes drifting in them. Low dusk beams raking across the empty table later: warm orange-pink, crisp near the window and softening across the walnut. The brass picture light's warm cone over the map and the cold downlight cone over the table in 2010, both with dust hanging in them. Outside the store, the lamppost's sodium cone and the window's fluorescent spill: wet, visible cones with drizzle streaking through them.
+- Screen glow on faces: a coloured soft-light shape on the side of the face toward the screen that follows the screen's brightness.
+- Lens flares on the morning sun through the glass walls, the low dusk sun, the lamppost, the store sign as it flickers on and the TV's power-on pop.
+- Film finish in a reusable <Grade> (per-scene settings in style.ts): a filmic contrast curve with slightly lifted blacks and a soft highlight roll-off; split toning (shadows toward the scene's ambient colour, highlights toward the key light); halation (a thin warm-red glow around the brightest highlights and practical lights); light wrap (bright backgrounds bleed a few pixels over character edges); very subtle gate weave (at most 0.5 px).
+- Grain: reuse the earlier grain component, changing every frame, stronger in mid-tones and shadows than in highlights, at 4–7% opacity; pre-render a set of grain tiles and cycle them if per-frame turbulence slows the render. A gentle lens vignette (10–15%) with slight edge softness.
+- Keep renders fast: no full-frame SVG filters every frame; prefer pre-rendered plates, transforms and opacity.
+
+STEP 11 — AUDIO
+- My voice-over only, at full volume. No music and no sound effects: I add them by hand in Premiere using out/blockbuster/sfx-cues.csv.
+- For the render, use a copy of the voice-over normalised to −14 LUFS (two-pass ffmpeg loudnorm: measure first with print_format=json, then apply the measured values; true peak −1.5 dBTP; 48 kHz), saved as public/vo/blockbuster_norm.wav and played with <Audio> from @remotion/media. Never touch my original file.
+
+STEP 12 — QUALITY GATES (do not skip)
+Save every QA image to out/blockbuster/qa/. Open every image you render and look at it; describe what you actually see in out/blockbuster/review.md before deciding it passes. Never mark anything as passing without looking at it.
+
+Gate A — Design
+1. Model sheets (STEP 3), a prop sheet with every prop from STEP 4, and a hand sheet: every pose in the hand library at 600 px tall in back and palm views, plus each grip holding its real prop → out/blockbuster/qa/hands.png. Check five digits, finger lengths, the knuckle arc, the thumb's origin and opposition, nails on the correct side, and grips that wrap around the object with correct layering and contact shadows. Redo any hand that looks like a mitten or a bunch of sausages.
+2. STYLE FRAMES: one finished still per shot at its key beat, rendered with `npx remotion still`.
+3. Colour script: all the style frames tiled in one image (ffmpeg tile) → out/blockbuster/qa/color-script.png. Check the journey: wet teal night and sodium amber at the store window → gold morning in the lobby → warm brushed steel in the elevator → bright hazy morning in the conference room → orange-pink dusk on the table later → flat white afternoon in the boardroom with the warm lamp on the ledger → brass picture light in 2004 → monitor blue a few years later → dusk again, then the cold night of 2010 → the store's green-white fluorescent and the CRT's blue → back to the wet teal and amber of the window.
+4. Value check: every style frame at 135×240 in greyscale. The focal point (a face or the key text) must be the highest-contrast spot in the frame; fix the staging if it is not. Texture and depth check: 100% crops of a face, a hand, a fabric area and a background area from every style frame → out/blockbuster/qa/crops-sNN.png; texture must be visible up close, and every style frame must show at least four depth cues.
+5. Score each style frame 1–5 on: looks like a frame from a premium cinematic animated documentary; characters, hands and props look like their real-life versions; cinematic lighting; depth; painterly texture; composition and readability; text spelled exactly as in IN-WORLD COPY. Redo anything that scores under 4.
+
+Gate B — Timing
+6. Watch the animatic (STEP 5) against the voice. Fix pacing before animating.
+
+Gate C — Animation
+7. Animate, then render a half-resolution draft (`npx remotion render Blockbuster out/blockbuster/draft.mp4 --scale=0.5`).
+8. Contact sheet per shot: every 6th frame tiled → out/blockbuster/qa/contact-sNN.png. Check arcs, spacing, overlap and that nothing pops or slides without weight.
+   Puppet test: watch every character action at full resolution, frame by frame. It fails on rigid parts rotating on pins, seams or gaps at joints, sliding feet, evenly spaced floaty in-betweens, body parts starting and stopping together, mirrored poses, hands popping between poses, fingers moving all at once, or effort without a weight shift.
+   Reference test (when reference exists): render each action beside its reference clip at the same timing → out/blockbuster/qa/ref-sNN.mp4, and compare weight, timing and arcs.
+
+Gate D — Sync
+9. For every beat in out/blockbuster/timing-report.md, render the frame before the beat and the beat frame side by side. The hit must happen on the beat frame: not early (except anticipation) and not late. Fix every miss.
+
+Gate E — Automated checks
+10. Static frames: render a QA draft with grain and handheld drift turned off and run ffmpeg freezedetect (n=0.001:d=1). No frozen segment may last 1 second or more.
+11. Loop: compare frame 0 with the last frame using ffmpeg ssim (target ≥ 0.98) and view them side by side.
+12. Duration: ffprobe the final file; it must equal durationInFrames / 30.
+13. Copy: run the copy.ts check script.
+14. Safe zone: one still per shot with showSafeZone on; no key text or action outside x 48–888, y 288–1248, and nothing important cut off by the frame edges.
+15. Audio: the MP4 has one audio stream at about −14 LUFS (ffmpeg ebur128); the silent MOV has no audio stream.
+
+Gate F — Checklist review (fix every failure, up to 3 full passes)
+- Frame 0 shows the hook text and the hero disc in its clear keep-case on the window ledge below the poster.
+- No static frames; something meaningful moves at least every second, and a new shot or new action lands every 2–3 seconds.
+- The film reads as one continuous story in one world; every cut is motivated and lands on its cut frame.
+- Every in-world text is readable on a phone, perspective-matched, lit by its scene, spelled exactly as written here, and enters on its exact word.
+- Characters look like characters from a premium cinematic animated documentary (not clip art or paper puppets), keep their design across shots, move with real weight and timing, breathe, blink and react; hands have correct anatomy and truly grip their props; everything animates on ones and stays smooth at 30 fps.
+- Every frame shows real depth (camera perspective, depth of field, haze, overlap, cast and contact shadows) and painterly texture.
+- Characters and props resemble their real-life versions.
+- No real logos, no Blockbuster ticket-stub logo, no ticket-shaped sign and no blue-and-yellow torn-ticket trade dress, no Netflix "N" logo or wordmark, no red Netflix mailing envelopes, no Netflix red-and-black interface on the TV, no CNBC peacock and no real newspaper masthead, no real cover or jacket of "That Will Never Work", no real Blockbuster website design on the monitor, no real film titles or cover art on the DVD cases and spines, no logo on the Clerk's polo, no real court seal, no likeness of the real store's staff, no real currency design, no likeness of a real person.
+- No element cut off by the frame edges; key text inside x 48–888, y 288–1248.
+- Transitions are whip-pans, light-flash cuts, match cuts, continuous camera moves or foreground wipes; never fades.
+- The final frame matches frame 0. Total duration = audio duration (+4 frames).
+
+AVOID (this is what makes it look cheap)
+- Flat single-colour backgrounds, uniform line weight, pure black lines, grey shadows.
+- Clean vector surfaces: flat fills, plastic gradients, razor-sharp shadow edges with no texture, everything in focus at the same depth.
+- Elements that pop, scale or fade in from the centre like a slideshow; text floating in space.
+- Characters built from circles and rectangles; paper cut-out motion (rigid pieces rotating on pins, visible joint seams, the whole body moving as one block).
+- Mitten or sausage hands, fingers of equal length, a flat thumb lying beside the fingers, fingers that open or close all at once, objects floating in front of a hand instead of being gripped.
+- Floaty, evenly spaced in-betweens with no breakdown poses; sliding feet; mirrored (twinned) poses; perfect stillness.
+- Linear easing on organic motion; everything starting on the same frame; everything moving at once.
+- Locked-off cameras and frozen frames.
+- Any fact, number, date or name not in this prompt.
+
+OUTPUT
+- Final render: npx remotion render Blockbuster out/blockbuster/blockbuster.mp4 --codec=h264 --crf=16 --image-format=png --color-space=bt709
+- Also out/blockbuster/blockbuster_master.mov (--codec=prores --prores-profile=hq --image-format=png) and out/blockbuster/blockbuster_silent.mov (ProRes HQ with --muted, no audio) for my Premiere edit.
+- out/blockbuster/review.md: what you reused and built, every gate with what you checked, what you fixed and how many passes it took, the style-frame scores, and anything you could not get right.
+- Tell me the final duration in seconds, the file paths, and summarise out/blockbuster/review.md.

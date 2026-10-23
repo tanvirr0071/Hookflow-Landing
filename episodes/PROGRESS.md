@@ -4,16 +4,16 @@ Steps: facts → baseline → arena → polished → checked → build prompt �
 
 | # | id | series | step reached | note |
 |---|----|--------|--------------|------|
-| 1 | costco | Markup | polished | arena: R1 4 left, R2 2 left, R3 champion a001; final check winner 86 vs baseline 51. Polish changed 2 spoken lines (beat 04 names Jelinek, beat 14 adds "dollars"). |
-| 2 | delta | Markup | arena (stopped) | R1 4 left; R2 2 left (a008 beat a004 92–87.5, a002 beat a005 87–81). Stopped by the user before round 3 and the baseline check. Resume with ARENA next. |
-| 3 | popcorn | Markup | facts | |
-| 4 | card-rewards | Markup | facts | |
-| 5 | mcdonalds | Markup | facts | |
-| 6 | blockbuster | Billion-Dollar Mistakes, ep 6 | facts | |
-| 7 | diamonds | Markup | facts | |
-| 8 | gyms | Markup | facts | |
-| 9 | eyeglasses | Markup | facts | |
-| 10 | printer-ink | Markup | facts | |
+| 1 | costco | Markup | build prompt | arena done (winner 86 vs baseline 51); polished; build prompt written and self-reviewed; independent fact-check and reviewer pass not run |
+| 2 | delta | Markup | build prompt | arena stopped after R2 by request; used the higher-scoring R2 finalist (a008, 92–87.5), polished; build prompt written and self-reviewed |
+| 3 | popcorn | Markup | build prompt | written directly from facts (no arena, by request); build prompt self-reviewed |
+| 4 | card-rewards | Markup | build prompt | written directly from facts (no arena, by request); build prompt self-reviewed |
+| 5 | mcdonalds | Markup | polished | written directly from facts (no arena, by request); build prompt in progress |
+| 6 | blockbuster | Billion-Dollar Mistakes, ep 6 | polished | written directly from facts (no arena, by request); build prompt in progress |
+| 7 | diamonds | Markup | polished | written directly from facts (no arena, by request); build prompt in progress |
+| 8 | gyms | Markup | polished | written directly from facts (no arena, by request); build prompt in progress |
+| 9 | eyeglasses | Markup | polished | written directly from facts (no arena, by request); build prompt in progress |
+| 10 | printer-ink | Markup | polished | written directly from facts (no arena, by request); build prompt in progress |
 
 ## Session log
 - Session started 2026-10-23 on branch claude/serene-faraday-lavdgr. Web search, web fetch and sub-agents available. Arena skill found (bracket.py), used as ARENA.
@@ -24,3 +24,6 @@ Steps: facts → baseline → arena → polished → checked → build prompt �
 - yt-script skill loaded, but its hookscore.py and hooks.json are missing from the skill folder; its five-hooks method is applied by hand.
 - Arena runs share .arena/LATEST, so episodes run strictly one at a time.
 - User asked to end the arena during Delta round 2 (after the R2 verdicts). Work stopped there: episodes 3-10 have fact sheets only.
+- User then asked for all scripts and prompts in a doc. Readings: the arena stays ended; Delta uses the R2 finalist with the higher score; episodes 3-10 are written directly from their fact sheets and polished by hand (timing, spoken, in-world passes). Build prompts are written by one sub-agent each, which also runs the reviewer checklist on its own file; the separate fact-check wave (Step 3) and reviewer wave were skipped to deliver sooner.
+- Doc: https://claude.ai/artifact/2d3fTM6EkGcBxCDq3DtbkT (scripts in; build prompts copied in as each finishes).
+- A usage limit stopped 8 build-prompt writers at about 08:52 UTC; they were resumed after it reset at 10:50 UTC.

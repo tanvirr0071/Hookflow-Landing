@@ -1,0 +1,416 @@
+Build a YouTube Short in Remotion from my voice-over: a "Markup" Short, "Why McDonald's Is Really a Landlord".
+
+THE GOAL
+It must look like a premium cinematic animated documentary short: painterly, richly textured, deep, lit like a film, with character acting so natural it feels observed from real life. Character design keeps the clean appeal of a high-end anime feature, but every frame is rendered with volume, texture and atmosphere. It must never look like flat vector art, motion graphics, an explainer, a slideshow or a paper cut-out puppet. It plays as one continuous story that moves with the voice: the same world, the same characters and the same hero prop carry the viewer from shot to shot, and every shot hands off to the next. Every cut, every action and every piece of text is synced to the voice-over to the frame.
+
+Work like a real feature-animation studio, in this order, and do not skip ahead:
+timing → reference (motion and hands) → design (model sheets, hand sheet, props, texture kit, background plates) → layout and animatic → key poses → breakdowns and in-betweens → secondary motion → lighting, texture and compositing → QA.
+Each stage has a quality gate (STEP 12). Do not start a stage until the previous gate passes.
+
+PRIORITIES WHEN SOMETHING HAS TO GIVE
+1. Sync and facts are never compromised.
+2. Believable movement and hands. A character who moves with real weight in a simple frame beats a detailed character who moves like a paper puppet.
+3. Quality over quantity. Fewer, better drawings, well staged, beat many crude ones. Use real animation staging cheats freely: silhouettes against bright windows, backs of heads, over-the-shoulder framing, characters cropped by foreground objects, and moving holds.
+4. Every frame must survive a pause. If a paused frame looks like a vector explainer, a PowerPoint slide, clip art or a cut-out puppet, it fails.
+
+INPUT
+- Voice-over: voiceover/mcdonalds.mp3 (ElevenLabs, English). It is my file: never edit, replace or regenerate it, and never create a voice. Copy it to public/vo/mcdonalds.mp3.
+- If there is no Remotion project in this folder, create one with `npx create-video@latest` (blank template, TypeScript). Run `npx remotion skills add` and follow /remotion-best-practices.
+- Free tools only: no paid APIs, no stock footage, no AI images. Install what is missing: `brew install ffmpeg cmake` and `npx remotion add @remotion/media @remotion/media-utils @remotion/install-whisper-cpp @remotion/google-fonts @remotion/transitions @remotion/noise @remotion/motion-blur @remotion/paths @remotion/shapes @remotion/layout-utils @remotion/animation-utils`. Also `npm i opentype.js @fontsource/permanent-marker` (for handwriting, see STEP 7).
+- If I have placed character or prop artwork in public/assets/ (SVG or PNG), use it instead of drawing that item from scratch.
+- Reference (my own recordings, not stock): reference/mcdonalds/sNN_<action>.mp4 are phone clips of me acting the key actions (s01_slap-palm-on-ledger, s03_ink-bar-along-ruler, s06_roll-out-drawer-and-lift-folder, s07_unfold-and-smooth-map, s08_ink-and-slam-stamp, s10_hang-and-straighten-frame, s12_swipe-highlighter, s15_set-down-keys-and-lift-box, s16_tuck-deed-and-slam-ledger, s18_lean-in-and-lift-glasses), and reference/hands/<pose>.jpg are photos of my hand in each pose of the hand library (STEP 3). When they exist, they are the source for poses, timing and hand shapes (STEP 3B). When one is missing, key that action by hand with the timing table in STEP 6.
+- For reference analysis, install the free MediaPipe package: `pip3 install mediapipe opencv-python numpy`.
+
+STEP 0 — PROJECT AUDIT AND STRUCTURE
+- Read every file in src/components/ and src/lib/ from earlier episodes (grain, flares, speed lines, rigs and anything else). Reuse what fits. Upgrade components in place without breaking earlier episodes: add optional props, never rename or remove existing ones. Log what you reused, upgraded and built new in out/mcdonalds/review.md.
+- Structure:
+  - src/mcdonalds/Mcdonalds.tsx (the composition), src/mcdonalds/shots/Shot01<Name>.tsx … (one file per shot, named after the shot titles in STEP 9)
+  - src/data/mcdonalds/words.json, timeline.ts, copy.ts, glyphs.json, poses/ (keyed and reference-extracted poses), sim/ (baked secondary motion)
+  - src/lib/ (shared, reusable across episodes): ease.ts, Camera3D.tsx, SurfaceText.tsx, HandWrite.tsx, Particles.tsx, Grade.tsx, rig/ (Skeleton, IK2Bone, SkinnedLimb, HandRig, FaceRig, ShadingStack), textures/
+  - scripts/: extract-pose.py (MediaPipe), bake-secondary.ts, build-glyphs.ts, build-textures.ts
+  - src/components/characters/, props/, backgrounds/, fx/ (reusable in later videos)
+- Determinism: never use Math.random(). Use random(seed) from remotion for every particle, blink and drift, so every render is identical.
+
+STEP 1 — TIMING MAP (do this first)
+1. Get the exact audio duration with getAudioDurationInSeconds from @remotion/media-utils and confirm it with ffprobe (they must agree within one frame).
+2. Composition "Mcdonalds": 1080x1920 at 30 fps. durationInFrames = Math.ceil(duration * 30) + 4. The last 4 frames are the loop hold (see the last shot).
+3. Transcribe: make a 16 kHz mono WAV copy of the voice-over in a temp folder (whisper.cpp requires it). Install whisper.cpp and the large-v3-turbo model with @remotion/install-whisper-cpp and transcribe with tokenLevelTimestamps: true; use the DTW token timestamps (t_dtw) where present. Merge sub-word tokens into words.
+4. Align Whisper's words to the script below with a sequence alignment. The script wins: "McDonald's" may come out as "McDonalds", "MacDonald's" or "Mc Donald's"; "franchisees" as "franchises" or "franchise fees"; "Sonneborn's" as "Sonnenborn's", "Sonnaborne's" or "sunny born's"; "royalties" as "royalty's"; and numbers may come out as digits or symbols ("10.4", "$10.4 billion", "95%", "45,000", "2,000", "56%", "80%", "1.4", "13.9", "20", "mid-50s", "'50s"); map them to the script's words. Save src/data/mcdonalds/words.json as [{ word, scriptIndex, startMs, endMs, rawFrame, frame }].
+5. Onset refinement: Whisper word starts are often 40–120 ms off. Decode the voice-over to PCM, compute a 10 ms RMS envelope, and snap every cut word and beat word to the nearest speech onset within ±3 frames. Run ffmpeg silencedetect (noise=-35dB:d=0.18) and record every pause. Keep both the raw and the refined frame.
+6. Build src/data/mcdonalds/timeline.ts: for every shot its cut word, cut frame, end frame (the next shot's cut frame) and every beat word inside it with its refined frame, plus helpers such as beat("s05", "word"). All animation reads from this file. Never hard-code seconds or absolute frames in components; offsets relative to a beat (beat - 3) are fine.
+7. Cut rule: a shot cuts in on its CUT word (usually the first word of the line). Actions land on their BEAT words. A big hit never lands on a shot's first frame: leave at least 6 frames between the cut and the first big hit so the anticipation reads.
+8. Sync rule: every action tied to a word lands ON that word's refined start frame. Big actions get 2–4 frames of anticipation before the hit (a wind-up, a squash, a held breath), then follow-through and settle over 6–12 frames after it.
+9. Pace: a new shot or a clear new action every 2–3 seconds. If a shot runs past 3 seconds on my voice, add a camera change or a new action on its next beat word. Something meaningful moves at least every second.
+10. Write out/mcdonalds/timing-report.md (shot, cut word, word time, raw frame, refined frame, every beat word → frame, every pause with its length) and out/mcdonalds/sfx-cues.csv (timecode HH:MM:SS:FF at 30 fps, frame, shot, action, suggested sound: fountain-pen scratch, ledger page turn, drum-counter clicks, steel drawer roll, rubber-stamp thump, receipt-printer chatter, keys clink, heavy book slam…) so I can add SFX by hand.
+
+VOICE-OVER SCRIPT (for reference; the audio is the source of truth)
+McDonald's collected ten point four billion in rent.
+Not from you. From its own franchisees.
+That's almost twice its royalties.
+About ninety-five percent of its restaurants are franchised.
+Of about forty-five thousand, it runs only two thousand.
+So what does McDonald's actually own?
+In the markets it runs directly,
+about fifty-six percent of the land under its restaurants.
+And about eighty percent of the buildings.
+Franchisees buy the right to run the restaurant.
+McDonald's is usually their landlord.
+And the rent goes up when sales go up.
+Its own restaurants made it one point four billion.
+The ones it rents out? Thirteen point nine billion.
+After twenty years, the franchise ends.
+The building still belongs to McDonald's.
+The model was Harry Sonneborn's idea, in the mid-fifties.
+He told bankers McDonald's was really in real estate.
+The burgers just make the rent payable.
+
+FACT LOCK
+Every number, date, quote and name in this prompt is fact-checked. Do not add any number, date, name or claim that is not in this prompt (the ledger's other ruled rows, the body text of the lease, contract and deeds, the wall map and its pins, the survey map's parcels, the back-office monitor and cork board, the kitchen ticket tape, the drive-thru menu board, the blank sheet in the 1950s typewriter and the contents of the bank file use neutral filler graphics, not invented facts). Put every in-world string in src/data/mcdonalds/copy.ts exactly as written below, character for character (curly quotes “ ”, middle dot ·, en dash –, em dash —, tilde ~). Components import strings from copy.ts; no string literals for in-world text inside components. Write a small check script that compares copy.ts against this list and fails on any difference. Keep "≈", "CONSOLIDATED MARKETS", "MID-1950s" and "KROC’S FINANCE MAN" wherever they appear: the land and building shares hold only for the markets McDonald's runs directly, the date of the idea is known only to the mid-1950s, and the idea is attributed to Sonneborn as a paraphrase, so "REAL ESTATE" is a file tab, never a quote in anyone's mouth. Keep the spoken hedges "about", "almost", "usually" and "really" in the timing map like any other word.
+
+IN-WORLD COPY (exact)
+$10.4 BILLION IN RENT
+2025
+McDONALD’S
+LEASE · FRANCHISEE
+RENT $10.4B
+ROYALTIES $6.0B
+≈ 95% FRANCHISED
+45,356 RESTAURANTS · 2,039 COMPANY-OPERATED
+WHAT DOES IT OWN?
+CONSOLIDATED MARKETS
+LAND OWNED ≈ 56%
+BUILDINGS OWNED ≈ 80%
+LICENSE TO OPERATE
+LANDLORD: McDONALD’S
+RENT = % OF SALES
+COMPANY-OPERATED MARGIN · 2025 · $1.4B
+FRANCHISED MARGIN · 2025 · $13.9B
+43,317 FRANCHISED RESTAURANTS
+TERM: 20 YEARS
+OWNER: McDONALD’S
+HARRY SONNEBORN · KROC’S FINANCE MAN · MID-1950s
+REAL ESTATE
+
+STEP 2 — LOOK BIBLE (before any shot is animated)
+Write src/mcdonalds/style.ts with the tokens below, then build and review the design stills in STEP 12, Gate A.
+
+THE WORLD (one geography, so camera moves and cuts make sense)
+- THE LEDGER ROOM: a second-floor corner office in an old red-brick building on the west side of a wet four-lane road. Its desk sits square to a tall east window, the framed wall map with its brass counter plate hangs on the wall behind the desk, and the steel flat file stands at the desk's left. Shots 1, 3–9, 13, 14 and 19 (night) and 16 (dawn), and the same room dressed for the mid-1950s in shots 17 and 18.
+- THE RESTAURANT: directly across the road, framed by the ledger-room window: a single-storey restaurant on its own lot, its drive-thru lane wrapping its side and its pole sign at the kerb. Its back office sits at the rear corner, with a small exterior window that looks back across the road at the ledger room's lit window and an interior window onto the kitchen. Shots 2, 10–12 and 15, and seen through the ledger-room window in shots 1, 9, 14, 16 and 19.
+- In the mid-1950s (shots 17 and 18) the same east window looks across the same road at an empty lot behind a board fence, where the restaurant will later stand.
+- The two windows face each other across the road: every look, whip-pan and camera move between the two places crosses that road, and the ledger room always sits higher, up and to the right of the restaurant.
+- Reuse the same component for anything that appears twice: the ledger room (night, dawn and mid-1950s dressing), the restaurant exterior and its back office, the two windows that face each other across the road, the rent ledger, the fountain pen, the brass-weighted stamp and its ink tin, the manila folder, the green-glass desk lamp, the pole sign, the drive-thru window and its crew hand, the Ledger Keeper and the Franchisee.
+
+PALETTE AND LIGHT (per scene: key light colour and direction, shadow tint, rim colour, line colour)
+- Ledger room, night (shots 1, 3–9, 13, 14, 19): key = the green-glass desk lamp, warm amber #F2B266, low from front-left; shadow tint deep bottle-green umber #2A352B; rim = cool rain-blue from the window behind #7E95AB; line colour dark walnut #3A2A1F. The episode's accent colour is oxblood ledger red #8C2B2B (the ledger's spine and corners, the stamp ink, the Keeper's tie, the red map pins).
+- Street and restaurant exterior, night (shot 2 and every window view at night): key = sodium streetlight orange #FF9A3C from high right; shadow tint indigo #1F2342; rim = cool white storefront glow #DCE9F0; line colour deep indigo-brown #2A2333.
+- Restaurant back office, night (shots 10–12): key = an overhead fluorescent tube, greenish white #E4EDD8 from above; shadow tint teal-grey #33454A; rim = warm heat-lamp amber through the kitchen window #FFB066; line colour #2C3533.
+- Back office, dawn (shot 15): key = cold dawn sky through the blinds #A8C2DF from the window side in slatted bands; shadow tint slate violet #3B3652; rim = first pink-gold sun #F3B79E; line colour #2F2B3D.
+- Ledger room, dawn (shot 16): key = the same dawn blue #A8C2DF through the east window from the front; fill = the lamp, still on, warm amber #F2B266; shadow tint slate violet #3B3652; rim = lamp amber on the Keeper's far side; line colour #2F2B3D.
+- Ledger room, mid-1950s morning (shots 17–18): key = low honey sun through venetian blinds #F5C67C from screen-right in hard slats; shadow tint warm sepia #4A3425; rim = pale sky bounce #CFE0E8; line colour #3B281C.
+
+RENDERING STYLE (painterly and cinematic, not flat cel)
+- Line art is thin, coloured and secondary to light: lines use the darkest local colour (never pure black), are heavier in shadow and on outer contours, thin out or break where light hits an edge, and taper at the ends (build them as filled shapes, not uniform strokes). Forms are defined mainly by light and shadow.
+- A reusable <ShadingStack> renders every character part and prop in this order: base colour → form shadow with a soft terminator (2–6 px feathered edge; colour = base tinted by the scene's shadow colour, never grey) → a darker core shadow and ambient occlusion in creases (under the chin and hair, inside the elbow, between the fingers, where a body meets a seat) → on skin, a warm, slightly saturated band along the terminator → bounce light on undersides from the floor or nearby colours → highlight → rim light in the key light's colour → specular glints on eyes, hair, lips, nails, a watch and phone glass.
+- Store the key-light direction per shot in style.ts; shadow and light shapes follow it, so a character who turns toward the light brightens on that side.
+- Cast shadows: characters and props cast soft shadows onto floors, walls, desks and each other, matching the key light's direction and softness. Contact shadows sit wherever something touches a surface: the ledger on the green desk blotter and the Keeper's palm flat on its page, the stamp face on the deed, the keys on the contract, the packed box on the Franchisee's hip, the senior banker sunk into the leather chair.
+
+TEXTURE (every surface, characters included)
+- Build a texture kit once, procedurally and seeded (no outside images), with scripts/build-textures.ts, and pre-render it as seamless PNG tiles: paper grain, canvas weave, dry brush, wet-paint blooms, chalk dust, concrete, wet asphalt, skin micro-texture, brushed metal, wood grain, glass smudges, plus charcoal worsted wool (the Keeper's vest), white cotton poplin (his shirt), oxblood silk (his tie), cotton piqué knit (the Franchisee's polo), quilted nylon (her dawn jacket), navy chalk-stripe wool flannel (the senior banker's suit), green buckram and worn oxblood leather (the ledger's boards, spine and corners), marbled paper (the ledger's page edges), cream ruled ledger paper, linen-backed blueline print (the survey map), heavy cream bond (the deeds, lease and contract), manila card (the folder), corrugated cardboard (the box), cased green glass (the lamp shade), aged brass (the lamp base, picture light, pins, counter plate and stamp weight), grey enamelled steel (the flat file), stainless steel (the kitchen line), tan brick and wet concrete (the restaurant and its lot), walnut and green leather (the 1950s desk and blotter), black Bakelite (the 1950s phone). Reuse tiles that earlier episodes already built.
+- On characters, each clothing and skin area gets its matching tile at low opacity (multiply or soft light), clipped to its shape, plus a brush mask that breaks up shadow edges so they look painted, not vector-perfect. Fabric shows seams, stitching, buttons, pockets, buckles, knit patterns and wrinkles that change with the pose.
+- In backgrounds, brushwork follows the form, edges break up, shadows hold painted texture, surfaces show dirt and wear, and fine detail concentrates around the focal point and falls away from it, as in a painting.
+- Texture must be visible in a 100% crop and subtle at phone size.
+
+DEPTH (every shot)
+- Combine depth cues: the real perspective camera (STEP 5), overlap, scale change, atmospheric haze between layers, depth of field with bokeh, cast and contact shadows, light falloff, and a foreground element close to the lens in most shots.
+- Plan the value structure in depth for each shot in the layout: the subject at the focal plane gets the highest contrast; the foreground is darker or out of focus; the background is hazier.
+- Volume: thin fog cards between depth layers; visible light beams (the desk lamp's warm cone over the ledger, sodium cones through the drizzle, dawn shafts through the back-office blinds, low morning sun through the venetian blinds in the 1950s room); dust motes, drizzle and rain beads, paper dust puffing off the folder and the ledger, and steam over the kitchen line catching the light.
+- Bokeh: out-of-focus point lights (the sodium streetlights, drive-thru headlights and tail lights, the restaurant's storefront and pole sign seen through the rain-beaded window, the lamp's reflection in the window glass, the kitchen heat lamps) become soft discs with a slightly brighter rim, sized by their distance from the focal plane.
+
+PAINTED BACKGROUNDS
+- No flat fills anywhere. Every surface has a gradient, brush texture (feTurbulence into feDisplacementMap on edges, low-opacity noise multiplied over fills) and hand-placed detail: cables, signage, window frames, scuffs, plants, reflections, light pools.
+- Atmospheric perspective: far layers have lower contrast and are tinted toward the sky or ambient colour.
+- One key light, one fill, and practical lights (neon, screens, lamps) casting coloured pools on nearby surfaces.
+- Background plates: render each background layer once as a high-resolution transparent PNG through its own composition (Plate-s01-far, Plate-s01-mid…) with `npx remotion still`, saved to public/plates/mcdonalds/. Plates are rendered at 2× pixel density (`--scale=2`) and 1.25–2× the frame size on the axis the camera travels, so texture stays crisp through push-ins. Shots then composite plates + live elements (characters, lights, text, particles). This lets the painting use expensive filters without slowing the render. Keep the plate source code so plates can be re-rendered.
+
+STEP 3 — CHARACTERS (all original designs, never portraits or likenesses of real people)
+- THE LEDGER KEEPER (the landlord's side, the present): late 50s, tall and lean with long hands, silver-grey hair combed back with a few strands falling forward, half-moon reading glasses on a thin black cord; a charcoal worsted-wool vest over a white cotton poplin shirt with the sleeves rolled twice, a loosened oxblood silk tie, grey flannel trousers. Precise and unhurried: he moves only as much as he needs, rests a fingertip on a figure before he writes it, and allows himself the smallest closed-mouth smile when a number lands. At dawn (shot 16) the tie is gone and the collar open, a long night in the drop of his shoulders.
+- THE FRANCHISEE: about 45, sturdy and square-shouldered with strong forearms, dark curly hair pulled into a low practical ponytail, a few grey hairs at the temple; a charcoal cotton piqué short-sleeve polo with no logo, black work trousers, black non-slip shoes, a wireless headset around her neck and a plain black lanyard with a ring of keys. Proud and tired: she rolls her neck between tasks, stands with her weight on one hip and keeps glancing across the road at the landlord's lit window. At dawn (shots 15 and 16) she wears a faded olive quilted nylon jacket over the polo, no headset, her shoulders lower and her steps slower.
+- THE SENIOR BANKER (the mid-1950s, shots 17 and 18): about 55, heavy-set and round-faced, a bald crown with neat grey sides, round steel-wire glasses, a navy chalk-stripe wool flannel three-piece suit with a gold watch chain across the vest, a starched white shirt and a narrow dark tie. Skeptical: he sits back with his arms folded and his chin down, and leans in only when the file reaches him.
+- Minor: THE JUNIOR BANKER (shot 18): about 30, thin, short-back-and-sides hair, a grey single-breasted suit, a steno pad and pencil, standing by the hat stand. THE DRIVER (shot 2): a young man in a grey hoodie, seen only through his car window, his hand reaching for the bag. THE CREW HAND (shots 2 and 19): only a forearm and hand in a plain charcoal sleeve at the drive-thru window. The kitchen crew (shots 10 and 12): plain charcoal shirts and caps, soft-focus through the back-office window.
+- Sonneborn himself never appears: in shots 17 and 18 he is present only as a white shirt cuff and a hand cropped at the wrist, and as an out-of-focus dark suit shoulder in the foreground; never a face, profile, silhouette or likeness.
+- Every character must read in silhouette alone.
+
+MODEL SHEETS FIRST
+For each main character (in every outfit and mood they appear in), build and render a model sheet: front, 3/4, profile and back views, with a second panel showing the volume construction underneath (ribcage, pelvis, limb cylinders); an expression sheet (neutral, smile, laugh, surprised, unimpressed with half-lidded eyes, tired, plus any expression this episode needs); and a turn test (the head turning from front to profile in 5 steps through the face rig). Minor characters get at least front and 3/4. Save to out/mcdonalds/qa/model-<name>.png. Fix proportions, appeal and consistency between views before any shot uses the character.
+
+CONSTRUCTION
+- Realistic proportions with the appeal of a high-end anime feature, never chibi: the Keeper about 7.5 heads tall, lean and long-limbed, with a slight forward stoop over the desk; the Franchisee about 7 heads, sturdy and square-shouldered with a low centre of gravity; the senior banker about 6.75 heads, heavy and broad through the waist, his weight sunk into the chair. Build every body from volumes first (ribcage, pelvis, tapered limb cylinders) and check the gesture line before adding detail. Necks, clavicles, shoulders, elbows, wrists, knees and ankles sit in anatomically correct places; elbows line up with the waist and fingertips reach mid-thigh.
+- Faces: small chin, eyes about one fifth of the face width, the nose shown by a soft shadow plane and a small highlight on the tip, a soft shadow under the lower lip. The Keeper: fine crow's feet, two short vertical lines between the brows, slightly hollow cheeks, the glasses low on the nose so he looks over them. The Franchisee: faint smile lines and a soft shadow under the eyes from the early shift, which deepens at dawn with heavier lids. The senior banker: a full lower face with soft jowls, deep-set eyes narrowed behind the glasses, a thin pressed mouth.
+- Eyes (they get close-ups): a thick, tapered upper lash line with a flick at the outer corner, a thin broken lower lash line, an iris with a vertical gradient (dark at the top, lighter at the bottom), a pupil, two highlights (one large, one small), a reflection of the scene's light source, and a soft shadow cast by the upper lid onto the eyeball. Eyelids and eyebrows are separate layers.
+- Hair in pointed clumps with a shadow shape, a highlight band and a few flyaway strands.
+- Clothes have weight and thickness: folds radiate from tension points (shoulders, elbows, belts, behind the knees) and change with every pose. The Keeper's wool vest stays smooth across the chest and wrinkles in horizontal folds at the waist when he leans over the desk; his rolled poplin sleeves bunch at the elbows and the loose tie swings late when he swivels. The Franchisee's piqué polo is soft, pulls tight across the shoulders when she lifts the frame and crumples at the collar; her quilted jacket creases in its stitched channels and its hem swishes a beat after she turns. The banker's heavy flannel creases deeply at the elbows, the vest strains at its buttons when he leans in and the jacket falls open.
+
+RIG (skinned, never a paper cut-out)
+- Skeleton: pelvis → lower spine → chest (a 3-segment spine), neck, head; clavicles (the shoulders rise when an arm lifts above shoulder height); upper arm, forearm with twist, wrist; thigh, shin, foot, toes.
+- Skinned body: never rotate rigid SVG pieces around pins. Compute each limb's outline every frame from its bones with a width profile (deltoid, upper arm, forearm taper, wrist; thigh, knee, calf, ankle), so elbows and knees bend smoothly: the inner side compresses and creases, the outer side sharpens into the joint. The torso outline follows the three spine bones the same way, so the chest and waist bend and twist. No seams, gaps or overlapping circles at joints, at any angle.
+- Two-bone IK with pole vectors for arms and legs: hands are placed on their targets (the fountain pen, the ledger's pages and cover, the steel ruler, the picture light's pull chain, the legend card, the flat-file drawer pull, the manila folder, the survey map, the stamp handle and ink tin, the deeds, the framed certificate and its nail, the lease pages, the highlighter, the contract, the keys, the cardboard box, the back door, the paper bag, the bank file, the banker's glasses) and feet are planted; a foot carrying weight never slides.
+- 2.5D face rig: the eyes, brows, nose, mouth, ears and hairline sit on a virtual ellipsoid and move with head yaw and pitch. During a turn the far eye narrows and moves toward the edge, the nose moves toward the silhouette, the cheek and jaw contour change, the ear shifts, and the hair clumps layer over and under accordingly. For turns beyond about 45°, swap to a dedicated 3/4 or profile head at the fastest point of the turn, where the motion hides the swap.
+- Torso turns work the same way: lapels, buttons, belts and seams slide across the torso shape.
+- Pose library per character, stored as joint angles + IK targets + face values + hand poses in src/data/mcdonalds/poses/.
+- Every part draws its own shading stack and texture (STEP 2) from the shot's key-light direction.
+
+HANDS (treat them as their own sub-project)
+- Proportions: the hand is about as long as the face from chin to hairline, and the palm about as long as the middle finger. The middle finger is longest; index and ring are about equal; the pinky's tip reaches the last knuckle of the ring finger. The knuckles form an arc, not a straight line. The thumb starts at the wrist, its tip reaches about the middle knuckle of the index finger, and it sits at roughly 90° to the palm (it opposes the fingers; it never lies flat beside them).
+- Hand rig: wrist, palm, thumb (3 joints: base, middle, tip) and four fingers with 3 joints each. Each finger is one continuous skinned shape built from its bones with a width profile: slight bulges at the knuckles, a narrower middle, a rounded, padded tip, tapering toward the end.
+- Detail: the back of the hand shows nails (correct shape, a highlight, a cuticle line), knuckle creases and wrinkles, and on older characters tendons, veins and softer, older skin; the palm shows the thumb's padded base, the main creases and fingertip pads. Hands get the same shading stack, texture, cast shadows and contact shadows as the rest of the body.
+- Views: back, palm, thumb side, pinky side and 3/4. Choose the view per pose so the hand reads clearly; never show a hand edge-on where the fingers merge into one shape.
+- Curl rules: when fingers curl, the joints fold progressively (base least, tip most), curled fingers converge toward a point near the base of the palm, and each finger toward the pinky curls slightly more than the one before. Relaxed hands are never flat: the fingers rest in a gentle cascade of curls.
+- Grips are layered: the object sits between the hand's layers (palm and far fingers behind it, near fingers and thumb in front), the fingers flatten slightly where they press, and contact shadows sit where skin meets the object. Fountain pen: pinched between thumb and index near the nib, resting on the side of the middle finger, the ring finger and pinky curled under and resting on the page. Rubber stamp: a full fist around the walnut handle, the thumb wrapped over the index, the brass weight below the little finger. Highlighter: a tripod grip, the chisel tip laid flat to the page. Ledger cover: four fingers under the board's edge, the thumb on top, the cover's weight pulling the wrist down. Manila folder: the thumb on top, four fingers under, the tab clear of the fingers. Framed certificate: both hands at the frame's sides, fingertips curled around the back edge, thumbs on the front moulding. Keys: the ring hooked on the index finger, the bunch resting in the palm, the thumb pressing the tag. Cardboard box: one palm under the bottom, the other hand's fingers curled over the near edge, the box pressed against the hip. Paper bag: the folded top pinched between the thumb and four fingers. Steel ruler: four fingertips spread flat on it, the thumb anchoring its near edge. Bank file: fingertips flat on the cover, the wrist low. Glasses: the thumb and index at the rim, the other fingers loosely curled.
+- Motion: the wrist leads and the fingers follow 1–3 frames later; when a hand opens or closes, the fingers move in a cascade from index to pinky, never all at once. Fingers never pop between poses; they interpolate through the rig.
+- Pose library (from my reference photos when available, see STEP 3B): relaxed, point, pen writing, fingertip trace, flat palm press and slap, page-corner pinch, chain pull (index and middle hooked), card slot (pinch), drawer pull (four fingers hooked under the pull), two-hand smoothing (palms flat, fingers spread), stamp fist, frame hold, highlighter swipe, keys release (an open cascade), box carry, file push, glasses lift, folded arms (hands tucked against the ribs), relaxed hand resting on a page edge.
+- Close-ups (shots 1, 3, 5, 7, 8, 9, 11, 13, 14, 15 and 19, and any insert) get the full detail level; wide shots simplify detail but keep correct proportions and silhouettes.
+
+ACTING (observed from life, never puppet-like)
+- Nobody is ever perfectly still: breathing moves the chest, shoulders and clavicles (1–2 px, a 3–4 second cycle, a different phase per character), and standing characters make tiny weight shifts between their feet. A held character is a moving hold.
+- Eyes lead: in every look or turn, the eyes move first, the head follows 2–4 frames later, then the torso. While watching or thinking, the eyes make small darts (saccades) every 0.5–1.5 seconds. Blinks take 5–7 frames (a fast close, a slower open), come every 2–4 seconds (seeded) and often accompany a head turn or a change of thought.
+- Asymmetry: no mirrored poses. Weight sits on one leg with the hips and shoulders tilted in opposite directions; the two hands do different things; the two sides of the face are never identical.
+- Faces act in small amounts: brow tension, lid height, the corners of the mouth, a jaw shift. A flicker of the coming emotion appears a few frames before the main expression (a flash of doubt in the eyes before a smile drops).
+- Extreme close-ups on the eyes for dramatic beats.
+- Mouths change only for expressions (smile, laugh, open surprise, flat). Characters never lip-sync: the narration is a voice-over; they act and react.
+- Eyelines: characters look at what matters (the ledger's header, bars and margin lines, the wall map and its counter plate, the folder tab, the survey map, the stamped deeds, the framed certificate, the lease line and clause, the drive-thru headlights, the keys on the contract, the deed in the Keeper's hand, the "REAL ESTATE" file tab and, again and again, the two windows that face each other across the road), and screen direction stays consistent across cuts.
+
+FRAME RATE
+Characters animate on ones (every frame, 30 per second) for smooth, natural movement; the puppet look is fixed with posing, timing, skinning and overlap, not by dropping frames. Camera, particles, lights, text and effects are also on ones.
+
+STEP 3B — REFERENCE-DRIVEN MOTION (when reference/ exists)
+- Run scripts/extract-pose.py with MediaPipe Pose Landmarker (33 body points) and Hand Landmarker (21 points per hand) on every reference clip and photo, and save per-frame 2D landmarks to src/data/mcdonalds/poses/ref/.
+- Smooth the landmarks (One Euro filter), convert them to the rig's joint angles and IK targets, and retarget them to each character's proportions. The Keeper moves slower and more economically than I do, about 20% slower, with smaller gestures and longer holds before he writes; the Franchisee moves quicker and heavier-footed than I do, with work-tired shoulders, and slower and lower at dawn; the senior banker moves heavier and slower still, sinking his weight into the chair before any gesture. Scale timing where age or mood calls for it.
+- Never trace every frame: that looks floaty and rotoscoped. Take the key poses and extremes from the reference, keep its timing, rebuild the breakdowns and in-betweens with the motion rules in STEP 6, and push the poses about 10–20% further than the reference for clarity.
+- Align each reference action to its beat word so its contact or hit frame lands on that word.
+- Use the hand photos to set finger joint angles, view and grip for every pose in the hand library.
+- Without reference, key the action by hand with the timing table in STEP 6.
+
+STEP 4 — PROPS (they must resemble their real-life versions)
+- The hero prop: THE RENT LEDGER, a large bound account ledger about 45 × 32 cm when open: heavy green buckram boards with a worn oxblood leather spine and corners, gilt-ruled spine bands, marbled page edges, cream paper with faint blue ruling and red double rules, a printed header band across the spread, and an oxblood silk ribbon bookmark. One component with states: header page ("$10.4 BILLION IN RENT" and "2025"), bars page (the two inked bars and their labels), margin page (the two inked margin lines and the printed small print), pages fluttering, closed, lamp-lit at night and dawn-lit. Shots 1, 3, 7 (pushed to the top of frame), 13, 14, 16 and 19.
+- The ledger room: an older office with tall sash windows in painted wood frames, a heavy oak desk with a green leather-edged desk blotter, worn plank floor, pressed-tin ceiling, rain beading and running on the glass at night.
+- The green-glass desk lamp: a cased green glass shade with a white inner lining, a brass base and a brass pull chain, a warm bulb that throws a hard-edged cone onto the desk.
+- The fountain pen: a black resin barrel, a gold-plated nib and clip; the wet ink line glints before it dries.
+- The steel ruler: brushed steel with etched graduations (no numbers legible), a cork backing.
+- The wall map: a large world map in muted ochre and teal under glass in a dark wood frame, with no labels, studded with hundreds of tiny white-headed pins and a far smaller scatter of red ones (decorative, not a count); a brass picture light on an arm above it with a dangling pull chain; a small brass card holder at the lower right corner.
+- The counter plate: an aged brass plate in the map's bottom rail with two rows of drum-counter windows (black drums, white digits) and engraved words filled in black.
+- The flat file: grey enamelled steel, five wide shallow drawers on ball-bearing runners, chrome pulls, empty brass label frames, chipped paint at the corners.
+- The manila folder: buff card, slightly dog-eared, a handwritten tab.
+- The survey map: a blueline print on linen-backed paper, folded in panels, parcel outlines, a north arrow, a scale bar with no numbers, no place names, a title block in the corner.
+- The deeds: heavy cream bond sheets with filler body text and a blank signature line.
+- The stamp: a rubber stamp on a brass-weighted base with a turned walnut handle, and a tin ink pad of oxblood ink, its felt worn darker in the middle.
+- The restaurant: a generic single-storey quick-service restaurant of today: tan brick walls, aluminium-framed storefront glass, a flat steel canopy, a drive-thru lane with a sliding pickup window, a wet concrete lot with painted lines, and a pole sign at the kerb carrying only the plain lettering "McDONALD’S" in white on a dark grey panel; no arches, no logo, no red-and-yellow scheme.
+- The back office: painted cinder-block walls, an overhead fluorescent tube, a steel desk, a computer monitor showing neutral filler, a cork board of filler notices, a small exterior window with blinds, an interior window onto a stainless-steel kitchen line with heat lamps, steam and a ticket printer on a rail.
+- The certificate: cream parchment with an engraved guilloche border and a blank embossed foil seal, in a black wood frame with a hanging wire.
+- The lease and the contract: stapled legal documents on blue backing sheets, filler body text, one bold line or clause each.
+- The highlighter: yellow, chisel tip, a scuffed cap.
+- The keys: a ring of brass and steel keys with a plain plastic tag.
+- The cardboard box: corrugated cardboard, the flaps folded in, holding a mug, a small plant and the edge of the black certificate frame.
+- The car: a generic compact hatchback of today with no badges, wet paint catching the sodium light.
+- The paper bag: a plain kraft paper bag with a folded top and no print.
+- The 1950s ledger room: a walnut desk with a green leather blotter, a black Bakelite rotary desk phone, a black manual typewriter with chrome-ringed keys and a blank sheet, a ceiling fan turning slowly, a bentwood hat stand with a grey felt fedora, a leather visitor's chair, venetian blinds; through the window, an empty lot behind a board fence.
+- The index card: a cream typed index card, its type slightly uneven, as a 1950s office typewriter strikes.
+- The bank file: a buff file folder with a typed paper label on its tab.
+- No icons-as-props and no blob shapes.
+
+STEP 5 — CAMERA, LAYOUT AND ANIMATIC
+- Build a reusable <Camera3D>: a real perspective camera in CSS 3D (perspective on the root, transform-style: preserve-3d), with every plate, character and prop placed at its true depth (translateZ, scaled to keep its intended framing size). The camera has a position (x, y, z), rotation, a lens (think 24 mm wide, 35 mm, 50 mm, 85 mm portrait) and a focus distance. Push-ins are dollies (the camera moves, so near layers grow faster than far ones), not zooms. Depth of field: each layer's blur comes from its distance to the focus plane and the shot's aperture; rack focus eases over 8–16 frames with a hint of focus breathing (1–2% scale). Handheld drift from noise2D in @remotion/noise (2–4 px, at most 0.3°), seeded per shot, with a documentary-camera feel: slow and organic on handheld shots, almost none on tripod shots.
+- Depth layers: 5–8 in every exterior, 4+ in every interior, and in most shots a foreground element near the lens that crosses the frame (the window mullion and rain beads, the edge of the lamp shade, a raised ledger page, the flat-file drawer edge, the monitor edge and ticket rail in the back office, a passing car in the drive-thru lane, the hat stand and the blurred dark shoulder in the 1950s room).
+- Every shot has a camera plan: start framing, end framing, move type, easing and the beats that trigger changes. No locked-off camera; a deliberate held beat is still a moving hold (drift + atmosphere).
+- Screen direction: progress and time move left to right; the drive-thru cars move left to right past the pickup window; every move from the restaurant up to the ledger room (eyelines, whip-pans) goes left to right, the way the rent travels, and every move back down to the restaurant goes right to left; at dawn the Franchisee and her car leave right to left, away from the ledger room; a whip-pan continues the direction of the motion that motivated it.
+- Layout first: write out/mcdonalds/layouts.md with one block per shot: framing (wide, medium, close, extreme close), camera move, layers, character key poses with their beat words, every text with its surface, the transition in and out, and the object that hands off to the next shot.
+- Animatic: render a fast pass with grey placeholder shapes in the correct positions and the real timing (`--scale=0.25`), watch it against the voice and fix the timing here, before painting and animating.
+
+STEP 6 — MOTION LANGUAGE
+- src/lib/ease.ts holds named curves (anticipate, overshoot, settle, slam, whip, float) and a few named spring() configs. Linear motion is allowed only for mechanical constant speed: the drum-counter digit rolls, the ticket-printer tape feed, the drive-thru cars crawling at constant speed, the ceiling fan, rain running down the glass.
+- Every move follows anticipation → action → overshoot → settle.
+- Breakdowns: between every two key poses, add a breakdown pose that defines the arc and the overlap (never a straight interpolation from key to key). Spacing is slow out of a pose, fast through the middle and slow into the next, and no two body parts start or stop on the same frame.
+- Biomechanics: the centre of gravity stays over the supporting foot; before reaching, pulling or lifting, the body shifts its weight first; to lift, the knees bend and the back stays straight; effort shows in the whole body (shoulders tense, neck strains, a short pause before a heavy lift).
+- Timing from life at 30 fps (refine from reference): blink 5–7 frames; eye dart 2–3; head turn 8–14; reach for an object 12–20; tap 4–6; both arms up 10–16; hand opening or closing 6–10; sit-to-stand 30–45; pen stroke: 2 frames of nib squash, 10–16 of stroke, 3–4 of lift; palm slap: 4 frames of lift, 2 of drop, 8–10 of settle; stamp slam: 6–8 frames of lift and hover, 2–3 down, 2 of squash on contact, 8–12 of lift and settle; drawer roll-out: 4 frames of tug, 10–12 of roll, a hard 2-frame stop; map fold: 12–16 frames per fold; page flutter and settle: 14–20 frames; ledger slam: 6 frames of lift, 3–4 of fall, 2 of contact, 10–14 of settle; frame hang: 14–18 frames up, 3 to catch, 8–10 to steady; keys release: 6–8 frames; box to hip: 6 frames of weight shift, 12–16 of lift; the banker's lean-in: 16–22 frames.
+- Secondary motion is simulated: bake the Keeper's tie and glasses cord, the Franchisee's ponytail, lanyard, keys and headset, the hem of her quilted jacket, the ledger's ribbon bookmark, the picture light's pull chain, the desk lamp's pull chain, the receipt tape, the senior banker's watch chain with a deterministic spring/verlet simulation in scripts/bake-secondary.ts; save per-frame values to src/data/mcdonalds/sim/ and read them in the components. Remotion renders frames in parallel, so anything physical must be baked or computed purely from the frame number.
+- Weight: heavy things (the ledger, the flat-file drawer, the brass-weighted stamp, the packed cardboard box, the senior banker settling into his chair) start slowly, stop hard and cause a small shake; light things (ledger pages, the legend card, the manila folder, the index card, the receipt tape, the kraft paper bag, paper dust) float, tumble and flutter.
+- Arcs: hands, heads and props travel on curved paths (IK targets follow arcs); never slide a hand in a straight line.
+- Overlapping action: the head leads, the torso follows 2 frames later, arms 2–4 frames later, hair, hems, bags and loose clothing 2–4 frames after that.
+- Smear frames (1–2 frames) on fast moves: the Keeper's swivel from the desk to the map (shot 3), the stamp slams (shots 8 and 9), the car crossing the road (shot 9), the receipt tape shooting out (shot 12), the page flips (shots 13 and 19), the ledger cover slamming shut (shot 16).
+- Impact frames (2–3 frames, restrained and filmic: an exposure flash and contrast punch with a touch of speed lines and very slight chromatic aberration) on key hits only, so they keep their punch: "rent" (shot 1), "land" (shot 8), "buildings" (shot 9), "billion" (shot 14), "McDonald's" (the last word of shot 16).
+- Screen shake on big hits: decaying over 3–6 frames, maximum 8 px.
+- Motion blur with @remotion/motion-blur during fast moves only (whip-pans, the swivel, the stamp slams, the page flips, the ledger cover slamming shut), with a 180° shutter feel and a low sample count to protect render time.
+- Particles (dust motes in the lamp cone and the 1950s sun slats, drizzle and rain beads at the windows, paper dust puffing off the folder and the ledger, steam over the kitchen line) are deterministic and layered in depth: near ones are bigger, blurrier and faster. Each piece tumbles in 3D (scaleX = cos of its spin) and drifts on its own curve.
+
+STEP 7 — KINETIC TYPOGRAPHY INSIDE THE WORLD
+- No captions, no word-by-word subtitles and no floating text cards. Every text sits on a surface in the world.
+- <SurfaceText> places text on any four-corner quad using a perspective transform (matrix3d computed from the four corner points), so it sits exactly on its sign, screen, paper or board and moves with that surface's parallax layer.
+- Light the text by surface type: emissive (screens, LED, neon: glow and bloom, and it lights nearby surfaces), printed (multiplied by the scene light, paper texture, shadowed), handwritten (marker or chalk texture), stamped.
+- Occlusion: foreground objects pass in front of text when natural (in shot 2 the window mullion and running rain cross the pole sign's "McDONALD’S" as the camera passes through the glass; in shot 3 the Keeper's pen hand crosses "ROYALTIES $6.0B" as he writes it; in shot 7 his forearm passes over "CONSOLIDATED MARKETS" as he smooths the map; in shot 18 the cuffed hand covers "REAL ESTATE" until it lets go of the file).
+- Entrances land on the exact beat frame and match the surface: LED digits roll and land; neon flickers on (2–3 flickers within 6 frames); screens switch on with a one-frame bright pop; printed text arrives with its object; handwriting is written stroke by stroke; stamps slam with a squash. Exits are motivated: switched off, wiped, washed out, torn, fallen away, scrolled off.
+- Handwriting: in a Node script, convert the needed glyphs of Permanent Marker (the .woff from @fontsource/permanent-marker) to outlines with opentype.js and save them to src/data/mcdonalds/glyphs.json. Reveal each glyph in writing order through a mask of thick strokes that follow the glyph's centre line, animated with evolvePath from @remotion/paths; the marker or chalk tip follows the leading point (getPointAtLength). Writing finishes on its beat word. If a glyph's centre line is not available, reveal it with a directional wipe along its main stroke, still followed by the pen.
+- Fonts via @remotion/google-fonts: "Permanent Marker" for the Keeper's inked bar labels and margin lines and the handwritten folder tab; "Libre Baskerville" for the ledger's printed header, column date and small print and for the lease, contract and deed text; "Oswald" for the stamps, the counter plate, the legend card, the survey title block and the pole sign; "Cinzel" for the engraved certificate; "Special Elite" for the typed 1950s index card and the bank file tab. Load only the weights you use, and confirm in the stills that no fallback font appears. Fit long lines with fitText from @remotion/layout-utils.
+- Readability on a phone: every key text and key action stays inside x 48–888, y 288–1248 of the 1080×1920 frame (clear of the Shorts buttons and title). Main words have a cap height of at least 72 px; secondary text (small print, attributions, source tags, sticky notes) at least 34 px and on screen for at least 1.2 seconds. Every text has strong contrast with what is behind it. Background art can fill the whole frame.
+- Add a showSafeZone prop that draws the safe box, for QA stills only.
+
+STEP 8 — TRANSITIONS
+- Lay the shots out on an absolute timeline (<Sequence from={cutFrame}> with premounting), and build each transition as an overlay that straddles the cut, so the audio timeline never shifts. If you use TransitionSeries from @remotion/transitions, remember that transitions overlap the shots and shorten the total: compensate the durations so every cut still lands exactly on its cut frame, and verify it.
+- Allowed transitions, each motivated by the story:
+  - Whip-pan (6–8 frames): accelerate out with motion blur and speed lines, cut at maximum blur on the cut frame, decelerate in, continuing the screen direction.
+  - Light-flash cut: a bright source in shot A blooms toward white over 3–4 frames; cut; shot B blooms down from its own brightest light over 4–6 frames.
+  - Match cut: a shape or motion in shot A matches the position, scale and direction of one in shot B on the exact cut frame.
+  - Continuous camera move: the camera travels from one setup to the next without a cut.
+  - Foreground wipe: an object passes the lens, fills the frame and the cut happens behind it.
+- Never crossfades, dips to black or generic slides.
+
+STEP 9 — SHOTS (CUT word → shot; beats inside)
+
+1. THE LEDGER — CUT "McDonald's" (frame 0). CLOSE-MEDIUM, high three-quarter angle over the desk in the ledger room at night: the rent ledger lies open on the green desk blotter under the green-glass desk lamp, its printed header band reading "$10.4 BILLION IN RENT" in large caps across the spread, the column date "2025" printed above the money column. The Keeper, in his charcoal vest, rolled white sleeves and loosened oxblood tie, is cropped at the shoulder at frame top-left: his left hand rests at the page's outer edge and his right hand holds the uncapped fountain pen above the total line. Behind the ledger the tall window is beaded with rain, and across the road the restaurant's storefront and pole sign glow as soft sodium-orange and white bokeh, their lettering lost in the blur. Dust motes hang in the lamp cone; the ribbon bookmark hangs over the ledger's lower edge.
+   Frame 0 is fully composed: the header and the "2025" lit by the lamp, the pen hovering, rain beads and dust mid-air, the camera at its start framing. Build this state as a <HookFrame /> component so the last frames can reproduce it exactly.
+   Beats: "collected" the camera starts a slow dolly-in toward the header, and the Keeper lays the pen down in the ledger's gutter, where it rolls a few millimetres and stops; "ten point four billion" the dolly tilts up just enough to find his eyes over the half-moon glasses, reading along the header; "rent" he brings his left palm down flat on the page beside the header with a slap (impact frame, lamp glint across the gilt edges, small shake, the dust jumping in the cone).
+   Out: his eyes lift from the page to the window; rack focus to the rain-beaded glass, and the camera keeps moving forward through it (continuous camera move).
+
+2. ACROSS THE ROAD — CUT "Not" (continuous camera move through the ledger-room window; the shot boundary is "Not"). WIDE EXTERIOR at night in drizzle: the camera clears the glass and cranes down over the wet four-lane road toward the restaurant: tan brick, storefront glass lit cool white, a flat steel canopy, the drive-thru lane curling along its side, and the pole sign at the kerb with the plain white lettering "McDONALD’S" on a dark grey panel, with sodium streetlights throwing orange cones of drizzle in the foreground. A compact hatchback idles at the pickup window.
+   Beats: "you" at the pickup window the crew hand in a plain charcoal sleeve passes a plain kraft paper bag through the sliding pane into the driver's hand, and the car rolls away left to right out of frame; "From" the camera continues its crane down and around the restaurant's rear corner to the small lit back-office window; "own" through the glass, the Franchisee at her steel desk, in her charcoal polo with the headset around her neck, rolls her neck; "franchisees" she drops a stapled blue-backed lease on the desk and its cover "LEASE · FRANCHISEE" lands face up, the pages flapping once and settling.
+   Out: she looks up through her window, across the road, at the ledger room's lit window (an eyeline up and to the right), and we cut on her look.
+
+3. TWICE — CUT "That's" (eyeline cut on her look, reversed to inside the ledger room). INSERT, close and high over the ledger: the page the Keeper has just turned lands flat on "That's", revealing a long hand-inked oxblood bar across the ruled page with the label "RENT $10.4B" beside it; a steel ruler lies just below it. The Keeper's hand, the fountain pen back in it, sets the nib at the start of a second line.
+   Beats: "almost" he draws the second bar along the ruler, left to right, the wet nib line glinting in the lamp light; "twice" the bar stops a little past the halfway mark of the rent bar (in true proportion, 6.0 to 10.4), the nib lifting with a tiny ink tail; "royalties" he writes the label "ROYALTIES $6.0B" beside it stroke by stroke, his hand crossing it as he writes, the writing finishing on the word.
+   Out: he pushes back from the desk and swivels his chair toward the wall map behind him; whip-pan with the swivel.
+
+4. THE WALL MAP — CUT "About" (whip-pan in, continuing the swivel). MEDIUM WIDE on the back wall of the ledger room: the framed world map under glass, studded with hundreds of tiny white-headed pins and a far smaller scatter of red ones, the brass picture light above it dark, its pull chain hanging, the brass card holder at the lower right corner and the brass counter plate in the bottom rail. The Keeper stands at the map, his back three-quarters to camera, weight on his left leg, a printed card in his right hand.
+   Beats: "ninety-five" he pulls the picture light's chain with his left hand: the light clicks on and its glow sweeps across the glass, the white pin-heads glinting left to right; "restaurants" he steps aside to let the light fall across the whole map, the chain still swinging; "franchised" he slides the card "≈ 95% FRANCHISED" into the brass holder, and it seats with a small tap.
+   Out: the camera dollies in toward the counter plate in the bottom rail (continuous camera move).
+
+5. THE COUNTER — CUT "Of" (continuous dolly-in from shot 4; the shot boundary is "Of"). CLOSE on the brass counter plate: the engraved words "RESTAURANTS" and "COMPANY-OPERATED", each beside a row of drum-counter windows with the drums spinning; above, out of focus, the pins glint. When complete, the plate reads "45,356 RESTAURANTS · 2,039 COMPANY-OPERATED".
+   Beats: "forty-five thousand" the first row of drums rolls and lands on "45,356", each drum landing one frame after the one to its left (the digits blur while rolling and never stop on any other number); "only" the Keeper's index finger enters from frame top and touches one of the few red pins, which glints; "two thousand" the second row rolls and lands on "2,039", completing the line.
+   Out: he turns from the map toward the flat file, and his shoulder passes across the lens (foreground wipe).
+
+6. WHAT DOES IT OWN — CUT "So" (cut behind the foreground wipe of his shoulder). MEDIUM, low angle beside the desk: the grey enamelled flat file, its chrome pulls and empty brass label frames catching the edge of the lamp's cone. The Keeper hooks four fingers under the top drawer's pull.
+   Beats: "what" he rolls the heavy drawer out and it stops hard on its runners (a small shake of the cabinet); "actually" he lifts a manila folder out of the drawer, thumb on top, fingers under; "own" the folder's tab, handwritten in black marker "WHAT DOES IT OWN?", rises into the lamp light facing camera, and he blows a puff of paper dust off it.
+   Out: he turns and lays the folder open on the desk as the camera rises to look straight down on it (continuous camera move).
+
+7. CONSOLIDATED MARKETS — CUT "In" (continuous move from shot 6; the shot boundary is "In", now top-down). TOP-DOWN over the desk, the ledger pushed to frame top: from the open folder the Keeper draws the folded survey map, blueline print on linen-backed paper with parcel outlines, a north arrow and a scale bar, and unfolds it across the blotter.
+   Beats: "markets" the second fold flips open and the title block in the lower corner reads "CONSOLIDATED MARKETS"; "directly" both his palms smooth the map flat from the centre outward, the creases catching the lamp light as his forearm passes over the title block.
+   Out: the camera slides down the map to the deed sheet lying beside it, where the stamp and its ink tin wait.
+
+8. LAND — CUT "about" (continuous move from shot 7; the shot boundary is "about"). CLOSE, low across the desk surface: a cream bond deed sheet, the brass-weighted rubber stamp with its turned walnut handle beside the tin ink pad of oxblood ink, the lamp hot behind them.
+   Beats: "fifty-six" he lifts the stamp and rocks it into the ink pad; "land" he slams it down on the deed (impact frame, lamp-light flash, small shake, the pen rolling on the blotter); "restaurants" he lifts it straight up, revealing the red impression "LAND OWNED ≈ 56%" with ink texture and a slightly heavier left edge.
+   Out: he slides the stamped deed aside to uncover a second deed beneath it.
+
+9. BUILDINGS — CUT "And" (continuous, the same setup). CLOSE on the second deed sheet under the raised stamp.
+   Beats: "eighty" he re-inks the stamp and raises it higher, his wrist cocked (anticipation); "buildings" he slams it down (impact frame, the lamp's pull chain jumping, small shake) and lifts it to reveal "BUILDINGS OWNED ≈ 80%".
+   Out: he looks up at the window: across the road a car's headlights cross right to left in front of the restaurant, and the camera whip-pans right to left with them, across the road and down.
+
+10. LICENSE — CUT "Franchisees" (whip-pan in, decelerating into the back office). MEDIUM in the restaurant's back office at night under the fluorescent tube: cinder-block walls, the steel desk and monitor, the cork board, and through the interior window the kitchen crew in plain charcoal shirts and caps working in steam under the heat lamps, soft-focus. The Franchisee, in her charcoal polo and headset, holds the framed certificate in both hands: cream parchment, engraved border, blank foil seal, reading "LICENSE TO OPERATE".
+   Beats: "buy" she lifts the frame up to a nail on the wall, rising onto her toes; "right" the hanging wire catches the nail and the frame swings, and she steadies it with two fingers until it hangs level; "restaurant" she steps back a pace, weight on one hip, and looks at it, the kitchen moving behind the glass.
+   Out: she sits and looks down at her desk; the camera tilts down past the desk edge to the lease.
+
+11. LANDLORD — CUT "McDonald's" (cut on the tilt to an insert). INSERT, top-down on the open lease on her desk in the fluorescent light: filler text on legal pages, one line set apart in bold: "LANDLORD: McDONALD’S".
+   Beats: "usually" her fingertip lands at the left margin and runs along the line; "landlord" it stops at the end of the line and taps twice, the nail pressing a small shadow into the paper.
+   Out: she pinches the page corner and turns it, and the page sweeps across the lens (foreground wipe).
+
+12. % OF SALES — CUT "And" (cut behind the page wipe). OVER-THE-SHOULDER on the Franchisee at her desk, the lease open to a new page with the clause "RENT = % OF SALES"; through the small exterior window beside the desk, the drive-thru lane in the drizzle; through the interior window, the ticket printer on its rail above the kitchen line. She holds a yellow highlighter.
+   Beats: "rent" she swipes the highlighter across the clause, left to right, the yellow laying down wet over the print; "up" (the first) outside the window, a line of headlights pulls into the drive-thru lane one after another, left to right; "sales" in the kitchen the ticket printer chatters out a long tape of filler that curls down over the rail; "up" (the second) she looks up from the page, out of the window and across the road to the ledger room's lit window.
+   Out: whip-pan left to right along her eyeline, across the road and up into the ledger room.
+
+13. COMPANY-OPERATED MARGIN — CUT "Its" (whip-pan in). CLOSE over the ledger in the ledger room at night, open at the bars page, the Keeper's fountain pen in his right hand.
+   Beats: "own" he turns the page and the pages flutter and settle on a ruled margin page, the ribbon bookmark swinging; "made" he sets the nib on the top line and starts writing; "billion" the line "COMPANY-OPERATED MARGIN · 2025 · $1.4B" finishes in his hand, small and neat.
+   Out: his pen drops down to the next ruled line as the camera drifts with it (continuous).
+
+14. FRANCHISED MARGIN — CUT "The" (continuous; the shot boundary is "The"). The same CLOSE, the camera drifting down the page with the pen; below the next ruled line the printed small print sits in the ledger's narrow column, hidden under his resting left hand.
+   Beats: "rents" his eyes flick up to the window, toward the restaurant's lights across the road (their reflection sliding across his glasses), and back; "out" he starts writing, and in the pause after the word his left hand slides off the column and uncovers "43,317 FRANCHISED RESTAURANTS"; "billion" the line "FRANCHISED MARGIN · 2025 · $13.9B" finishes and he strikes a double underline beneath it (impact frame, wet-ink flash, small shake).
+   Out: he looks up at the window; the camera rises past him, through the glass and across the road, while the sky turns from night to dawn (continuous camera move), descending to the restaurant's back-office window.
+
+15. TWENTY YEARS — CUT "After" (continuous move from shot 14; the shot boundary is "After", as the camera arrives through the back-office window). MEDIUM in the back office at dawn, cold blue light through the blinds in slatted bands: a pale rectangle on the cinder block where the certificate hung; the Franchisee, in the faded olive quilted jacket over her polo, folds the flaps of the cardboard box (a mug, a small plant and the edge of the black frame inside); the contract lies open on the desk at the line "TERM: 20 YEARS".
+   Beats: "twenty" she sets her ring of keys down on the contract beside the term line; "years" her fingers open off the keys in a cascade, index to pinky, and the keys settle with a small bounce; "ends" she shifts her weight, slides the box off the desk onto her hip and turns toward the back door.
+   Out: she shoulders the back door open into the dawn lot, and the swinging door fills the lens (foreground wipe).
+
+16. STILL BELONGS — CUT "The" (cut behind the door wipe to the reverse angle, across the road). OVER-THE-SHOULDER on the Keeper standing at his desk by the ledger-room window at dawn, tie gone, collar open, sleeves still rolled, the lamp still on, the ledger open on the desk beside him. He holds a deed sheet up in the near foreground, "OWNER: McDONALD’S" printed across its top, out of focus. Through the glass, across the road, the restaurant stands in dawn blue with its pole sign "McDONALD’S" still lit, and the Franchisee's small figure crosses the lot with her box toward her car.
+   Beats: "building" focus holds on the restaurant as she reaches her car; "still" her car pulls out and leaves frame right to left; "belongs" rack focus to the deed in his hand, "OWNER: McDONALD’S" sharp in the foreground, and he lowers it toward the open ledger; "McDonald's" he lays it in and slams the ledger shut (impact frame, a puff of paper dust, the lamp chain jumping, small shake).
+   Out: the camera dollies down onto the shut green cover until it fills the lens (foreground wipe).
+
+17. THE IDEA — CUT "The" (cut behind the foreground wipe: the green cover lifts away and becomes the green leather blotter of the same desk in the mid-1950s, a match cut). MEDIUM, a slow dolly across the desk in the ledger room in the mid-1950s, low morning sun through venetian blinds in hard honey slats: the walnut desk and green leather blotter, the black Bakelite rotary phone, the manual typewriter with its blank sheet, the ceiling fan turning slowly, the hat stand with a grey felt fedora, and through the window the empty lot across the road behind a board fence. On the blotter lies the typed cream index card "HARRY SONNEBORN · KROC’S FINANCE MAN · MID-1950s".
+   Beats: "model" the slat shadows slide across the blotter as the camera moves; "Sonneborn's" rack focus lands on the index card, large in frame; "idea" a hand in a white shirt cuff, cropped at the wrist, picks up the buff bank file from beside the card; "mid-fifties" the camera completes its arc across the desk to the visitor's side, where the senior banker is settling heavily into the leather chair.
+   Out: the camera continues around into an over-the-shoulder on the banker (continuous camera move).
+
+18. THE BANKERS — CUT "He" (continuous move from shot 17; the shot boundary is "He"). OVER-THE-SHOULDER past a blurred dark suit shoulder in the foreground (cropped and out of focus, never a face or profile) onto the senior banker in the leather visitor's chair, arms folded, chin down, in his navy chalk-stripe three-piece and steel glasses; the junior banker stands behind him by the hat stand with his steno pad. The buff file lies under the cropped, cuffed hand on the walnut desk, its typed tab covered by the fingers.
+   Beats: "told" the hand slides the file across the desk toward the banker; "bankers" the senior banker's brow lifts, his arms still folded, and the junior banker's pencil pauses; "really" the hand lets go and the file stops at the desk edge in front of him, its tab "REAL ESTATE" uncovered and facing him; "estate" he unfolds his arms, leans in with a creak of leather and lifts his glasses to read the tab.
+   Out: he sits back and looks toward the sunlit window; the low sun on the glass blooms toward white (light-flash cut).
+
+19. PAYABLE — CUT "The" (light-flash cut: shot 19 blooms down from the bulb of the green-glass desk lamp). OVER-THE-SHOULDER on the Keeper at the desk in the ledger room at night, the night of shot 1: tie loosened, vest buttoned, sleeves rolled, the uncapped fountain pen in his right hand, the ledger closed on the blotter, rain beads on the window, the restaurant lit across the road.
+   Beats: "burgers" rack focus through the glass: at the drive-thru window across the road, the crew hand passes a plain kraft paper bag into a car; "just" rack focus back to the desk as he lifts the ledger's cover; "rent" the cover falls open and the pages fan and flutter, the ribbon bookmark swinging; "payable" the pages settle on the header page "$10.4 BILLION IN RENT" with "2025" above the money column, his left hand settles at the page's outer edge, the pen lifts to hover over the total line, and the camera dollies into exactly the frame-0 composition. The last 4 frames render <HookFrame /> exactly, so the Short loops seamlessly.
+
+STEP 10 — COMPOSITING AND FINISH
+- Layer order in every shot: plates → haze cards between depth layers → practical light pools → cast and contact shadows → characters (shading stack, texture, rim light, light wrap) → in-world text → atmosphere (particles) → light beams → glow, bloom and halation on emissive surfaces → lens flares → grade → grain → vignette → chromatic aberration (impact frames only).
+- Bloom: a blurred copy of emissive layers composited with a screen blend.
+- The desk lamp's cone in the ledger room: a soft-edged warm cone falling onto the ledger, with dust drifting slowly in it; sodium streetlight cones outside, visible through the drizzle; dawn shafts through the back-office blinds in cold blue bands; and low morning sun through the venetian blinds of the 1950s room in hard honey slats with dust turning in them.
+- Screen glow on faces: a coloured soft-light shape on the side of the face toward the screen that follows the screen's brightness.
+- Lens flares on the bulb of the green-glass desk lamp when it faces the lens, the sodium streetlights, the drive-thru headlights and the low morning sun on the 1950s window glass.
+- Film finish in a reusable <Grade> (per-scene settings in style.ts): a filmic contrast curve with slightly lifted blacks and a soft highlight roll-off; split toning (shadows toward the scene's ambient colour, highlights toward the key light); halation (a thin warm-red glow around the brightest highlights and practical lights); light wrap (bright backgrounds bleed a few pixels over character edges); very subtle gate weave (at most 0.5 px).
+- Grain: reuse the earlier grain component, changing every frame, stronger in mid-tones and shadows than in highlights, at 4–7% opacity; pre-render a set of grain tiles and cycle them if per-frame turbulence slows the render. A gentle lens vignette (10–15%) with slight edge softness.
+- Keep renders fast: no full-frame SVG filters every frame; prefer pre-rendered plates, transforms and opacity.
+
+STEP 11 — AUDIO
+- My voice-over only, at full volume. No music and no sound effects: I add them by hand in Premiere using out/mcdonalds/sfx-cues.csv.
+- For the render, use a copy of the voice-over normalised to −14 LUFS (two-pass ffmpeg loudnorm: measure first with print_format=json, then apply the measured values; true peak −1.5 dBTP; 48 kHz), saved as public/vo/mcdonalds_norm.wav and played with <Audio> from @remotion/media. Never touch my original file.
+
+STEP 12 — QUALITY GATES (do not skip)
+Save every QA image to out/mcdonalds/qa/. Open every image you render and look at it; describe what you actually see in out/mcdonalds/review.md before deciding it passes. Never mark anything as passing without looking at it.
+
+Gate A — Design
+1. Model sheets (STEP 3), a prop sheet with every prop from STEP 4, and a hand sheet: every pose in the hand library at 600 px tall in back and palm views, plus each grip holding its real prop → out/mcdonalds/qa/hands.png. Check five digits, finger lengths, the knuckle arc, the thumb's origin and opposition, nails on the correct side, and grips that wrap around the object with correct layering and contact shadows. Redo any hand that looks like a mitten or a bunch of sausages.
+2. STYLE FRAMES: one finished still per shot at its key beat, rendered with `npx remotion still`.
+3. Colour script: all the style frames tiled in one image (ffmpeg tile) → out/mcdonalds/qa/color-script.png. Check the journey: lamp-amber night in the ledger room → sodium orange and indigo over the street → brass glints at the wall map → green-white fluorescent back office → lamp amber again for the margins → cold blue dawn → honey-sepia mid-1950s morning → back to lamp-amber night.
+4. Value check: every style frame at 135×240 in greyscale. The focal point (a face or the key text) must be the highest-contrast spot in the frame; fix the staging if it is not. Texture and depth check: 100% crops of a face, a hand, a fabric area and a background area from every style frame → out/mcdonalds/qa/crops-sNN.png; texture must be visible up close, and every style frame must show at least four depth cues.
+5. Score each style frame 1–5 on: looks like a frame from a premium cinematic animated documentary; characters, hands and props look like their real-life versions; cinematic lighting; depth; painterly texture; composition and readability; text spelled exactly as in IN-WORLD COPY. Redo anything that scores under 4.
+
+Gate B — Timing
+6. Watch the animatic (STEP 5) against the voice. Fix pacing before animating.
+
+Gate C — Animation
+7. Animate, then render a half-resolution draft (`npx remotion render Mcdonalds out/mcdonalds/draft.mp4 --scale=0.5`).
+8. Contact sheet per shot: every 6th frame tiled → out/mcdonalds/qa/contact-sNN.png. Check arcs, spacing, overlap and that nothing pops or slides without weight.
+   Puppet test: watch every character action at full resolution, frame by frame. It fails on rigid parts rotating on pins, seams or gaps at joints, sliding feet, evenly spaced floaty in-betweens, body parts starting and stopping together, mirrored poses, hands popping between poses, fingers moving all at once, or effort without a weight shift.
+   Reference test (when reference exists): render each action beside its reference clip at the same timing → out/mcdonalds/qa/ref-sNN.mp4, and compare weight, timing and arcs.
+
+Gate D — Sync
+9. For every beat in out/mcdonalds/timing-report.md, render the frame before the beat and the beat frame side by side. The hit must happen on the beat frame: not early (except anticipation) and not late. Fix every miss.
+
+Gate E — Automated checks
+10. Static frames: render a QA draft with grain and handheld drift turned off and run ffmpeg freezedetect (n=0.001:d=1). No frozen segment may last 1 second or more.
+11. Loop: compare frame 0 with the last frame using ffmpeg ssim (target ≥ 0.98) and view them side by side.
+12. Duration: ffprobe the final file; it must equal durationInFrames / 30.
+13. Copy: run the copy.ts check script.
+14. Safe zone: one still per shot with showSafeZone on; no key text or action outside x 48–888, y 288–1248, and nothing important cut off by the frame edges.
+15. Audio: the MP4 has one audio stream at about −14 LUFS (ffmpeg ebur128); the silent MOV has no audio stream.
+
+Gate F — Checklist review (fix every failure, up to 3 full passes)
+- Frame 0 shows the hook text and the rent ledger open on its header page under the green-glass desk lamp.
+- No static frames; something meaningful moves at least every second, and a new shot or new action lands every 2–3 seconds.
+- The film reads as one continuous story in one world; every cut is motivated and lands on its cut frame.
+- Every in-world text is readable on a phone, perspective-matched, lit by its scene, spelled exactly as written here, and enters on its exact word.
+- Characters look like characters from a premium cinematic animated documentary (not clip art or paper puppets), keep their design across shots, move with real weight and timing, breathe, blink and react; hands have correct anatomy and truly grip their props; everything animates on ones and stays smooth at 30 fps.
+- Every frame shows real depth (camera perspective, depth of field, haze, overlap, cast and contact shadows) and painterly texture.
+- Characters and props resemble their real-life versions.
+- No real logos, no golden arches or any single arch, no "M" logo, no red-and-yellow colour scheme, no red-and-white tiled 1950s stand, no Speedee chef or any other mascot, no McDonald's-printed bags, cups, fry cartons, clamshells, wrappers or trays, no signature burger or fries packaging, no McDonald's crew uniform designs, no grey-and-wood-slat modern McDonald's façade, no real 10-K page layout, no likeness of Harry Sonneborn or Kroc, no real currency design, no likeness of a real person.
+- No element cut off by the frame edges; key text inside x 48–888, y 288–1248.
+- Transitions are whip-pans, light-flash cuts, match cuts, continuous camera moves or foreground wipes; never fades.
+- The final frame matches frame 0. Total duration = audio duration (+4 frames).
+
+AVOID (this is what makes it look cheap)
+- Flat single-colour backgrounds, uniform line weight, pure black lines, grey shadows.
+- Clean vector surfaces: flat fills, plastic gradients, razor-sharp shadow edges with no texture, everything in focus at the same depth.
+- Elements that pop, scale or fade in from the centre like a slideshow; text floating in space.
+- Characters built from circles and rectangles; paper cut-out motion (rigid pieces rotating on pins, visible joint seams, the whole body moving as one block).
+- Mitten or sausage hands, fingers of equal length, a flat thumb lying beside the fingers, fingers that open or close all at once, objects floating in front of a hand instead of being gripped.
+- Floaty, evenly spaced in-betweens with no breakdown poses; sliding feet; mirrored (twinned) poses; perfect stillness.
+- Linear easing on organic motion; everything starting on the same frame; everything moving at once.
+- Locked-off cameras and frozen frames.
+- Any fact, number, date or name not in this prompt.
+
+OUTPUT
+- Final render: npx remotion render Mcdonalds out/mcdonalds/mcdonalds.mp4 --codec=h264 --crf=16 --image-format=png --color-space=bt709
+- Also out/mcdonalds/mcdonalds_master.mov (--codec=prores --prores-profile=hq --image-format=png) and out/mcdonalds/mcdonalds_silent.mov (ProRes HQ with --muted, no audio) for my Premiere edit.
+- out/mcdonalds/review.md: what you reused and built, every gate with what you checked, what you fixed and how many passes it took, the style-frame scores, and anything you could not get right.
+- Tell me the final duration in seconds, the file paths, and summarise out/mcdonalds/review.md.
