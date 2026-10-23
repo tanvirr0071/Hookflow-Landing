@@ -5,7 +5,7 @@ Steps: facts → baseline → arena → polished → checked → build prompt �
 | # | id | series | step reached | note |
 |---|----|--------|--------------|------|
 | 1 | costco | Markup | polished | arena: R1 4 left, R2 2 left, R3 champion a001; final check winner 86 vs baseline 51. Polish changed 2 spoken lines (beat 04 names Jelinek, beat 14 adds "dollars"). |
-| 2 | delta | Markup | arena | round 1 done: 4 of 8 left (one R1 attack failed twice, recorded NO OUTPUT) |
+| 2 | delta | Markup | arena (stopped) | R1 4 left; R2 2 left (a008 beat a004 92–87.5, a002 beat a005 87–81). Stopped by the user before round 3 and the baseline check. Resume with ARENA next. |
 | 3 | popcorn | Markup | facts | |
 | 4 | card-rewards | Markup | facts | |
 | 5 | mcdonalds | Markup | facts | |
@@ -23,3 +23,4 @@ Steps: facts → baseline → arena → polished → checked → build prompt �
 - Step 1 done: all 10 facts.md written, each with at least 10 labelled facts and URLs. Costco: FY2026 results (Sept 24, 2026) used instead of FY2025.
 - yt-script skill loaded, but its hookscore.py and hooks.json are missing from the skill folder; its five-hooks method is applied by hand.
 - Arena runs share .arena/LATEST, so episodes run strictly one at a time.
+- User asked to end the arena during Delta round 2 (after the R2 verdicts). Work stopped there: episodes 3-10 have fact sheets only.
