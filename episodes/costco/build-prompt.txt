@@ -1,0 +1,423 @@
+Build a YouTube Short in Remotion from my voice-over: a "Markup" Short, "Costco's $1.50 Hot Dog Doesn't Need Profit".
+
+THE GOAL
+It must look like a premium cinematic animated documentary short: painterly, richly textured, deep, lit like a film, with character acting so natural it feels observed from real life. Character design keeps the clean appeal of a high-end anime feature, but every frame is rendered with volume, texture and atmosphere. It must never look like flat vector art, motion graphics, an explainer, a slideshow or a paper cut-out puppet. It plays as one continuous story that moves with the voice: the same world, the same characters and the same hero prop carry the viewer from shot to shot, and every shot hands off to the next. Every cut, every action and every piece of text is synced to the voice-over to the frame.
+
+Work like a real feature-animation studio, in this order, and do not skip ahead:
+timing → reference (motion and hands) → design (model sheets, hand sheet, props, texture kit, background plates) → layout and animatic → key poses → breakdowns and in-betweens → secondary motion → lighting, texture and compositing → QA.
+Each stage has a quality gate (STEP 12). Do not start a stage until the previous gate passes.
+
+PRIORITIES WHEN SOMETHING HAS TO GIVE
+1. Sync and facts are never compromised.
+2. Believable movement and hands. A character who moves with real weight in a simple frame beats a detailed character who moves like a paper puppet.
+3. Quality over quantity. Fewer, better drawings, well staged, beat many crude ones. Use real animation staging cheats freely: silhouettes against bright windows, backs of heads, over-the-shoulder framing, characters cropped by foreground objects, and moving holds.
+4. Every frame must survive a pause. If a paused frame looks like a vector explainer, a PowerPoint slide, clip art or a cut-out puppet, it fails.
+
+INPUT
+- Voice-over: voiceover/costco.mp3 (ElevenLabs, English). It is my file: never edit, replace or regenerate it, and never create a voice. Copy it to public/vo/costco.mp3.
+- If there is no Remotion project in this folder, create one with `npx create-video@latest` (blank template, TypeScript). Run `npx remotion skills add` and follow /remotion-best-practices.
+- Free tools only: no paid APIs, no stock footage, no AI images. Install what is missing: `brew install ffmpeg cmake` and `npx remotion add @remotion/media @remotion/media-utils @remotion/install-whisper-cpp @remotion/google-fonts @remotion/transitions @remotion/noise @remotion/motion-blur @remotion/paths @remotion/shapes @remotion/layout-utils @remotion/animation-utils`. Also `npm i opentype.js @fontsource/permanent-marker` (for handwriting, see STEP 7).
+- If I have placed character or prop artwork in public/assets/ (SVG or PNG), use it instead of drawing that item from scratch.
+- Reference (my own recordings, not stock): reference/costco/sNN_<action>.mp4 are phone clips of me acting the key actions (slapping a taped paper strip flat with a palm, tearing receipt tape against a serrated bar, flicking a light switch, scooping a tray off a table and hurrying away, tapping a glass case with one knuckle, inking and slamming a rubber stamp, writing on a glass jar with a marker, punching calculator keys with one finger and tearing the tape, yanking a hoist release lever, sliding a card into a wallet), and reference/hands/<pose>.jpg are photos of my hand in each pose of the hand library (STEP 3). When they exist, they are the source for poses, timing and hand shapes (STEP 3B). When one is missing, key that action by hand with the timing table in STEP 6.
+- For reference analysis, install the free MediaPipe package: `pip3 install mediapipe opencv-python numpy`.
+
+STEP 0 — PROJECT AUDIT AND STRUCTURE
+- Read every file in src/components/ and src/lib/ from earlier episodes (grain, flares, speed lines, rigs and anything else). Reuse what fits. Upgrade components in place without breaking earlier episodes: add optional props, never rename or remove existing ones. Log what you reused, upgraded and built new in out/costco/review.md.
+- Structure:
+  - src/costco/Costco.tsx (the composition), src/costco/shots/Shot01<Name>.tsx … (one file per shot, named after the shot titles in STEP 9)
+  - src/data/costco/words.json, timeline.ts, copy.ts, glyphs.json, poses/ (keyed and reference-extracted poses), sim/ (baked secondary motion)
+  - src/lib/ (shared, reusable across episodes): ease.ts, Camera3D.tsx, SurfaceText.tsx, HandWrite.tsx, Particles.tsx, Grade.tsx, rig/ (Skeleton, IK2Bone, SkinnedLimb, HandRig, FaceRig, ShadingStack), textures/
+  - scripts/: extract-pose.py (MediaPipe), bake-secondary.ts, build-glyphs.ts, build-textures.ts
+  - src/components/characters/, props/, backgrounds/, fx/ (reusable in later videos)
+- Determinism: never use Math.random(). Use random(seed) from remotion for every particle, blink and drift, so every render is identical.
+
+STEP 1 — TIMING MAP (do this first)
+1. Get the exact audio duration with getAudioDurationInSeconds from @remotion/media-utils and confirm it with ffprobe (they must agree within one frame).
+2. Composition "Costco": 1080x1920 at 30 fps. durationInFrames = Math.ceil(duration * 30) + 4. The last 4 frames are the loop hold (see the last shot).
+3. Transcribe: make a 16 kHz mono WAV copy of the voice-over in a temp folder (whisper.cpp requires it). Install whisper.cpp and the large-v3-turbo model with @remotion/install-whisper-cpp and transcribe with tokenLevelTimestamps: true; use the DTW token timestamps (t_dtw) where present. Merge sub-word tokens into words.
+4. Align Whisper's words to the script below with a sequence alignment. The script wins: "Costco" may come out as "Cosco" or "Costcos", "Jelinek" as "Jellinek", "Jelenik" or "jelly neck", "Sinegal" as "Senegal", "Sinagal" or "Sinegol", "effing" as "f-ing", "effin'" or "freaking", "buck fifty" as "buck 50", and numbers may come out as digits or symbols ("$1.50", "1.50", "245 million", "80s", "$5.9 billion", "5.9", "2024", "9 in 10", "US", "$65"); map them to the script's words. Save src/data/costco/words.json as [{ word, scriptIndex, startMs, endMs, rawFrame, frame }].
+5. Onset refinement: Whisper word starts are often 40–120 ms off. Decode the voice-over to PCM, compute a 10 ms RMS envelope, and snap every cut word and beat word to the nearest speech onset within ±3 frames. Run ffmpeg silencedetect (noise=-35dB:d=0.18) and record every pause. Keep both the raw and the refined frame.
+6. Build src/data/costco/timeline.ts: for every shot its cut word, cut frame, end frame (the next shot's cut frame) and every beat word inside it with its refined frame, plus helpers such as beat("s05", "word"). All animation reads from this file. Never hard-code seconds or absolute frames in components; offsets relative to a beat (beat - 3) are fine.
+7. Cut rule: a shot cuts in on its CUT word (usually the first word of the line). Actions land on their BEAT words. A big hit never lands on a shot's first frame: leave at least 6 frames between the cut and the first big hit so the anticipation reads.
+8. Sync rule: every action tied to a word lands ON that word's refined start frame. Big actions get 2–4 frames of anticipation before the hit (a wind-up, a squash, a held breath), then follow-through and settle over 6–12 frames after it.
+9. Pace: a new shot or a clear new action every 2–3 seconds. If a shot runs past 3 seconds on my voice, add a camera change or a new action on its next beat word. Something meaningful moves at least every second.
+10. Write out/costco/timing-report.md (shot, cut word, word time, raw frame, refined frame, every beat word → frame, every pause with its length) and out/costco/sfx-cues.csv (timecode HH:MM:SS:FF at 30 fps, frame, shot, action, suggested sound: receipt printer chatter, paper tear, light-switch click, door jolt thud, rubber stamp thunk, adding-machine clatter, iron weight slam, wallet snap…) so I can add SFX by hand.
+
+VOICE-OVER SCRIPT (for reference; the audio is the source of truth)
+Costco's dollar-fifty hot dog doesn't need profit.
+Over two hundred forty-five million combos in one year.
+Same price since the mid-eighties.
+Craig Jelinek once warned co-founder Jim Sinegal.
+"Jim, we can't sell this hot dog
+for a buck fifty." Sinegal answered.
+"If you raise the effing hot dog,
+I will kill you. Figure it out."
+So Costco built two hot dog plants.
+Why guard a hot dog this hard?
+Last year, membership fees brought in
+about five point nine billion dollars.
+About half of Costco's operating profit.
+Combos bring in roughly a few hundred million dollars.
+A rounding error next to five point nine billion.
+In twenty twenty-four, the card went up.
+The hot dog stayed a dollar fifty.
+Over nine in ten U.S. and Canadian members renew.
+The hot dog's the ad that keeps them renewing.
+The money's in the sixty-five-dollar card.
+
+FACT LOCK
+Every number, date, quote and name in this prompt is fact-checked. Do not add any number, date, name or claim that is not in this prompt (the menu board's other panels, the register screen, the body of the receipt, the corridor's framed pictures, the deposit slip's other fields, the cash office ledgers and CCTV monitor, the body of the renewal notice, the backs of the member cards, and the plants' doors and trailers use neutral filler graphics, not invented facts). Put every in-world string in src/data/costco/copy.ts exactly as written below, character for character (curly quotes “ ”, middle dot ·, en dash –, em dash —, tilde ~). Components import strings from copy.ts; no string literals for in-world text inside components. Write a small check script that compares copy.ts against this list and fails on any difference. Keep "OVER", "ABOUT", "≈", "MID-’80s", "ESTIMATE", "AS RETOLD BY CRAIG JELINEK" and both attribution plates ("— CRAIG JELINEK, ISSAQUAH CHAMBER LUNCHEON, APR 2018" and "— JIM SINEGAL, AS RETOLD BY CRAIG JELINEK, APR 2018") wherever they appear.
+
+IN-WORLD COPY (exact)
+$1.50 HOT DOG.
+NO PROFIT NEEDED.
+OVER 245 MILLION COMBOS · IN ONE YEAR
+FISCAL 2025
+SAME $1.50 · SINCE THE MID-’80s
+JIM SINEGAL · CO-FOUNDER
+CRAIG JELINEK · HIS SUCCESSOR
+“JIM, WE CAN’T SELL THIS HOT DOG
+FOR A BUCK FIFTY.”
+— CRAIG JELINEK, ISSAQUAH CHAMBER LUNCHEON, APR 2018
+$1.50
+“IF YOU RAISE THE EFFING HOT DOG,
+I WILL KILL YOU. FIGURE IT OUT.”
+— JIM SINEGAL, AS RETOLD BY CRAIG JELINEK, APR 2018
+KIRKLAND SIGNATURE · 2 PLANTS
+LOS ANGELES
+MORRIS, ILL.
+WHY GUARD IT?
+MEMBERSHIP FEES · FISCAL 2026
+ABOUT $5.9 BILLION
+OPERATING PROFIT
+FEES ≈ HALF
+245M × $1.50 ≈ $368M
+A FEW HUNDRED MILLION · ESTIMATE
+≈ $368M
+$5.9B
+GOLD STAR $60 → $65 · SEPT 2024
+STILL $1.50
+RENEWED
+OVER 9 IN 10 · U.S. & CANADA
+THE AD
+RENEW
+MEMBERSHIP $65 / YEAR
+
+STEP 2 — LOOK BIBLE (before any shot is animated)
+Write src/costco/style.ts with the tokens below, then build and review the design stills in STEP 12, Gate A.
+
+THE WORLD (one geography, so camera moves and cuts make sense)
+- The whole film happens in and around one warehouse club. Inside its exit end is the food court: the long stainless order counter, with the backlit menu board just above its order window, faces the exit doors across rows of tables under red umbrellas; the registers and receipt printer sit at the counter's left end, and the old double-sided painted sign hangs on chains over its right end (shots 1–3, 10, 17, 20).
+- Directly above the counter runs a mezzanine office corridor. Its interior window looks down on the hanging sign; inside, the door with the two nameplates faces the wall lettering and a narrow console across the corridor; its end window looks out the back of the building (shots 3–8).
+- Out the back, across a misty service road seen from that end window, the two plants stand side by side under one banner (shot 9).
+- Behind the food-court wall, through a steel door beside the counter, is the cash office: the desk faces a CCTV monitor showing the food court, and the brass balance stands in the corner behind the desk (shots 11–15). At the other end of the front wall, the membership desk stands just inside the glass entrance doors; from it the front aisle runs straight down to the food court, and through the doors we see the parking lot and the billboard above the entrance (shots 16, 18, 19, and the glide into shot 20).
+- Reuse the same component for anything that appears twice: the hero hot dog (<HeroHotDog>) and its red tray, the menu board and its taped strip, the old hanging sign, the counter and its register, the corridor door with its nameplates, the cash office desk and its lamp, the balance, the membership desk and its stamp, the counter worker, the bookkeeper, the member and the clerk.
+
+PALETTE AND LIGHT (per scene: key light colour and direction, shadow tint, rim colour, line colour)
+- Food court, lunchtime (shots 1, 2, 3, 17, 20): key light cool white from the high-bay lamps and skylights, high from the left; the menu board is a warm amber practical on faces, steam and trays; shadow tint warm brick-brown; rim amber from the menu board; line colour dark brick. The episode's accent is mustard yellow #E8B21E: the hero hot dog's mustard, the lit price numerals and the manila tag's string.
+- Mezzanine corridor, dusk (shots 4–8): key light low amber-orange sun through the end window from screen right, raking along the panelling; the brass picture lights are warm practicals; shadow tint deep plum; rim warm brass, turning hot red in shots 7–8 from the backlit lettering on the glass; line colour dark aubergine.
+- The plants, nightfall (shot 9): key light sodium-vapour orange from lamp posts above left; shadow tint deep teal-blue; rim cold white from the truck headlights; line colour deep blue-green.
+- Food court after closing (shot 10): key light one hard white spotlight straight down on the museum case; shadow tint blue-black; rim faint cyan from the steam well's standby lamps; line colour ink blue.
+- Cash office, night (shots 11–15): key light warm tungsten from the green-shaded banker's lamp, low from the left; shadow tint olive-brown; rim cool blue from the CCTV monitor; line colour dark olive.
+- Membership desk, morning (shots 16, 18): key light bright cool daylight through the glass entrance doors from screen left; shadow tint slate blue; rim pale gold bounced off the sunlit parking lot; line colour slate.
+- Warehouse entrance, golden afternoon (shot 19): key light low golden sun from behind the camera, right; shadow tint violet; rim hot white from the billboard floodlights; line colour deep violet-brown.
+
+RENDERING STYLE (painterly and cinematic, not flat cel)
+- Line art is thin, coloured and secondary to light: lines use the darkest local colour (never pure black), are heavier in shadow and on outer contours, thin out or break where light hits an edge, and taper at the ends (build them as filled shapes, not uniform strokes). Forms are defined mainly by light and shadow.
+- A reusable <ShadingStack> renders every character part and prop in this order: base colour → form shadow with a soft terminator (2–6 px feathered edge; colour = base tinted by the scene's shadow colour, never grey) → a darker core shadow and ambient occlusion in creases (under the chin and hair, inside the elbow, between the fingers, where a body meets a seat) → on skin, a warm, slightly saturated band along the terminator → bounce light on undersides from the floor or nearby colours → highlight → rim light in the key light's colour → specular glints on eyes, hair, lips, nails, a watch and phone glass.
+- Store the key-light direction per shot in style.ts; shadow and light shapes follow it, so a character who turns toward the light brightens on that side.
+- Cast shadows: characters and props cast soft shadows onto floors, walls, desks and each other, matching the key light's direction and softness. Contact shadows sit wherever something touches a surface: the tray on the counter, feet on the polished concrete floor, the bookkeeper's elbows and the stamp on the desk, the balance's right pan on the floor.
+
+TEXTURE (every surface, characters included)
+- Build a texture kit once, procedurally and seeded (no outside images), with scripts/build-textures.ts, and pre-render it as seamless PNG tiles: paper grain, canvas weave, dry brush, wet-paint blooms, chalk dust, concrete, wet asphalt, skin micro-texture, brushed metal, wood grain, glass smudges, plus thermal paper (the receipt and the calculator tape), foil-lined paper (the hot dog sleeve), steamed bun crumb and glossy frank skin (the hero hot dog), red moulded plastic (the trays), chipped enamel over wood (the old sign), poly-cotton piqué (the polos), cotton drill (the bib apron), nitrile (the worker's gloves), waxed canvas (the member's jacket), fleece (his hoodie), wool knit (the bookkeeper's cardigan), engraved brass (the nameplates, plates, picture lights and balance), mahogany veneer and frosted glass (the corridor door), green plaster (the corridor wall), insulated steel panels (the plants), cast iron (the vault weight), carbonless form paper (the deposit slip), PVC card stock (the member cards), worn leather (the wallet), polished concrete (the warehouse floor). Reuse tiles that earlier episodes already built.
+- On characters, each clothing and skin area gets its matching tile at low opacity (multiply or soft light), clipped to its shape, plus a brush mask that breaks up shadow edges so they look painted, not vector-perfect. Fabric shows seams, stitching, buttons, pockets, buckles, knit patterns and wrinkles that change with the pose.
+- In backgrounds, brushwork follows the form, edges break up, shadows hold painted texture, surfaces show dirt and wear, and fine detail concentrates around the focal point and falls away from it, as in a painting.
+- Texture must be visible in a 100% crop and subtle at phone size.
+
+DEPTH (every shot)
+- Combine depth cues: the real perspective camera (STEP 5), overlap, scale change, atmospheric haze between layers, depth of field with bokeh, cast and contact shadows, light falloff, and a foreground element close to the lens in most shots.
+- Plan the value structure in depth for each shot in the layout: the subject at the focal plane gets the highest contrast; the foreground is darker or out of focus; the background is hazier.
+- Volume: thin fog cards between depth layers; visible light beams (skylight shafts over the food court, the dusk shaft through the corridor's end window, headlight beams and sodium lamp cones in the mist at the plants, the spotlight cone over the museum case, the banker's lamp cone in the cash office, morning shafts through the entrance doors); steam from the hero hot dog and the steam well, dust motes, paint flecks from the old sign, paper fibres from torn tape, and vent steam and mist at the plants catching the light.
+- Bokeh: out-of-focus point lights (register screens and card terminals, the high-bay lamps, sodium lamps and truck lights at the plants, the CCTV monitor, the parking-lot lamps) become soft discs with a slightly brighter rim, sized by their distance from the focal plane.
+
+PAINTED BACKGROUNDS
+- No flat fills anywhere. Every surface has a gradient, brush texture (feTurbulence into feDisplacementMap on edges, low-opacity noise multiplied over fills) and hand-placed detail: cables, signage, window frames, scuffs, plants, reflections, light pools.
+- Atmospheric perspective: far layers have lower contrast and are tinted toward the sky or ambient colour.
+- One key light, one fill, and practical lights (neon, screens, lamps) casting coloured pools on nearby surfaces.
+- Background plates: render each background layer once as a high-resolution transparent PNG through its own composition (Plate-s01-far, Plate-s01-mid…) with `npx remotion still`, saved to public/plates/costco/. Plates are rendered at 2× pixel density (`--scale=2`) and 1.25–2× the frame size on the axis the camera travels, so texture stays crisp through push-ins. Shots then composite plates + live elements (characters, lights, text, particles). This lets the painting use expensive filters without slowing the render. Keep the plate source code so plates can be re-rendered.
+
+STEP 3 — CHARACTERS (all original designs, never portraits or likenesses of real people)
+- THE COUNTER WORKER: a woman in her late forties, sturdy and square-shouldered with strong forearms; dark hair threaded with grey, pinned up under a black hairnet and a black food-service cap; a dark short-sleeved poly-cotton polo, a black cotton-drill bib apron tied in a double knot at the back, blue nitrile gloves, black non-slip work shoes, a laminated badge on a lanyard turned backwards into the apron bib. Brisk and proud: she works the counter in practised, economical moves, checks the drawer shut with her hip and keeps a half-smile to herself. After closing (shot 10) the cap and gloves are off, her sleeves pushed up and damp, her shoulders lower and her moves slower; she still smiles at the case.
+- THE BOOKKEEPER: a man in his early sixties, heavy-set, with round, soft shoulders and a slight forward stoop; thinning white hair combed back with one cowlick, a trimmed grey moustache, reading glasses on a cord; a navy wool cardigan with pockets sagging under a row of pens, a white oxford shirt with the sleeves pushed up under the cardigan, a knitted tie loosened at the collar, grey trousers, brown lace-ups. Meticulous and dry: he squares every paper before he touches it and taps keys with one finger. In the corridor (shots 7–8) his shoulders jump to his ears and he clutches the tray to his chest; back at his desk he is calm again, one eyebrow doing the talking.
+- THE MEMBER: a man in his mid-thirties, lanky, long-armed, with a loose, loping walk; short dark curly hair, a two-day beard; a faded olive waxed-canvas work jacket over a heather-grey fleece hoodie, dark jeans worn pale at the knees, scuffed white sneakers, a worn brown leather bifold wallet. Easygoing and appreciative: he leans his weight onto one hip and one forearm on the counter, nods slowly and shrugs off bad news with a small crooked smile.
+- Minor: THE CLERK at the membership desk, a young man in his early twenties, slim, neat short hair, a dark polo with a backwards badge, quick rhythmic hands on a self-inking stamp. Background members in the food court and at the entrance: everyday clothes, carts and trays, mostly soft-focus or silhouetted.
+- Every character must read in silhouette alone.
+
+MODEL SHEETS FIRST
+For each main character (in every outfit and mood they appear in), build and render a model sheet: front, 3/4, profile and back views, with a second panel showing the volume construction underneath (ribcage, pelvis, limb cylinders); an expression sheet (neutral, smile, laugh, surprised, unimpressed with half-lidded eyes, tired, plus any expression this episode needs); and a turn test (the head turning from front to profile in 5 steps through the face rig). Minor characters get at least front and 3/4. Save to out/costco/qa/model-<name>.png. Fix proportions, appeal and consistency between views before any shot uses the character.
+
+CONSTRUCTION
+- Realistic proportions with the appeal of a high-end anime feature, never chibi: the counter worker about 7 heads tall and solid through the hips and forearms; the bookkeeper about 6.75 heads, heavy and round-shouldered, his stoop deepening over the desk; the member about 7.5 heads and lanky, loose at the joints; the clerk about 7.5 heads and slim. Build every body from volumes first (ribcage, pelvis, tapered limb cylinders) and check the gesture line before adding detail. Necks, clavicles, shoulders, elbows, wrists, knees and ankles sit in anatomically correct places; elbows line up with the waist and fingertips reach mid-thigh.
+- Faces: small chin, eyes about one fifth of the face width, the nose shown by a soft shadow plane and a small highlight on the tip, a soft shadow under the lower lip. The counter worker has faint laugh lines and a few grey hairs at the temple; the bookkeeper has heavier upper lids, soft jowls, deep lines from nose to mouth and a red mark on the bridge of his nose from his glasses; the member has a light stubble shadow and a smile that rises higher on one side; the clerk has smooth, young skin and a quick, eager brow.
+- Eyes (they get close-ups): a thick, tapered upper lash line with a flick at the outer corner, a thin broken lower lash line, an iris with a vertical gradient (dark at the top, lighter at the bottom), a pupil, two highlights (one large, one small), a reflection of the scene's light source, and a soft shadow cast by the upper lid onto the eyeball. Eyelids and eyebrows are separate layers.
+- Hair in pointed clumps with a shadow shape, a highlight band and a few flyaway strands.
+- Clothes have weight and thickness: folds radiate from tension points (shoulders, elbows, belts, behind the knees) and change with every pose. The counter worker's bib apron is stiff cotton drill that holds a flat plane and breaks into sharp folds at the waist ties, and her nitrile gloves wrinkle at the knuckles and shine; the bookkeeper's wool cardigan is soft and heavy, sags at the pen-filled pockets and bunches at the pushed-up sleeves; the member's waxed-canvas jacket is stiff, creases in sharp breaks at the elbows and swings late, while the fleece hoodie under it sags softly at the front pocket.
+
+RIG (skinned, never a paper cut-out)
+- Skeleton: pelvis → lower spine → chest (a 3-segment spine), neck, head; clavicles (the shoulders rise when an arm lifts above shoulder height); upper arm, forearm with twist, wrist; thigh, shin, foot, toes.
+- Skinned body: never rotate rigid SVG pieces around pins. Compute each limb's outline every frame from its bones with a width profile (deltoid, upper arm, forearm taper, wrist; thigh, knee, calf, ankle), so elbows and knees bend smoothly: the inner side compresses and creases, the outer side sharpens into the joint. The torso outline follows the three spine bones the same way, so the chest and waist bend and twist. No seams, gaps or overlapping circles at joints, at any angle.
+- Two-bone IK with pole vectors for arms and legs: hands are placed on their targets (the red tray, the taped strip, the register key, the receipt tape and the tear bar, the light switch, the deposit bag's loops, the mop handle, the museum case's glass, the till drawer, the deposit slip, the rubber stamp and the ink pad, the envelope of fee slips, the marker and the jar, the calculator keys, the calculator tape and its masking-tape flag, the hoist release lever, the renewal notice, the membership card, the cards and the self-inking stamp, the wallet) and feet are planted; a foot carrying weight never slides.
+- 2.5D face rig: the eyes, brows, nose, mouth, ears and hairline sit on a virtual ellipsoid and move with head yaw and pitch. During a turn the far eye narrows and moves toward the edge, the nose moves toward the silhouette, the cheek and jaw contour change, the ear shifts, and the hair clumps layer over and under accordingly. For turns beyond about 45°, swap to a dedicated 3/4 or profile head at the fastest point of the turn, where the motion hides the swap.
+- Torso turns work the same way: lapels, buttons, belts and seams slide across the torso shape.
+- Pose library per character, stored as joint angles + IK targets + face values + hand poses in src/data/costco/poses/.
+- Every part draws its own shading stack and texture (STEP 2) from the shot's key-light direction.
+
+HANDS (treat them as their own sub-project)
+- Proportions: the hand is about as long as the face from chin to hairline, and the palm about as long as the middle finger. The middle finger is longest; index and ring are about equal; the pinky's tip reaches the last knuckle of the ring finger. The knuckles form an arc, not a straight line. The thumb starts at the wrist, its tip reaches about the middle knuckle of the index finger, and it sits at roughly 90° to the palm (it opposes the fingers; it never lies flat beside them).
+- Hand rig: wrist, palm, thumb (3 joints: base, middle, tip) and four fingers with 3 joints each. Each finger is one continuous skinned shape built from its bones with a width profile: slight bulges at the knuckles, a narrower middle, a rounded, padded tip, tapering toward the end.
+- Detail: the back of the hand shows nails (correct shape, a highlight, a cuticle line), knuckle creases and wrinkles, and on older characters tendons, veins and softer, older skin; the palm shows the thumb's padded base, the main creases and fingertip pads. Hands get the same shading stack, texture, cast shadows and contact shadows as the rest of the body.
+- Views: back, palm, thumb side, pinky side and 3/4. Choose the view per pose so the hand reads clearly; never show a hand edge-on where the fingers merge into one shape.
+- Curl rules: when fingers curl, the joints fold progressively (base least, tip most), curled fingers converge toward a point near the base of the palm, and each finger toward the pinky curls slightly more than the one before. Relaxed hands are never flat: the fingers rest in a gentle cascade of curls.
+- Grips are layered: the object sits between the hand's layers (palm and far fingers behind it, near fingers and thumb in front), the fingers flatten slightly where they press, and contact shadows sit where skin meets the object. Tray: the fingertips curled under the near rim, the thumb on top of the rim, the other fingers fanned under the base; in a two-hand scoop, both thumbs on top. Receipt and calculator tape: pinched between the thumb and the side of the index finger, the other fingers curled, pulled down across the tear bar. Deposit bag: the fingers hooked through the handle loops, the thumb resting on the outside. Mop handle: a loose overhand grip, the other hand cupping the top. Till drawer: both hands under its ends, the fingers curled under the edge, the thumbs on top. Rubber stamp: the wooden knob in a full fist, the thumb wrapped over the top, the wrist straight for the slam. Envelope: pinched at its open end between the thumb and fingers, tipped from the wrist. Marker: pinched between thumb and index, the middle finger supporting it. Hoist release: four fingers hooked over the lever, the thumb under it, pulled down from the elbow. Self-inking stamp: the palm on top of the handle, the fingers wrapped round the frame. Membership card: pinched between the thumb pad and the side of the index finger, the thumb pushing it into the slot. Wallet: held open in the other hand, the fingers behind the fold, the thumb holding the flap. Renewal notice: a flat palm on top, the fingertips pressing as it slides.
+- Motion: the wrist leads and the fingers follow 1–3 frames later; when a hand opens or closes, the fingers move in a cascade from index to pinky, never all at once. Fingers never pop between poses; they interpolate through the rig.
+- Pose library (from my reference photos when available, see STEP 3B): relaxed, point, flat palm slap, pinch-and-tear, light-switch flick, fingers hooked through a loop, two-hand tray scoop, knuckle tap, mop lean, stamp fist, envelope tip, marker pinch, one-finger key punch, flag slap, lever yank, flat palm slide, card pinch with thumb push, wallet hold, and the worker's gloved hand resting on the tray rim in frame 0 (her hands are in blue nitrile gloves in shots 1, 2, 17 and 20: the same rig and anatomy, with glove wrinkles at the knuckles and a sheen).
+- Close-ups (shots 1, 2, 12, 13, 14, 18 and 20, and any insert) get the full detail level; wide shots simplify detail but keep correct proportions and silhouettes.
+
+ACTING (observed from life, never puppet-like)
+- Nobody is ever perfectly still: breathing moves the chest, shoulders and clavicles (1–2 px, a 3–4 second cycle, a different phase per character), and standing characters make tiny weight shifts between their feet. A held character is a moving hold.
+- Eyes lead: in every look or turn, the eyes move first, the head follows 2–4 frames later, then the torso. While watching or thinking, the eyes make small darts (saccades) every 0.5–1.5 seconds. Blinks take 5–7 frames (a fast close, a slower open), come every 2–4 seconds (seeded) and often accompany a head turn or a change of thought.
+- Asymmetry: no mirrored poses. Weight sits on one leg with the hips and shoulders tilted in opposite directions; the two hands do different things; the two sides of the face are never identical.
+- Faces act in small amounts: brow tension, lid height, the corners of the mouth, a jaw shift. A flicker of the coming emotion appears a few frames before the main expression (a flash of doubt in the eyes before a smile drops).
+- Extreme close-ups on the eyes for dramatic beats.
+- Mouths change only for expressions (smile, laugh, open surprise, flat). Characters never lip-sync: the narration is a voice-over; they act and react.
+- Eyelines: characters look at what matters (the menu board and its taped strip, the receipt, the nameplates, the wall lettering, the red lettering on the glass, the tagged hot dog, the museum case, the deposit slip, the jar, the calculator tape, the tray and the vault weight, the renewal notice, the hanging sign, the stacked cards, the wallet), and screen direction stays consistent across cuts.
+
+FRAME RATE
+Characters animate on ones (every frame, 30 per second) for smooth, natural movement; the puppet look is fixed with posing, timing, skinning and overlap, not by dropping frames. Camera, particles, lights, text and effects are also on ones.
+
+STEP 3B — REFERENCE-DRIVEN MOTION (when reference/ exists)
+- Run scripts/extract-pose.py with MediaPipe Pose Landmarker (33 body points) and Hand Landmarker (21 points per hand) on every reference clip and photo, and save per-frame 2D landmarks to src/data/costco/poses/ref/.
+- Smooth the landmarks (One Euro filter), convert them to the rig's joint angles and IK targets, and retarget them to each character's proportions. The counter worker moves quicker and more economically than I do, with snappy finishes; the bookkeeper moves slower and heavier, with longer settles and a pause before every effort; the member is looser than I am and lands a little behind the beat; the clerk is brisk and rhythmic. Scale timing where age or mood calls for it.
+- Never trace every frame: that looks floaty and rotoscoped. Take the key poses and extremes from the reference, keep its timing, rebuild the breakdowns and in-betweens with the motion rules in STEP 6, and push the poses about 10–20% further than the reference for clarity.
+- Align each reference action to its beat word so its contact or hit frame lands on that word.
+- Use the hand photos to set finger joint angles, view and grip for every pose in the hand library.
+- Without reference, key the action by hand with the timing table in STEP 6.
+
+STEP 4 — PROPS (they must resemble their real-life versions)
+- The hero prop: <HeroHotDog>, the food-court hot dog: a long, glossy, red-brown frank, blistered and shining with fat, overhanging both ends of a soft steamed white bun, a zig-zag ribbon of yellow mustard along its top, nested in a foil-lined white paper sleeve folded under at the bottom, on a red plastic food-court tray. One component with states: served (steam curling, on its tray at the counter: shots 1, 17, 20), tagged (a manila price tag on a cotton string tied round the sleeve, its face reading "$1.50": shots 5–8), caged (under the glass museum case, no tag and no steam, spotlit: shot 10), weighed (on the balance's left pan with its paper tag "≈ $368M": shot 15) and billboard (painted at billboard scale above the entrance, the same silhouette: shot 19). The sleeve's crinkle highlights, the bun's crumb and the frank's sheen keep the same design in every state.
+- The food court, as a warehouse-club food court really looks: polished concrete floor, exposed steel roof trusses and skylights, a long stainless order counter with registers and card terminals, a steam well behind it, a long backlit menu board in a dusty aluminium frame just above the order window (its other panels carry neutral painted filler, no prices), steel tables with attached seats under red umbrellas kept up indoors, a condiment station, unbranded white paper soda cups with plain lids, napkin dispensers.
+- The taped strip: a sheet of white printer paper hand-lettered in black marker, held by clear tape that catches the light, one corner lifting.
+- The register's thermal receipt printer: grey plastic, a serrated metal tear bar, glossy thermal paper that curls, crisp grey-black print.
+- The old hanging sign: a thick double-sided wooden board on two chains, brick-red enamel with cream sign-writer's lettering, chipped edges showing bare wood, a patina of grease and dust, brass eyelets; each face carries a different line (shots 3 and 17).
+- The mezzanine corridor: dark wood panelling under deep green plaster, a row of brass picture lights, a narrow hall console, a heavy mahogany-veneer door with a frosted glass upper panel and a brass lever handle, two engraved brass nameplates with black-filled lettering, small brass attribution plates, red sign-writer's paint on the glass.
+- The plants: insulated steel-panel facades, loading docks with black rubber dock seals, stainless exhaust stacks venting steam, white refrigerated trailers with no markings, sodium lamps on poles, a vinyl banner held by ratchet straps, roof signs as lit channel letters on steel frames, a chain-link fence along the road.
+- The museum case: a glass vitrine with brass corners on a wooden plinth, a brass plaque, velvet ropes on brass stanchions, a theatre spotlight on a stand; nearby a string mop and a yellow mop bucket with no lettering.
+- The till drawer: a black steel cash-drawer insert with its lid closed (no currency visible).
+- The cash office: a grey steel desk, a green-shaded brass banker's lamp with a pull chain, a CCTV monitor, ledgers, a pale blue carbonless deposit slip with a perforated stub, a felt ink pad and a wooden-handled rubber stamp, a manila envelope of folded white slips, a big glass apothecary jar with a printed paper label, a black marker, a desktop printing calculator with a paper roll and a red total key, a roll of masking tape.
+- The balance: a tall cast-brass beam balance on an iron stand with two shallow pans on chains, a cast-iron vault weight with raised cast lettering, a chain hoist hung from a ceiling hook with a release lever.
+- The membership desk: a laminate counter, a card printer, a self-inking stamp with red ink, plain generic member cards (two-tone, with a blank photo window and no real card design), a printed renewal notice on white letter paper with neutral filler body text.
+- The entrance: a corrugated steel warehouse front with no logo, glass sliding doors with a vinyl decal, rows of steel shopping carts and flatbed carts, a steel-framed billboard with floodlights on arms.
+- The member's wallet: a worn brown leather bifold with pale, rubbed edges and a curved crease from a back pocket.
+- No icons-as-props and no blob shapes.
+
+STEP 5 — CAMERA, LAYOUT AND ANIMATIC
+- Build a reusable <Camera3D>: a real perspective camera in CSS 3D (perspective on the root, transform-style: preserve-3d), with every plate, character and prop placed at its true depth (translateZ, scaled to keep its intended framing size). The camera has a position (x, y, z), rotation, a lens (think 24 mm wide, 35 mm, 50 mm, 85 mm portrait) and a focus distance. Push-ins are dollies (the camera moves, so near layers grow faster than far ones), not zooms. Depth of field: each layer's blur comes from its distance to the focus plane and the shot's aperture; rack focus eases over 8–16 frames with a hint of focus breathing (1–2% scale). Handheld drift from noise2D in @remotion/noise (2–4 px, at most 0.3°), seeded per shot, with a documentary-camera feel: slow and organic on handheld shots, almost none on tripod shots.
+- Depth layers: 5–8 in every exterior, 4+ in every interior, and in most shots a foreground element near the lens that crosses the frame (a paper soda cup and a napkin dispenser on the counter, the edges of red umbrellas, the hanging sign's chains, door frames and pilasters, the chain-link fence at the plants, a velvet-rope stanchion, the lamp's pull chain, the curling calculator tape, cart handles and flatbed carts passing the lens).
+- Every shot has a camera plan: start framing, end framing, move type, easing and the beats that trigger changes. No locked-off camera; a deliberate held beat is still a moving hold (drift + atmosphere).
+- Screen direction: progress and time move left to right; the bookkeeper walks the corridor left to right and the corridor whip-pans follow his head turns (right to the wall, left back to the door); the truck rolls left to right past the plants; the balance's heavy pan drops on the right and the tray flies up on the left; members stream into the warehouse left to right; the final whip-pan runs left and up, back to the menu board, the return to frame 0; a whip-pan continues the direction of the motion that motivated it.
+- Layout first: write out/costco/layouts.md with one block per shot: framing (wide, medium, close, extreme close), camera move, layers, character key poses with their beat words, every text with its surface, the transition in and out, and the object that hands off to the next shot.
+- Animatic: render a fast pass with grey placeholder shapes in the correct positions and the real timing (`--scale=0.25`), watch it against the voice and fix the timing here, before painting and animating.
+
+STEP 6 — MOTION LANGUAGE
+- src/lib/ease.ts holds named curves (anticipate, overshoot, settle, slam, whip, float) and a few named spring() configs. Linear motion is allowed only for mechanical constant speed: the receipt and calculator tape feeds, the refrigerated truck rolling past the plants, the glass entrance doors sliding open.
+- Every move follows anticipation → action → overshoot → settle.
+- Breakdowns: between every two key poses, add a breakdown pose that defines the arc and the overlap (never a straight interpolation from key to key). Spacing is slow out of a pose, fast through the middle and slow into the next, and no two body parts start or stop on the same frame.
+- Biomechanics: the centre of gravity stays over the supporting foot; before reaching, pulling or lifting, the body shifts its weight first; to lift, the knees bend and the back stays straight; effort shows in the whole body (shoulders tense, neck strains, a short pause before a heavy lift).
+- Timing from life at 30 fps (refine from reference): blink 5–7 frames; eye dart 2–3; head turn 8–14; reach for an object 12–20; tap 4–6; both arms up 10–16; hand opening or closing 6–10; sit-to-stand 30–45; the palm slap on the strip: 4 frames of wind-up onto her toes, 2 of action, 8–10 of settle; the tape tear: 3 frames of tension, 2 of rip, 8 of flutter; the knuckle tap on the glass: 4–5; the stamp slam: 6–8 frames of rocking on the ink pad and lifting, 2 of drop, 10–12 of lift and settle; the two-hand tray scoop and hurry-off: 6 of reach, 4 of lift, 12–16 of turn into the walk; the hoist yank and weight drop: 6 frames of reach, 3 of yank, 8–10 of a slow-then-fast fall, 2 of impact, 12–16 of the beam rebounding and settling; the card into the wallet: 6 frames of lining up, 3 of slide, 6 of snap and fold.
+- Secondary motion is simulated: bake the hanging sign and its chains, the price tag on its string, the taped strip's loose corner, the receipt and calculator tapes, the worker's apron ties, the bookkeeper's glasses cord, cardigan hem and deposit bag, the member's jacket hem and hoodie strings, the banner, the lamp's pull chain, the balance's pans and chains with a deterministic spring/verlet simulation in scripts/bake-secondary.ts; save per-frame values to src/data/costco/sim/ and read them in the components. Remotion renders frames in parallel, so anything physical must be baked or computed purely from the frame number.
+- Weight: heavy things (the cast-iron vault weight, the double-sided hanging sign on its chains, the heavy corridor door, the vinyl banner, the rubber stamps, the till drawer) start slowly, stop hard and cause a small shake; light things (the receipt and calculator tape, the taped paper strip, the price tag on its string, the fee slips, paint flecks and steam) float, tumble and flutter.
+- Arcs: hands, heads and props travel on curved paths (IK targets follow arcs); never slide a hand in a straight line.
+- Overlapping action: the head leads, the torso follows 2 frames later, arms 2–4 frames later, hair, hems, bags and loose clothing 2–4 frames after that.
+- Smear frames (1–2 frames) on fast moves: the palm slap on the strip, the tape tears, the door jolt, the bookkeeper's tray scoop, the stamp slams, the vault weight's drop and the tray flying up, the card snapping into the wallet.
+- Impact frames (2–3 frames, restrained and filmic: an exposure flash and contrast punch with a touch of speed lines and very slight chromatic aberration) on key hits only, so they keep their punch: "profit" (shot 1), "effing" (shot 7), "billion" (shot 12, the stamp), "billion" (shot 15, the vault weight), "renew" (shot 18).
+- Screen shake on big hits: decaying over 3–6 frames, maximum 8 px.
+- Motion blur with @remotion/motion-blur during fast moves only (whip-pans, the door jolt, the stamp slams, the vault weight's drop and the tray flying up, the truck's headlights sweeping past the lens), with a 180° shutter feel and a low sample count to protect render time.
+- Particles (steam from the hero hot dog and the plant stacks, dust motes, paint flecks from the old sign, paper fibres from the tears, ink spatter from the stamp, mist at the plants, fee slips tumbling into the jar) are deterministic and layered in depth: near ones are bigger, blurrier and faster. Each piece tumbles in 3D (scaleX = cos of its spin) and drifts on its own curve.
+
+STEP 7 — KINETIC TYPOGRAPHY INSIDE THE WORLD
+- No captions, no word-by-word subtitles and no floating text cards. Every text sits on a surface in the world.
+- <SurfaceText> places text on any four-corner quad using a perspective transform (matrix3d computed from the four corner points), so it sits exactly on its sign, screen, paper or board and moves with that surface's parallax layer.
+- Light the text by surface type: emissive (screens, LED, neon: glow and bloom, and it lights nearby surfaces), printed (multiplied by the scene light, paper texture, shadowed), handwritten (marker or chalk texture), stamped.
+- Occlusion: foreground objects pass in front of text when natural (the falling receipt tape passes in front of the old sign's lettering in shot 3; the bookkeeper's soft shoulder crosses the red lettering on the glass in shots 7–8; the lamp's pull chain swings across the deposit slip in shot 12; members and carts pass in front of the "RENEW" decal in shot 19).
+- Entrances land on the exact beat frame and match the surface: LED digits roll and land; neon flickers on (2–3 flickers within 6 frames); screens switch on with a one-frame bright pop; printed text arrives with its object; handwriting is written stroke by stroke; stamps slam with a squash. Exits are motivated: switched off, wiped, washed out, torn, fallen away, scrolled off.
+- Handwriting: in a Node script, convert the needed glyphs of Permanent Marker (the .woff from @fontsource/permanent-marker) to outlines with opentype.js and save them to src/data/costco/glyphs.json. Reveal each glyph in writing order through a mask of thick strokes that follow the glyph's centre line, animated with evolvePath from @remotion/paths; the marker or chalk tip follows the leading point (getPointAtLength). Writing finishes on its beat word. If a glyph's centre line is not available, reveal it with a directional wipe along its main stroke, still followed by the pen.
+- Fonts via @remotion/google-fonts: "Anton" for the menu board, the factory banner, the roof signs, the billboard and the door decal; "IBM Plex Mono" for the receipt, the calculator tape, the deposit slip header, the tray tag, the renewal notice and the member cards; "Cormorant Garamond" for the brass nameplates, the wall lettering, the attribution plates, the price tag and the museum plaque; "Alfa Slab One" for the old painted sign, the red lettering on the glass, the stamped lines, the jar label and the lettering cast into the vault weight; "Permanent Marker" for the taped strip, the fill line on the jar and the masking-tape flag. Check that every special character (“ ” ’ · ≈ × → —) exists in the font of its surface; if one is missing, move that surface to another of these fonts that has it, and if Permanent Marker has no ≈, draw it as two stacked marker tildes through the same stroke pipeline. Load only the weights you use, and confirm in the stills that no fallback font appears. Fit long lines with fitText from @remotion/layout-utils.
+- Readability on a phone: every key text and key action stays inside x 48–888, y 288–1248 of the 1080×1920 frame (clear of the Shorts buttons and title). Main words have a cap height of at least 72 px; secondary text (small print, attributions, source tags, sticky notes) at least 34 px and on screen for at least 1.2 seconds. Every text has strong contrast with what is behind it. Background art can fill the whole frame.
+- Add a showSafeZone prop that draws the safe box, for QA stills only.
+
+STEP 8 — TRANSITIONS
+- Lay the shots out on an absolute timeline (<Sequence from={cutFrame}> with premounting), and build each transition as an overlay that straddles the cut, so the audio timeline never shifts. If you use TransitionSeries from @remotion/transitions, remember that transitions overlap the shots and shorten the total: compensate the durations so every cut still lands exactly on its cut frame, and verify it.
+- Allowed transitions, each motivated by the story:
+  - Whip-pan (6–8 frames): accelerate out with motion blur and speed lines, cut at maximum blur on the cut frame, decelerate in, continuing the screen direction.
+  - Light-flash cut: a bright source in shot A blooms toward white over 3–4 frames; cut; shot B blooms down from its own brightest light over 4–6 frames.
+  - Match cut: a shape or motion in shot A matches the position, scale and direction of one in shot B on the exact cut frame.
+  - Continuous camera move: the camera travels from one setup to the next without a cut.
+  - Foreground wipe: an object passes the lens, fills the frame and the cut happens behind it.
+- Never crossfades, dips to black or generic slides.
+
+STEP 9 — SHOTS (CUT word → shot; beats inside)
+
+1. THE MENU BOARD — CUT "Costco's" (frame 0). LOW MEDIUM-WIDE SHOT from the customer side of the food-court counter at lunchtime: steel roof trusses and skylight shafts high behind, red umbrellas and the lunch crowd soft in the background, a paper soda cup and a napkin dispenser out of focus in the foreground. The long backlit menu board hangs just above the order window, low enough to reach, its lit panel reading "$1.50 HOT DOG."; below it a sheet of printer paper is taped on with clear tape, "NO PROFIT NEEDED." written on it in black marker, one corner lifting. Behind the stainless counter stands the counter worker in her black cap, hairnet, dark polo, black bib apron and blue nitrile gloves; her gloved hand rests on the rim of a red tray at the counter edge holding the hero hot dog (served state), its steam curling up through the board's glow.
+   Frame 0 is fully composed: the board lit, the strip taped below it, the hero hot dog on its tray, steam and dust mid-air, the worker's gloved hand on the tray rim, the camera at its start framing. Build this state as a <HookFrame /> component so the last frames can reproduce it exactly.
+   Beats: "dollar-fifty" the board's backlight swells a touch and the camera starts a slow push-in and tilt up; "hot dog" she nudges the tray toward the lens and the steam bends; "need" a draft from the exit doors lifts the strip's loose corner (a light flutter); "profit" she rises onto her toes and slaps the strip flat with her palm (impact frame, a flicker in the board, small shake).
+   Out: her other hand punches a register key at the left end of the counter and the receipt printer starts to feed; match cut on the tape's white edge.
+
+2. THE RECEIPT — CUT "Over" (match cut on the tape's edge). CLOSE INSERT at the register end of the counter, lunchtime: the thermal receipt printer under the board's amber glow, its serrated tear bar, the register screen and a card terminal as bokeh behind, the worker's gloved hand waiting by the bar. The tape feeds out toward the lens and curls over the counter edge.
+   Beats: "two hundred forty-five million" the printed line "OVER 245 MILLION COMBOS · IN ONE YEAR" rolls up out of the printer into the light (printed text arriving with its paper; it may wrap after the middle dot) and is fully readable by "combos"; "one year" the footer "FISCAL 2025" rolls out below it and she tears the tape against the bar (smear, paper fibres catching the light).
+   Out: she flicks the torn tape up past the lens until it fills the frame (foreground wipe).
+
+3. THE OLD SIGN — CUT "Same" (foreground wipe behind the falling tape). LOW MEDIUM SHOT up at the old double-sided sign hanging on its two chains over the right end of the counter, lunchtime: brick-red wood with cream sign-writer's lettering, "SAME $1.50 · SINCE THE MID-’80s", chipped edges, grease patina, brass eyelets; skylight shafts and steel trusses behind it, the mezzanine's interior window glowing amber high above.
+   Beats: "Same" the receipt tape tumbles down in front of the lettering and clears it; "price" the sign rocks on its chains in the draft as the camera pushes in on it; "mid-eighties" a fleck of old paint breaks off the chipped corner and drifts down through a skylight shaft.
+   Out: the camera cranes up the chains toward the mezzanine window until its frame crosses the lens (foreground wipe).
+
+4. THE NAMEPLATES — CUT "Craig" (the crane-up passes through the mezzanine window as its frame crosses the lens). MEDIUM SHOT in the mezzanine corridor at dusk: low amber sun from the end window rakes along the dark panelling; a heavy mahogany-veneer door with a dark frosted glass upper panel carries two engraved brass nameplates, "JIM SINEGAL · CO-FOUNDER" on the wood above the glass and "CRAIG JELINEK · HIS SUCCESSOR" on the wood below it. The bookkeeper walks in left to right in his navy cardigan, a grey canvas deposit bag hooked on his fingers; a door frame's edge out of focus in the foreground.
+   Beats: "Jelinek" a slow sun glint slides across the lower plate; "warned" the bookkeeper slows, his eyes rise to the door and his head follows; "co-founder" rack focus up the door; "Jim Sinegal" the glint reaches the upper plate and he stops, his weight settling onto his back foot.
+   Out: his eyes flick right to the wall behind him and the camera whip-pans right with his turn.
+
+5. THE WALL LETTERING — CUT "Jim" (whip-pan, continuing right). MEDIUM SHOT across the corridor: deep green plaster with gilded serif lettering, "“JIM, WE CAN’T SELL THIS HOT DOG", under a row of brass picture lights that are still dark; below it a narrow console holds the hero hot dog on its red tray (tagged state, the manila tag hanging on its string with its blank back to us); the bookkeeper's shoulder and hand at the switch plate soft in the foreground.
+   Beats: "Jim" he flicks the switch and the first picture light warms over the start of the line; "can't" the next lamp warms; "sell" the next; "hot dog" the last lamp of this stretch lights the end of the line and its spill lands on the tagged hot dog below.
+   Out: the camera dollies right along the wall with the lamp light, and a carved pilaster passes the lens (foreground wipe).
+
+6. A BUCK FIFTY — CUT "for" (foreground wipe behind the pilaster). MEDIUM CLOSE SHOT further along the wall: the lettering continues, "FOR A BUCK FIFTY.”", under the last picture lights; below it a small brass plate reads "— CRAIG JELINEK, ISSAQUAH CHAMBER LUNCHEON, APR 2018"; on the console the tagged hero hot dog; the bookkeeper's profile soft at the left edge, his deposit bag swinging.
+   Beats: "for" the last lamp warms and the line reads; "buck" its light spills down onto the brass plate, which stays lit and readable to the end of the shot; "fifty" his swinging bag brushes the console and the price tag spins round on its string into the lamp light, its face reading "$1.50", swinging; "Sinegal" his eyes snap back toward the door behind him; "answered" he turns and the camera whip-pans left with him.
+   Out: the whip-pan lands on the door.
+
+7. THE RED LETTERING — CUT "If" (whip-pan, continuing left). OVER-THE-SHOULDER MEDIUM CLOSE SHOT on the door past the bookkeeper's soft shoulder, with the tagged hot dog on its console at the bottom of the frame: the frosted glass between the two nameplates is dark; dusk light lies across the brass.
+   Beats: "raise" a light snaps on inside the office (a one-frame bright pop) and backlights red sign-writer's lettering on the glass, "“IF YOU RAISE THE EFFING HOT DOG,", glowing red through the frost; "effing" the door jolts hard in its frame as if slammed from inside (impact frame, shake, dust shaken off the top rail, the nameplates rattling); "hot dog" the bookkeeper flinches back and the tag on the console jumps and swings.
+   Out: the camera keeps pushing in toward the glass.
+
+8. FIGURE IT OUT — CUT "I" (continuous camera move: the push-in carries on into a closer framing). CLOSE SHOT on the glass, the bookkeeper's profile large and soft at the left: below the first line, a second line of red lettering lights across the glass from left to right, "I WILL KILL YOU. FIGURE IT OUT.”"; on the wood below the glass, just above the lower nameplate, a small brass plate reads "— JIM SINEGAL, AS RETOLD BY CRAIG JELINEK, APR 2018", catching the red spill.
+   Beats: "I" the second line starts to light; "will" the brass plate catches the light and stays readable to the end of the shot; "kill" the red backlight flares and blooms and the camera snaps in to an extreme close-up of his eyes, the red lettering reflected in his glasses; "Figure" his eyes drop to the tagged hot dog; "out" he scoops the tray off the console with both hands and hurries off left to right down the corridor.
+   Out: the camera follows him to the corridor's end window and pushes through the glass into the night.
+
+9. TWO PLANTS — CUT "So" (continuous camera move: the end window's mullion crosses the lens as we pass through the glass). HIGH WIDE SHOT out the back of the building at nightfall, across a service road wet with mist: two food plants stand side by side, insulated steel-panel facades, loading docks with black dock seals, stainless exhaust stacks, white refrigerated trailers backed into the bays, sodium lamps on poles; a chain-link fence close to the lens, out of focus.
+   Beats: "built" a long vinyl banner drops from the parapets and snaps taut across both facades, "KIRKLAND SIGNATURE · 2 PLANTS" (a slow start, a hard stop, a small shake); "two" the roof sign on the left plant, "LOS ANGELES", flickers on in lit channel letters (2–3 flickers within 6 frames); "hot dog" the roof sign on the right plant, "MORRIS, ILL.", flickers on; "plants" both stacks vent a plume of steam into the lamp light and a refrigerated truck rolls left to right along the road, its headlights sweeping toward the lens.
+   Out: the headlights bloom into the lens (light-flash cut).
+
+10. WHY GUARD IT? — CUT "Why" (light-flash cut: the spotlight blooms down from white). MEDIUM SHOT in the food court after closing: the hall dark, chairs upturned on the tables, the red umbrellas furled, the menu board switched off; on the counter the hero hot dog sits on its tray under a glass museum case on a wooden plinth (caged state), lit by one hard spotlight, velvet ropes around it, a brass plaque on the plinth reading "WHY GUARD IT?"; a stanchion post soft in the foreground. The counter worker, cap and gloves off and sleeves pushed up, leans on her mop in the background.
+   Beats: "guard" her eyes lift to the case, then her head; "hot dog" she leans the mop against the counter and bends in close, her breath fogging a patch of the glass; "hard" she taps the glass once with one knuckle (the case ticks, dust glints in the beam).
+   Out: she picks up the till drawer from the counter and carries it past the lens until her back fills the frame (foreground wipe).
+
+11. THE DEPOSIT SLIP — CUT "Last" (foreground wipe behind her back). MEDIUM SHOT in the cash office behind the food-court wall, night: a grey steel desk under a green-shaded banker's lamp, a CCTV monitor glowing blue with the dark food court on it, ledgers, an ink pad and a wooden-handled rubber stamp; the adding machine and a big glass jar at the back of the desk, the brass balance standing in shadow in the corner. The bookkeeper sits with his glasses on, his elbows on the desk; the worker sets the till drawer at his elbow and walks out of frame.
+   Beats: "membership fees" he slides a pale blue deposit slip into the lamp's pool, its header "MEMBERSHIP FEES · FISCAL 2026" readable; "brought in" he lifts the stamp and rocks it on the ink pad (the wind-up), his eyes on the blank amount line.
+   Out: he raises the stamp high; match cut on its position.
+
+12. THE STAMP — CUT "about" (match cut: the raised stamp holds the same screen position in an extreme close insert). EXTREME CLOSE INSERT on the slip's amount line under the lamp: paper fibres, the pale blue carbon tint, his knuckles round the stamp's knob above, the lamp's brass pull chain soft in the foreground.
+   Beats: "five point nine" the stamp hovers at the top of its wind-up, trembling; "billion" it slams down and lifts away from the stamped line "ABOUT $5.9 BILLION" (impact frame, the rubber squashing, fine ink spatter, the desk shaking, the pull chain jumping); "dollars" the wet ink glistens as the camera eases back.
+   Out: the pull chain's swing carries the pool of light right across the desk to the jar, and the camera slides with it.
+
+13. THE JAR — CUT "About" (continuous camera move). CLOSE SHOT on a big glass apothecary jar under the lamp, smudged and empty, a printed paper label on it reading "OPERATING PROFIT"; the stamped slip soft in the foreground.
+   Beats: "half" the bookkeeper tips an envelope and a stream of folded white fee slips tumbles into the jar and settles halfway up; "Costco's" he uncaps a black marker; "operating profit" he draws a line on the glass at the top of the heap and writes "FEES ≈ HALF" beside it, stroke by stroke, the marker tip leading, finishing on "profit".
+   Out: rack focus past the jar to the adding machine behind it as his hand reaches for its keys.
+
+14. THE CALCULATOR TAPE — CUT "Combos" (continuous camera move: the rack focus completes and the camera drifts left to the machine). CLOSE SHOT on a desktop printing calculator, grey keys and a red total key, its paper roll curling; the jar soft in the foreground.
+   Beats: "Combos" his index finger punches keys one at a time; "bring" the tape starts to feed; "roughly" the printed line "245M × $1.50 ≈ $368M" rolls up into the lamp light; "few hundred million" he tears the tape off and slaps a masking-tape flag onto it with "A FEW HUNDRED MILLION · ESTIMATE" written on it in marker (it stays readable into the next shot); "dollars" he lets the tape go and it curls down off the edge of the desk.
+   Out: the camera tilts down with the falling tape as it drapes over the left pan of the balance.
+
+15. THE SCALE — CUT "A" (continuous camera move: the tilt lands on the balance). MEDIUM-WIDE SHOT in the corner of the cash office: the tall brass beam balance on its iron stand; the left pan holds the red tray with the hero hot dog (weighed state) and its paper tag "≈ $368M", the flagged calculator tape draped over the pan's rim; above the right pan hangs the cast-iron vault weight with "$5.9B" cast into its face, on a chain hoist from a ceiling hook; the bookkeeper stands beside it, one hand on the hoist release; a stack of ledgers soft in the foreground.
+   Beats: "rounding error" one eyebrow rises and his eyes travel from the tray to the weight; "next to" he yanks the release and the weight starts to drop, slow at first; "billion" it slams onto the right pan, which hits the floor (impact frame, shake, dust jumping off the concrete), and the beam kicks the left pan high, the tray and hot dog bouncing, the tape fluttering.
+   Out: the tray's rise carries on up through the frame; match cut on the upward motion.
+
+16. THE RENEWAL NOTICE — CUT "In" (match cut: the notice slides up into frame along the tray's path). MEDIUM SHOT at the membership desk inside the glass entrance doors, morning: bright cool daylight through the doors, carts and the parking lot glaring behind; the clerk behind the laminate counter in his dark polo, the member at the counter in his olive canvas jacket; a card printer and a stack of blank cards soft in the foreground.
+   Beats: "twenty twenty-four" the clerk's flat hand slides a printed renewal notice up the counter to the member and it stops in the light, its bold line "GOLD STAR $60 → $65 · SEPT 2024" readable; "card" the member pulls his membership card from his jacket pocket; "went up" his eyebrows lift, then he shrugs with his crooked smile and lays the card on the notice.
+   Out: his eyes travel down the front aisle toward the food court, and the camera whip-pans right with his look.
+
+17. STILL — CUT "The" (whip-pan, continuing right). LOW MEDIUM SHOT under the old hanging sign at lunchtime, the counter busy below it, skylight shafts behind, umbrella edges soft in the foreground; the sign shows its front, "SAME $1.50 · SINCE THE MID-’80s".
+   Beats: "hot dog" the counter worker's gloved hand slides a tray with the hero hot dog (served state) along the counter under the sign; "stayed" a draft from the exit doors turns the heavy sign on its chains and its other face comes round and settles toward us, "STILL $1.50", the same chipped old paint, with no new paint and no sticker over the price; "dollar fifty" the worker glances up at it and smiles, and leaves it untouched.
+   Out: a flatbed cart pushed left to right passes close to the lens (foreground wipe).
+
+18. RENEWED — CUT "Over" (foreground wipe behind the cart). CLOSE SHOT at the membership desk, morning: a stack of plain member cards on the laminate, the clerk's hands working a self-inking stamp in red ink, daylight from the doors at the left, the door frame soft in the foreground.
+   Beats: "nine" he stamps "RENEWED" on a card and slides it onto the stack; "ten" another stamp, another card; "U.S." a last card slides onto the top, its printed line "OVER 9 IN 10 · U.S. & CANADA" in the light; "renew" he stamps it below that line, the stamp's squash rocking the whole stack (impact frame, small shake).
+   Out: he hands the top card to the member, and the camera follows the member's look out through the glass doors and pushes through them.
+
+19. THE AD — CUT "The" (continuous camera move: the sliding doors' frame crosses the lens as the camera passes outside and cranes up). LOW WIDE SHOT up at the warehouse entrance in golden afternoon light: the corrugated steel front, the glass sliding doors with a vinyl decal reading "RENEW", rows of carts, members walking in, the parking-lot lamps as bokeh; above the entrance a steel-framed billboard shows the hero hot dog painted at billboard scale (billboard state) beside the words "THE AD"; cart handles close to the lens in the foreground.
+   Beats: "hot dog's" the camera cranes up to the billboard; "ad" the floodlights clunk on with a one-frame pop and "THE AD" blazes; "keeps" members with carts stream in left to right, passing in front of the decal; "renewing" the camera settles low on the "RENEW" decal and the doors slide open.
+   Out: the camera glides in through the open doors and travels down the front aisle to the food-court counter.
+
+20. THE CARD — CUT "The" (continuous camera move: the glide ends at the counter). CLOSE SHOT at the food-court counter at lunchtime under the menu board's amber glow: the member's hands hold his membership card and his open leather bifold; the card's face reads "MEMBERSHIP $65 / YEAR" in plain lettering beside a blank photo window; the soda cup and napkin dispenser of frame 0 soft in the foreground.
+   Beats: "money's" he tilts the card and its face catches the board's light; "sixty-five-dollar" he slides it into the wallet's slot, his thumb pushing (smear); "card" it snaps home and the wallet folds shut. On "card" (or on "sixty-five-dollar" if fewer than 14 frames remain after "card"), the camera whip-pans left and up off his hands to the menu board and decelerates as the worker sets the red tray with the hero hot dog (served state) at the counter edge and rests her gloved hand on its rim, the steam curling, "$1.50 HOT DOG." lit and "NO PROFIT NEEDED." taped below it, and the framing arrives at exactly the frame-0 composition. The last 4 frames render <HookFrame /> exactly, so the Short loops seamlessly.
+   Out: the loop: <HookFrame /> hands back to frame 0 of shot 1.
+
+STEP 10 — COMPOSITING AND FINISH
+- Layer order in every shot: plates → haze cards between depth layers → practical light pools → cast and contact shadows → characters (shading stack, texture, rim light, light wrap) → in-world text → atmosphere (particles) → light beams → glow, bloom and halation on emissive surfaces → lens flares → grade → grain → vignette → chromatic aberration (impact frames only).
+- Bloom: a blurred copy of emissive layers composited with a screen blend.
+- Skylight shafts over the food court: tall, cool, soft-edged columns with dust and steam drifting in them; the dusk shaft through the corridor's end window, raking amber across the panelling; headlight beams and sodium lamp cones cutting the mist at the plants; the hard spotlight cone over the museum case, with dust hanging almost still in it; the warm cone of the banker's lamp over the cash office desk.
+- Screen glow on faces: a coloured soft-light shape on the side of the face toward the screen that follows the screen's brightness.
+- Lens flares on the menu board's lit panel, the truck headlights, the museum spotlight, the billboard floodlights and the morning sun through the entrance doors.
+- Film finish in a reusable <Grade> (per-scene settings in style.ts): a filmic contrast curve with slightly lifted blacks and a soft highlight roll-off; split toning (shadows toward the scene's ambient colour, highlights toward the key light); halation (a thin warm-red glow around the brightest highlights and practical lights); light wrap (bright backgrounds bleed a few pixels over character edges); very subtle gate weave (at most 0.5 px).
+- Grain: reuse the earlier grain component, changing every frame, stronger in mid-tones and shadows than in highlights, at 4–7% opacity; pre-render a set of grain tiles and cycle them if per-frame turbulence slows the render. A gentle lens vignette (10–15%) with slight edge softness.
+- Keep renders fast: no full-frame SVG filters every frame; prefer pre-rendered plates, transforms and opacity.
+
+STEP 11 — AUDIO
+- My voice-over only, at full volume. No music and no sound effects: I add them by hand in Premiere using out/costco/sfx-cues.csv.
+- For the render, use a copy of the voice-over normalised to −14 LUFS (two-pass ffmpeg loudnorm: measure first with print_format=json, then apply the measured values; true peak −1.5 dBTP; 48 kHz), saved as public/vo/costco_norm.wav and played with <Audio> from @remotion/media. Never touch my original file.
+
+STEP 12 — QUALITY GATES (do not skip)
+Save every QA image to out/costco/qa/. Open every image you render and look at it; describe what you actually see in out/costco/review.md before deciding it passes. Never mark anything as passing without looking at it.
+
+Gate A — Design
+1. Model sheets (STEP 3), a prop sheet with every prop from STEP 4, and a hand sheet: every pose in the hand library at 600 px tall in back and palm views, plus each grip holding its real prop → out/costco/qa/hands.png. Check five digits, finger lengths, the knuckle arc, the thumb's origin and opposition, nails on the correct side, and grips that wrap around the object with correct layering and contact shadows. Redo any hand that looks like a mitten or a bunch of sausages.
+2. STYLE FRAMES: one finished still per shot at its key beat, rendered with `npx remotion still`.
+3. Colour script: all the style frames tiled in one image (ffmpeg tile) → out/costco/qa/color-script.png. Check the journey: warm lunchtime food court → amber-and-plum dusk corridor with a red blaze → sodium orange and teal night at the plants → black-and-white spotlit food court → green-lamp olive cash office → cool morning membership desk → warm lunchtime food court → golden afternoon entrance → back to the warm frame-0 food court.
+4. Value check: every style frame at 135×240 in greyscale. The focal point (a face or the key text) must be the highest-contrast spot in the frame; fix the staging if it is not. Texture and depth check: 100% crops of a face, a hand, a fabric area and a background area from every style frame → out/costco/qa/crops-sNN.png; texture must be visible up close, and every style frame must show at least four depth cues.
+5. Score each style frame 1–5 on: looks like a frame from a premium cinematic animated documentary; characters, hands and props look like their real-life versions; cinematic lighting; depth; painterly texture; composition and readability; text spelled exactly as in IN-WORLD COPY. Redo anything that scores under 4.
+
+Gate B — Timing
+6. Watch the animatic (STEP 5) against the voice. Fix pacing before animating.
+
+Gate C — Animation
+7. Animate, then render a half-resolution draft (`npx remotion render Costco out/costco/draft.mp4 --scale=0.5`).
+8. Contact sheet per shot: every 6th frame tiled → out/costco/qa/contact-sNN.png. Check arcs, spacing, overlap and that nothing pops or slides without weight.
+   Puppet test: watch every character action at full resolution, frame by frame. It fails on rigid parts rotating on pins, seams or gaps at joints, sliding feet, evenly spaced floaty in-betweens, body parts starting and stopping together, mirrored poses, hands popping between poses, fingers moving all at once, or effort without a weight shift.
+   Reference test (when reference exists): render each action beside its reference clip at the same timing → out/costco/qa/ref-sNN.mp4, and compare weight, timing and arcs.
+
+Gate D — Sync
+9. For every beat in out/costco/timing-report.md, render the frame before the beat and the beat frame side by side. The hit must happen on the beat frame: not early (except anticipation) and not late. Fix every miss.
+
+Gate E — Automated checks
+10. Static frames: render a QA draft with grain and handheld drift turned off and run ffmpeg freezedetect (n=0.001:d=1). No frozen segment may last 1 second or more.
+11. Loop: compare frame 0 with the last frame using ffmpeg ssim (target ≥ 0.98) and view them side by side.
+12. Duration: ffprobe the final file; it must equal durationInFrames / 30.
+13. Copy: run the copy.ts check script.
+14. Safe zone: one still per shot with showSafeZone on; no key text or action outside x 48–888, y 288–1248, and nothing important cut off by the frame edges.
+15. Audio: the MP4 has one audio stream at about −14 LUFS (ffmpeg ebur128); the silent MOV has no audio stream.
+
+Gate F — Checklist review (fix every failure, up to 3 full passes)
+- Frame 0 shows the hook text and the hero hot dog steaming on its red tray under the lit menu board.
+- No static frames; something meaningful moves at least every second, and a new shot or new action lands every 2–3 seconds.
+- The film reads as one continuous story in one world; every cut is motivated and lands on its cut frame.
+- Every in-world text is readable on a phone, perspective-matched, lit by its scene, spelled exactly as written here, and enters on its exact word.
+- Characters look like characters from a premium cinematic animated documentary (not clip art or paper puppets), keep their design across shots, move with real weight and timing, breathe, blink and react; hands have correct anatomy and truly grip their props; everything animates on ones and stays smooth at 30 fps.
+- Every frame shows real depth (camera perspective, depth of field, haze, overlap, cast and contact shadows) and painterly texture.
+- Characters and props resemble their real-life versions.
+- No real logos, no Costco logo or wordmark, no Costco warehouse trade dress (its facade colour bands and signage design), no real Costco membership card or Gold Star card design (layout, colours, photo panel or logo), no Kirkland Signature logo, label or packaging, no real Costco food-court menu board layout or food photography, no soft-drink brand cups, logos or fountain branding, no likeness of Jim Sinegal or Craig Jelinek, no real currency design, no likeness of a real person.
+- No element cut off by the frame edges; key text inside x 48–888, y 288–1248.
+- Transitions are whip-pans, light-flash cuts, match cuts, continuous camera moves or foreground wipes; never fades.
+- The final frame matches frame 0. Total duration = audio duration (+4 frames).
+
+AVOID (this is what makes it look cheap)
+- Flat single-colour backgrounds, uniform line weight, pure black lines, grey shadows.
+- Clean vector surfaces: flat fills, plastic gradients, razor-sharp shadow edges with no texture, everything in focus at the same depth.
+- Elements that pop, scale or fade in from the centre like a slideshow; text floating in space.
+- Characters built from circles and rectangles; paper cut-out motion (rigid pieces rotating on pins, visible joint seams, the whole body moving as one block).
+- Mitten or sausage hands, fingers of equal length, a flat thumb lying beside the fingers, fingers that open or close all at once, objects floating in front of a hand instead of being gripped.
+- Floaty, evenly spaced in-betweens with no breakdown poses; sliding feet; mirrored (twinned) poses; perfect stillness.
+- Linear easing on organic motion; everything starting on the same frame; everything moving at once.
+- Locked-off cameras and frozen frames.
+- Any fact, number, date or name not in this prompt.
+
+OUTPUT
+- Final render: npx remotion render Costco out/costco/costco.mp4 --codec=h264 --crf=16 --image-format=png --color-space=bt709
+- Also out/costco/costco_master.mov (--codec=prores --prores-profile=hq --image-format=png) and out/costco/costco_silent.mov (ProRes HQ with --muted, no audio) for my Premiere edit.
+- out/costco/review.md: what you reused and built, every gate with what you checked, what you fixed and how many passes it took, the style-frame scores, and anything you could not get right.
+- Tell me the final duration in seconds, the file paths, and summarise out/costco/review.md.
