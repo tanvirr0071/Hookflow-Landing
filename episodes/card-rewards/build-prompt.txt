@@ -1,0 +1,404 @@
+Build a YouTube Short in Remotion from my voice-over: a "Markup" Short, "Who Really Pays for Your Credit-Card Rewards".
+
+THE GOAL
+It must look like a premium cinematic animated documentary short: painterly, richly textured, deep, lit like a film, with character acting so natural it feels observed from real life. Character design keeps the clean appeal of a high-end anime feature, but every frame is rendered with volume, texture and atmosphere. It must never look like flat vector art, motion graphics, an explainer, a slideshow or a paper cut-out puppet. It plays as one continuous story that moves with the voice: the same world, the same characters and the same hero prop carry the viewer from shot to shot, and every shot hands off to the next. Every cut, every action and every piece of text is synced to the voice-over to the frame.
+
+Work like a real feature-animation studio, in this order, and do not skip ahead:
+timing → reference (motion and hands) → design (model sheets, hand sheet, props, texture kit, background plates) → layout and animatic → key poses → breakdowns and in-betweens → secondary motion → lighting, texture and compositing → QA.
+Each stage has a quality gate (STEP 12). Do not start a stage until the previous gate passes.
+
+PRIORITIES WHEN SOMETHING HAS TO GIVE
+1. Sync and facts are never compromised.
+2. Believable movement and hands. A character who moves with real weight in a simple frame beats a detailed character who moves like a paper puppet.
+3. Quality over quantity. Fewer, better drawings, well staged, beat many crude ones. Use real animation staging cheats freely: silhouettes against bright windows, backs of heads, over-the-shoulder framing, characters cropped by foreground objects, and moving holds.
+4. Every frame must survive a pause. If a paused frame looks like a vector explainer, a PowerPoint slide, clip art or a cut-out puppet, it fails.
+
+INPUT
+- Voice-over: voiceover/card-rewards.mp3 (ElevenLabs, English). It is my file: never edit, replace or regenerate it, and never create a voice. Copy it to public/vo/card-rewards.mp3.
+- If there is no Remotion project in this folder, create one with `npx create-video@latest` (blank template, TypeScript). Run `npx remotion skills add` and follow /remotion-best-practices.
+- Free tools only: no paid APIs, no stock footage, no AI images. Install what is missing: `brew install ffmpeg cmake` and `npx remotion add @remotion/media @remotion/media-utils @remotion/install-whisper-cpp @remotion/google-fonts @remotion/transitions @remotion/noise @remotion/motion-blur @remotion/paths @remotion/shapes @remotion/layout-utils @remotion/animation-utils`. Also `npm i opentype.js @fontsource/permanent-marker` (for handwriting, see STEP 7).
+- If I have placed character or prop artwork in public/assets/ (SVG or PNG), use it instead of drawing that item from scratch.
+- Reference (my own recordings, not stock): reference/card-rewards/sNN_<action>.mp4 are phone clips of me acting the key actions (catching a flipped coin and laying folded bills flat on a counter, slamming a cash drawer shut with the flat of the hand, swiping a card down the side slot of a terminal, tearing a receipt off a printer's tear bar, sliding a report out of a folder and putting on reading glasses, writing in a ledger with a felt-tip marker and striking a hard double underline, writing on a window at shoulder height and pointing through the glass, flicking a shelf tag holder up with the thumb, writing on a chalkboard with a chalk stub, cutting a stack of cards into two piles and pushing one card across a desk with a fingertip while writing with the other hand), and reference/hands/<pose>.jpg are photos of my hand in each pose of the hand library (STEP 3). When they exist, they are the source for poses, timing and hand shapes (STEP 3B). When one is missing, key that action by hand with the timing table in STEP 6.
+- For reference analysis, install the free MediaPipe package: `pip3 install mediapipe opencv-python numpy`.
+
+STEP 0 — PROJECT AUDIT AND STRUCTURE
+- Read every file in src/components/ and src/lib/ from earlier episodes (grain, flares, speed lines, rigs and anything else). Reuse what fits. Upgrade components in place without breaking earlier episodes: add optional props, never rename or remove existing ones. Log what you reused, upgraded and built new in out/card-rewards/review.md.
+- Structure:
+  - src/card-rewards/CardRewards.tsx (the composition), src/card-rewards/shots/Shot01<Name>.tsx … (one file per shot, named after the shot titles in STEP 9)
+  - src/data/card-rewards/words.json, timeline.ts, copy.ts, glyphs.json, poses/ (keyed and reference-extracted poses), sim/ (baked secondary motion)
+  - src/lib/ (shared, reusable across episodes): ease.ts, Camera3D.tsx, SurfaceText.tsx, HandWrite.tsx, Particles.tsx, Grade.tsx, rig/ (Skeleton, IK2Bone, SkinnedLimb, HandRig, FaceRig, ShadingStack), textures/
+  - scripts/: extract-pose.py (MediaPipe), bake-secondary.ts, build-glyphs.ts, build-textures.ts
+  - src/components/characters/, props/, backgrounds/, fx/ (reusable in later videos)
+- Determinism: never use Math.random(). Use random(seed) from remotion for every particle, blink and drift, so every render is identical.
+
+STEP 1 — TIMING MAP (do this first)
+1. Get the exact audio duration with getAudioDurationInSeconds from @remotion/media-utils and confirm it with ffprobe (they must agree within one frame).
+2. Composition "CardRewards": 1080x1920 at 30 fps. durationInFrames = Math.ceil(duration * 30) + 4. The last 4 frames are the loop hold (see the last shot).
+3. Transcribe: make a 16 kHz mono WAV copy of the voice-over in a temp folder (whisper.cpp requires it). Install whisper.cpp and the large-v3-turbo model with @remotion/install-whisper-cpp and transcribe with tokenLevelTimestamps: true; use the DTW token timestamps (t_dtw) where present. Merge sub-word tokens into words.
+4. Align Whisper's words to the script below with a sequence alignment. The script wins: "Mastercard" may come out as "MasterCard" or "master card", "Fed" as "fed" or "Fed's", "Boston Fed" as "Boston fed", "cardholders" as "card holders", "Here's" as "Here is", "don't" as "dont", and the numbers may come out as digits or symbols ("$149", "2.4%", "198 billion" or "$198 billion", "2025", "$21", "750", "15 billion", "2022", "$40 billion", and the last line's "one forty-nine" as "149", "1.49" or "$1.49"); map them to the script's words. Save src/data/card-rewards/words.json as [{ word, scriptIndex, startMs, endMs, rawFrame, frame }].
+5. Onset refinement: Whisper word starts are often 40–120 ms off. Decode the voice-over to PCM, compute a 10 ms RMS envelope, and snap every cut word and beat word to the nearest speech onset within ±3 frames. Run ffmpeg silencedetect (noise=-35dB:d=0.18) and record every pause. Keep both the raw and the refined frame.
+6. Build src/data/card-rewards/timeline.ts: for every shot its cut word, cut frame, end frame (the next shot's cut frame) and every beat word inside it with its refined frame, plus helpers such as beat("s05", "word"). All animation reads from this file. Never hard-code seconds or absolute frames in components; offsets relative to a beat (beat - 3) are fine.
+7. Cut rule: a shot cuts in on its CUT word (usually the first word of the line). Actions land on their BEAT words. A big hit never lands on a shot's first frame: leave at least 6 frames between the cut and the first big hit so the anticipation reads.
+8. Sync rule: every action tied to a word lands ON that word's refined start frame. Big actions get 2–4 frames of anticipation before the hit (a wind-up, a squash, a held breath), then follow-through and settle over 6–12 frames after it.
+9. Pace: a new shot or a clear new action every 2–3 seconds. If a shot runs past 3 seconds on my voice, add a camera change or a new action on its next beat word. Something meaningful moves at least every second.
+10. Write out/card-rewards/timing-report.md (shot, cut word, word time, raw frame, refined frame, every beat word → frame, every pause with its length) and out/card-rewards/sfx-cues.csv (timecode HH:MM:SS:FF at 30 fps, frame, shot, action, suggested sound: coin catch and cash-drawer pop, cash-drawer slam, card swipe and terminal beep, thermal-printer feed and paper tear, ledger thump and marker squeak, tag-holder clicks, chalk scratch and tap, neon transformer buzz…) so I can add SFX by hand.
+
+VOICE-OVER SCRIPT (for reference; the audio is the source of truth)
+Paying cash costs you a hundred forty-nine dollars.
+Every year, according to a Boston Fed study.
+It flows to households that pay by credit card.
+Here's how. Every swipe costs the store a fee.
+Visa or Mastercard credit: about two point four percent.
+Merchant groups count one ninety-eight billion for twenty twenty-five.
+Most goes to the bank that issued the card.
+And that money helps pay for rewards.
+But stores don't charge card users more.
+They raise prices for everyone.
+So who comes out ahead?
+The poorest households pay in about twenty-one dollars.
+The richest collect about seven hundred fifty.
+Even among cardholders, there's a split.
+Fed economists estimate fifteen billion a year moves
+from people who carry balances to people who don't.
+Rewards earned in twenty twenty-two: over forty billion dollars.
+In the cash line? That's your one forty-nine.
+
+FACT LOCK
+Every number, date, quote and name in this prompt is fact-checked. Do not add any number, date, name or claim that is not in this prompt (the receipt's item lines, the ledger's columns and pencilled figures, the balance sheet's other rows, the body pages of the report and the working paper, the terminal's idle screen, the register's touchscreen, the hanging aisle signs, the packs and cans on the shelves and the bank's other windows use neutral filler graphics, not invented facts). Put every in-world string in src/data/card-rewards/copy.ts exactly as written below, character for character (curly quotes “ ”, middle dot ·, en dash –, em dash —, tilde ~). Components import strings from copy.ts; no string literals for in-world text inside components. Write a small check script that compares copy.ts against this list and fails on any difference. Keep the hedges "≈", ">" and "AVG", the definition "“CASH” = CASH, CHECKS, DEBIT & PREPAID", and the source tags "FEDERAL RESERVE BANK OF BOSTON · 2010", "NILSON DATA, VIA MERCHANT GROUPS", "GAO EXAMPLE · $100 SALE · 2009", "FEDERAL RESERVE BOARD WORKING PAPER, 2023" and "CFPB" wherever they appear, always on the same surface as the figure they qualify and on screen for at least 1.2 seconds.
+
+IN-WORLD COPY (exact)
+PAYING CASH COSTS YOU $149
+WHO GAINS AND WHO LOSES FROM CREDIT CARD PAYMENTS?
+FEDERAL RESERVE BANK OF BOSTON · 2010
+“CASH” = CASH, CHECKS, DEBIT & PREPAID
+$149 / YEAR → CREDIT-CARD HOUSEHOLDS
+SWIPE FEE
+VISA / MASTERCARD CREDIT · AVG FEE ≈ 2.4% · 2025
+2025 SWIPE FEES ≈ $198B
+NILSON DATA, VIA MERCHANT GROUPS
+$2.20 FEE → $1.70 TO THE CARD’S BANK
+GAO EXAMPLE · $100 SALE · 2009
+BANK
+→ REWARDS
+SAME PRICE · CARD OR CASH
+PRICE ↑
+WHO COMES OUT AHEAD?
+LOWEST INCOME: PAYS $21 / YEAR
+HIGHEST INCOME: GETS $750 / YEAR
+CARRY A BALANCE
+PAY IN FULL
+$15B / YEAR
+FEDERAL RESERVE BOARD WORKING PAPER, 2023
+CARRY A BALANCE → PAY IN FULL
+REWARDS EARNED, 2022: > $40B
+CFPB
+
+STEP 2 — LOOK BIBLE (before any shot is animated)
+Write src/card-rewards/style.ts with the tokens below, then build and review the design stills in STEP 12, Gate A.
+
+THE WORLD (one geography, so camera moves and cuts make sense)
+- THE STORE: a narrow present-day neighbourhood grocery on a city street at blue hour. The checkout counter runs along the inside of the front windows; the cashier stands behind it with the windows at his back. The queue enters the counter from the left, the register (the hero prop) sits mid-counter with a low wire impulse rack along the counter's customer face, and the card terminal stands on a swivel post at the counter's right end. A stencilled arrow on the floor runs along the queue, left to right, from the spot where cash payers stand to the terminal. The canned-goods aisle runs from the counter straight back to a short flight of steps at the rear (shots 1, 3, 4, 5, 9, 10 and 18).
+- THE OFFICE: at the top of those steps, the owner's office has a wide steel-framed interior window that looks down the aisle to the counter, the front windows and the street beyond: the reverse angle of shot 1. Inside: her desk with a leather-cornered blotter and a tungsten desk lamp, and a slate chalkboard on the wall beside the window (shots 2, 6, 7, 11, 12, 13, 14, 15 and 16; the store floor is seen through its glass in shots 3, 7, 12, 13 and 16).
+- THE BANK: directly across the street, facing the store's front windows: an older stone bank with tall arched windows, bronze doors and carved lettering over the door, a neon sign in one window and a tall digital display in the next. Its lit windows are the gold bokeh behind the cashier in shots 1, 4, 5 and 18, the target of the owner's arrow through the office glass in shot 7, and the exterior of shots 8 and 17, filmed from the store's side of the street and then from the bank's own sidewalk with the store's lit windows behind.
+- Reuse the same component for anything that appears twice: the register with its pole display, the card terminal, the counter and impulse rack, the floor arrow, the generic credit card, the office window and desk, the black marker, the stack of plain cards with its tent labels, the bank facade with its neon sign and window display, and all four characters.
+
+PALETTE AND LIGHT (per scene: key light colour and direction, shadow tint, rim colour, line colour)
+- Checkout counter at blue hour (shots 1, 3, 4, 5, 9, 18): key cool-white fluorescent from overhead, slightly front-left; shadow tint deep blue-green; rim cobalt blue-hour light through the front windows plus the teal spill of the pole display; line colour dark spruce. The episode's accent colour is the pole display's vacuum-fluorescent teal, #2FE0C4: it belongs to the hook display, and only the terminal's status LED echoes it.
+- The owner's office (shots 2, 6, 7, 11–16): key warm tungsten desk lamp from upper left, low and close; shadow tint warm umber-violet; rim cool blue-white fluorescent spill through the interior window behind her; line colour deep sepia.
+- The canned-goods aisle (shot 10): key fluorescent from straight overhead; shadow tint muted olive; rim cool cobalt from the front windows at the far end; line colour dark olive-brown.
+- The street at blue hour (shots 8, 17): key cobalt sky light from above and behind the bank; shadow tint deep indigo; rim the bank's gold window light and the neon sign's warm amber; line colour dark navy-violet.
+
+RENDERING STYLE (painterly and cinematic, not flat cel)
+- Line art is thin, coloured and secondary to light: lines use the darkest local colour (never pure black), are heavier in shadow and on outer contours, thin out or break where light hits an edge, and taper at the ends (build them as filled shapes, not uniform strokes). Forms are defined mainly by light and shadow.
+- A reusable <ShadingStack> renders every character part and prop in this order: base colour → form shadow with a soft terminator (2–6 px feathered edge; colour = base tinted by the scene's shadow colour, never grey) → a darker core shadow and ambient occlusion in creases (under the chin and hair, inside the elbow, between the fingers, where a body meets a seat) → on skin, a warm, slightly saturated band along the terminator → bounce light on undersides from the floor or nearby colours → highlight → rim light in the key light's colour → specular glints on eyes, hair, lips, nails, a watch and phone glass.
+- Store the key-light direction per shot in style.ts; shadow and light shapes follow it, so a character who turns toward the light brightens on that side.
+- Cast shadows: characters and props cast soft shadows onto floors, walls, desks and each other, matching the key light's direction and softness. Contact shadows sit wherever something touches a surface: the old man's boots and the young woman's sneakers on the vinyl floor tiles, the bills, the coin and the grocery bag on the counter laminate, the ledger, the report and the owner's forearm on the desk blotter, and the card stacks and tent labels on the blotter.
+
+TEXTURE (every surface, characters included)
+- Build a texture kit once, procedurally and seeded (no outside images), with scripts/build-textures.ts, and pre-render it as seamless PNG tiles: paper grain, canvas weave, dry brush, wet-paint blooms, chalk dust, concrete, wet asphalt, skin micro-texture, brushed metal, wood grain, glass smudges, plus cotton duck canvas (the old man's work jacket), corduroy (its collar), brushed flannel (his plaid shirt), camel wool melton (the young woman's overcoat), fine merino rib knit (her turtleneck), cotton piqué (the cashier's polo), heavy cotton twill (his apron), chunky cable knit (the owner's cardigan), thermal paper (the receipt), kraft paper (the grocery bag), matte bond paper (the report, the balance sheet, the working paper), bookcloth and red leather (the ledger), slate (the chalkboard), worn vinyl composition tile (the store floor), laminate (the counter), smoked acrylic (the pole display window), limestone and patinated bronze (the bank). Reuse tiles that earlier episodes already built.
+- On characters, each clothing and skin area gets its matching tile at low opacity (multiply or soft light), clipped to its shape, plus a brush mask that breaks up shadow edges so they look painted, not vector-perfect. Fabric shows seams, stitching, buttons, pockets, buckles, knit patterns and wrinkles that change with the pose.
+- In backgrounds, brushwork follows the form, edges break up, shadows hold painted texture, surfaces show dirt and wear, and fine detail concentrates around the focal point and falls away from it, as in a painting.
+- Texture must be visible in a 100% crop and subtle at phone size.
+
+DEPTH (every shot)
+- Combine depth cues: the real perspective camera (STEP 5), overlap, scale change, atmospheric haze between layers, depth of field with bokeh, cast and contact shadows, light falloff, and a foreground element close to the lens in most shots.
+- Plan the value structure in depth for each shot in the layout: the subject at the focal plane gets the highest contrast; the foreground is darker or out of focus; the background is hazier.
+- Volume: thin fog cards between depth layers; visible light beams (blue-hour streetlight slanting through the front windows across the counter and down the aisle, the warm cone of the owner's desk lamp, the bank's gold window light falling across the damp sidewalk); dust motes in the lamp cone and the window shafts, chalk dust, paper fibres from the receipt tear and fine street mist under the streetlights catching the light.
+- Bokeh: out-of-focus point lights (the streetlights, passing cars' head- and tail-lights, the bank's lit arched windows, the pole display's characters, the terminal's status LED and the neon sign) become soft discs with a slightly brighter rim, sized by their distance from the focal plane.
+
+PAINTED BACKGROUNDS
+- No flat fills anywhere. Every surface has a gradient, brush texture (feTurbulence into feDisplacementMap on edges, low-opacity noise multiplied over fills) and hand-placed detail: cables, signage, window frames, scuffs, plants, reflections, light pools.
+- Atmospheric perspective: far layers have lower contrast and are tinted toward the sky or ambient colour.
+- One key light, one fill, and practical lights (neon, screens, lamps) casting coloured pools on nearby surfaces.
+- Background plates: render each background layer once as a high-resolution transparent PNG through its own composition (Plate-s01-far, Plate-s01-mid…) with `npx remotion still`, saved to public/plates/card-rewards/. Plates are rendered at 2× pixel density (`--scale=2`) and 1.25–2× the frame size on the axis the camera travels, so texture stays crisp through push-ins. Shots then composite plates + live elements (characters, lights, text, particles). This lets the painting use expensive filters without slowing the render. Keep the plate source code so plates can be re-rendered.
+
+STEP 3 — CHARACTERS (all original designs, never portraits or likenesses of real people)
+- THE CASH PAYER: a man in his late 60s, wiry, with a slight forward stoop at the neck; close-cropped grey hair receding at the temples and short grey stubble; a faded navy cotton-duck work jacket with a brown corduroy collar and frayed cuffs, open over a red-and-grey plaid flannel shirt, tan work trousers and scuffed brown leather boots; he carries folded bills, a coin and a kraft paper grocery bag. He is careful and unhurried: he squares his bills before laying them down and keeps his elbows close to his body. Same outfit throughout.
+- THE CARD USER: a woman around 30, tall and long-limbed, upright; dark straight shoulder-length hair tucked behind one ear; a camel wool melton overcoat over a black merino turtleneck, slim dark jeans and white leather sneakers; a slim brown leather card wallet and a plain matte-charcoal credit card. Quick and sure: she does things one-handed and is already moving on before the last action settles. In shot 17 she stands outside under the bank's light, her face lit by its display, with a first hint of a smile.
+- THE CASHIER: about 19, lanky, shoulders a little rounded; curly dark hair cut short at the sides; a forest-green cotton piqué store polo with a plain chest, a black heavy-twill apron with a front pocket, and a key on a lanyard clipped at his hip. Loose and a beat late: he reacts after the others, then catches up with a quick, practised hand.
+- THE OWNER: a woman in her late 50s, solid and square-shouldered; a short silver bob; reading glasses on a beaded chain; a burgundy chunky cable-knit cardigan with its sleeves pushed up over a white collared blouse, dark trousers. Sharp and deliberate: she taps whatever she is sure of and writes in fast, decisive strokes. She works in her office for the whole film; her glasses go on in shot 2 and stay on.
+- Every character must read in silhouette alone.
+
+MODEL SHEETS FIRST
+For each main character (in every outfit and mood they appear in), build and render a model sheet: front, 3/4, profile and back views, with a second panel showing the volume construction underneath (ribcage, pelvis, limb cylinders); an expression sheet (neutral, smile, laugh, surprised, unimpressed with half-lidded eyes, tired, plus any expression this episode needs); and a turn test (the head turning from front to profile in 5 steps through the face rig). Minor characters get at least front and 3/4. Save to out/card-rewards/qa/model-<name>.png. Fix proportions, appeal and consistency between views before any shot uses the character.
+
+CONSTRUCTION
+- Realistic proportions with the appeal of a high-end anime feature, never chibi: the cash payer about 7 heads tall and wiry, with the forward stoop and slightly sloping shoulders; the card user about 7.5 heads, long-legged and narrow-shouldered; the cashier about 7.5 heads, lanky, with long forearms and a loose stance; the owner about 7 heads, solid and square-shouldered, planted on both feet. Build every body from volumes first (ribcage, pelvis, tapered limb cylinders) and check the gesture line before adding detail. Necks, clavicles, shoulders, elbows, wrists, knees and ankles sit in anatomically correct places; elbows line up with the waist and fingertips reach mid-thigh.
+- Faces: small chin, eyes about one fifth of the face width, the nose shown by a soft shadow plane and a small highlight on the tip, a soft shadow under the lower lip. The cash payer: deeper soft shadow planes for the nasolabial folds and under the cheekbones, crow's feet, thinning brows, slightly heavier upper lids. The card user: smooth planes, a defined jaw, neat level brows, a mouth that rests neutral. The cashier: a soft young jaw, a scatter of faint freckles, sleepy lids. The owner: fine lines at the eye corners and mouth corners, a faint vertical crease between the brows from reading, a softer jawline.
+- Eyes (they get close-ups): a thick, tapered upper lash line with a flick at the outer corner, a thin broken lower lash line, an iris with a vertical gradient (dark at the top, lighter at the bottom), a pupil, two highlights (one large, one small), a reflection of the scene's light source, and a soft shadow cast by the upper lid onto the eyeball. Eyelids and eyebrows are separate layers.
+- Hair in pointed clumps with a shadow shape, a highlight band and a few flyaway strands.
+- Clothes have weight and thickness: folds radiate from tension points (shoulders, elbows, belts, behind the knees) and change with every pose. The cotton-duck work jacket is stiff, breaks into hard angular creases at the elbows and barely swings; the flannel collar crumples under it. The camel overcoat is heavy and swings late, its lapels folding and its hem settling a beat after she stops; the turtleneck is soft and gathers at the throat. The piqué polo bunches at the armpits when the cashier reaches, and the apron pulls taut across his waist at the ties. The cable-knit cardigan sags at the pockets, its pushed-up sleeves bunch at the elbows and its cables stretch over her shoulders when she writes on the glass.
+
+RIG (skinned, never a paper cut-out)
+- Skeleton: pelvis → lower spine → chest (a 3-segment spine), neck, head; clavicles (the shoulders rise when an arm lifts above shoulder height); upper arm, forearm with twist, wrist; thigh, shin, foot, toes.
+- Skinned body: never rotate rigid SVG pieces around pins. Compute each limb's outline every frame from its bones with a width profile (deltoid, upper arm, forearm taper, wrist; thigh, knee, calf, ankle), so elbows and knees bend smoothly: the inner side compresses and creases, the outer side sharpens into the joint. The torso outline follows the three spine bones the same way, so the chest and waist bend and twist. No seams, gaps or overlapping circles at joints, at any angle.
+- Two-bone IK with pole vectors for arms and legs: hands are placed on their targets (the folded bills, the coin, the counter edge, the grocery bag, the register's touchscreen, the cash drawer, the card wallet, the credit card, the terminal's side slot, the receipt and the printer's tear bar, the impulse rack's packs and tag holder, the manila folder and the report, the reading glasses, the ledger, the black marker and the white glass marker, the office window glass, the chalk stub and the chalkboard, the steel ruler and the highlighter, the stack of plain cards, the working paper and the desk blotter) and feet are planted; a foot carrying weight never slides.
+- 2.5D face rig: the eyes, brows, nose, mouth, ears and hairline sit on a virtual ellipsoid and move with head yaw and pitch. During a turn the far eye narrows and moves toward the edge, the nose moves toward the silhouette, the cheek and jaw contour change, the ear shifts, and the hair clumps layer over and under accordingly. For turns beyond about 45°, swap to a dedicated 3/4 or profile head at the fastest point of the turn, where the motion hides the swap.
+- Torso turns work the same way: lapels, buttons, belts and seams slide across the torso shape.
+- Pose library per character, stored as joint angles + IK targets + face values + hand poses in src/data/card-rewards/poses/.
+- Every part draws its own shading stack and texture (STEP 2) from the shot's key-light direction.
+
+HANDS (treat them as their own sub-project)
+- Proportions: the hand is about as long as the face from chin to hairline, and the palm about as long as the middle finger. The middle finger is longest; index and ring are about equal; the pinky's tip reaches the last knuckle of the ring finger. The knuckles form an arc, not a straight line. The thumb starts at the wrist, its tip reaches about the middle knuckle of the index finger, and it sits at roughly 90° to the palm (it opposes the fingers; it never lies flat beside them).
+- Hand rig: wrist, palm, thumb (3 joints: base, middle, tip) and four fingers with 3 joints each. Each finger is one continuous skinned shape built from its bones with a width profile: slight bulges at the knuckles, a narrower middle, a rounded, padded tip, tapering toward the end.
+- Detail: the back of the hand shows nails (correct shape, a highlight, a cuticle line), knuckle creases and wrinkles, and on older characters tendons, veins and softer, older skin; the palm shows the thumb's padded base, the main creases and fingertip pads. Hands get the same shading stack, texture, cast shadows and contact shadows as the rest of the body.
+- Views: back, palm, thumb side, pinky side and 3/4. Choose the view per pose so the hand reads clearly; never show a hand edge-on where the fingers merge into one shape.
+- Curl rules: when fingers curl, the joints fold progressively (base least, tip most), curled fingers converge toward a point near the base of the palm, and each finger toward the pinky curls slightly more than the one before. Relaxed hands are never flat: the fingers rest in a gentle cascade of curls.
+- Grips are layered: the object sits between the hand's layers (palm and far fingers behind it, near fingers and thumb in front), the fingers flatten slightly where they press, and contact shadows sit where skin meets the object. Folded bills: folded lengthwise, pinched between the thumb and the side of the index finger, the other fingers curled loosely under them. Coin: flipped off the thumbnail from under the curled index finger, caught in a cupped palm with the fingers closing over it from index to pinky. Credit card: held at its short end, the thumb on the face, the index and middle fingers behind, the ring and pinky curled away; for the swipe its long edge sits in the slot and the wrist leads. Card wallet: lying in the palm, four fingers wrapped round its back, the thumb sliding the card up out of the top slot. Grocery bag: hugged into the crook of the arm, the fingers spread under its flat base, the thumb hooked over the folded top. Receipt: the top corner pinched between thumb and index, the paper bowing over the knuckles, the other palm braced on the printer. Report: four fingers under its bottom edge, the thumb on the cover, the paper flexing slightly. Reading glasses: one temple pinched between thumb and index, lifted by the frame, never the lens. Marker (the black felt-tip and the white glass marker): held like a pencil between thumb and index, the middle finger supporting it, the pinky edge resting on the paper; on the glass the arm is raised, the wrist straighter and the pen steeper. Highlighter: the same grip, the chisel tip flat to the page. Chalk stub: pinched between the thumb and the first two fingers, tip forward, the ring and pinky curled. Steel ruler: pressed flat by spread fingertips that flatten where they press. Foil pack: pinched between the thumb and the first two fingers. Stack of cards: held from above, the thumb at the near end, the middle finger at the far end, the index curled on top; the thumb lifts half the stack to cut it. Single card: pushed by the flat pad of the index fingertip, the other fingers lifted clear. Tag holder: flicked up by the thumb from beneath, the index resting on the rack edge.
+- Motion: the wrist leads and the fingers follow 1–3 frames later; when a hand opens or closes, the fingers move in a cascade from index to pinky, never all at once. Fingers never pop between poses; they interpolate through the rig.
+- Pose library (from my reference photos when available, see STEP 3B): relaxed, point, coin flick, cupped catch, bill pinch, drawer slam (palm flat, fingers spread), keypad tap, card hold, card swipe, wallet slide, bag hug, receipt pinch and tear, page hold, glasses lift, index tap, pencil grip (marker and highlighter), chalk pinch, flat press (ruler), pack pinch, thumb flick, deck grip, deck cut, fingertip push.
+- Close-ups (shots 1, 4, 5, 6, 9, 10, 14, 15, 16 and 18, and any insert) get the full detail level; wide shots simplify detail but keep correct proportions and silhouettes.
+
+ACTING (observed from life, never puppet-like)
+- Nobody is ever perfectly still: breathing moves the chest, shoulders and clavicles (1–2 px, a 3–4 second cycle, a different phase per character), and standing characters make tiny weight shifts between their feet. A held character is a moving hold.
+- Eyes lead: in every look or turn, the eyes move first, the head follows 2–4 frames later, then the torso. While watching or thinking, the eyes make small darts (saccades) every 0.5–1.5 seconds. Blinks take 5–7 frames (a fast close, a slower open), come every 2–4 seconds (seeded) and often accompany a head turn or a change of thought.
+- Asymmetry: no mirrored poses. Weight sits on one leg with the hips and shoulders tilted in opposite directions; the two hands do different things; the two sides of the face are never identical.
+- Faces act in small amounts: brow tension, lid height, the corners of the mouth, a jaw shift. A flicker of the coming emotion appears a few frames before the main expression (a flash of doubt in the eyes before a smile drops).
+- Extreme close-ups on the eyes for dramatic beats.
+- Mouths change only for expressions (smile, laugh, open surprise, flat). Characters never lip-sync: the narration is a voice-over; they act and react.
+- Eyelines: characters look at what matters (the pole display and the cash drawer for the old man and the cashier, the terminal screen and the receipt for the young woman and the cashier, the report, the ledger, the glass diagram, the chalkboard, the balance sheet and the card stacks for the owner, the store floor below her window when she looks up, and the bank's window display for the young woman), and screen direction stays consistent across cuts.
+
+FRAME RATE
+Characters animate on ones (every frame, 30 per second) for smooth, natural movement; the puppet look is fixed with posing, timing, skinning and overlap, not by dropping frames. Camera, particles, lights, text and effects are also on ones.
+
+STEP 3B — REFERENCE-DRIVEN MOTION (when reference/ exists)
+- Run scripts/extract-pose.py with MediaPipe Pose Landmarker (33 body points) and Hand Landmarker (21 points per hand) on every reference clip and photo, and save per-frame 2D landmarks to src/data/card-rewards/poses/ref/.
+- Smooth the landmarks (One Euro filter), convert them to the rig's joint angles and IK targets, and retarget them to each character's proportions. The cash payer moves slower and more carefully than I do, with longer holds and smaller arcs; the card user lighter and quicker, with her follow-through cut short; the cashier looser, starting each action a beat late and finishing it fast; the owner economical and decisive, with sharp starts and clean stops. Scale timing where age or mood calls for it.
+- Never trace every frame: that looks floaty and rotoscoped. Take the key poses and extremes from the reference, keep its timing, rebuild the breakdowns and in-betweens with the motion rules in STEP 6, and push the poses about 10–20% further than the reference for clarity.
+- Align each reference action to its beat word so its contact or hit frame lands on that word.
+- Use the hand photos to set finger joint angles, view and grip for every pose in the hand library.
+- Without reference, key the action by hand with the timing table in STEP 6.
+
+STEP 4 — PROPS (they must resemble their real-life versions)
+- The hero prop: THE REGISTER, the checkout register as it looks in a present-day neighbourhood grocery: a black touchscreen point-of-sale monitor tilted on a stand, a steel cash drawer under the counter lip with a black plastic bill-and-coin tray, a small thermal receipt printer with a serrated tear bar, and a customer-facing pole display: a black plastic head on a short steel pole with a smoked acrylic window, behind which vacuum-fluorescent dot-matrix characters glow teal on an upper and a lower row, with faint filament wires visible across the glass when it is dark. One component with states: display dark / warming (the filaments glow faintly) / lit / flicker / rolling-in (characters step in from the right); drawer closed / open (it shoots out on its spring and stops hard) / slammed; printer idle / feeding. It is in shots 1, 3 (in the wide from the office window), 4 (soft behind the terminal), 5 (the printer), 9 (soft behind the impulse rack) and 18, and small through the office window in shots 12 and 13.
+- The card terminal: a present-day countertop chip-and-tap terminal on a swivel post: matte black plastic, a small colour screen above a rubber-key PIN pad, a magnetic-stripe slot down its right side, a chip slot along the bottom edge and a small status LED; scuffs around the keys and the slot; no brand marks and no contactless symbol.
+- The credit cards: plain plastic cards in muted solid colours (the young woman's is matte charcoal), each with a gold contact chip on the face and a magnetic stripe on the back, rounded corners and a soft sheen; no logos, network marks, bank names, holograms, numbers or names.
+- Cash: bills always seen folded or edge-on, a muted grey-green paper with faint generic engraving lines, worn soft at the folds, no portrait, seal or numeral; the coin a plain silver-nickel disc with a reeded edge and an abstract relief, no real coin design.
+- The receipt: glossy thermal paper that curls as it leaves the printer, printed in faint grey-black dot text, neutral filler bars above and below its copy line, torn off with a sawtooth edge.
+- The report: a stapled printed paper on matte white bond with a plain typed cover (title, institution line, a small-print definition at the foot), one corner softly dog-eared, kept in a manila folder with a tab; no seal or emblem.
+- The ledger: a heavy cloth-bound account book with red leather corners and spine, green-ruled columnar pages with pencilled filler marks (no readable figures), a printed newsletter clipping taped into the corner of the open page.
+- The markers: a black felt-tip marker for the ledger and the blotter, a white liquid-chalk marker for the office glass, both with clear-ridged caps.
+- The office window: a wide steel-framed interior window with a central mullion, lightly smudged glass that reflects the desk lamp, a printed page taped in its lower corner.
+- The chalkboard: a slate board in a scuffed oak frame with a chalk ledge, ghosts of erased writing on the slate, a stub of white chalk.
+- The balance sheet: a printed sheet on bond paper, neutral filler rows above and below its two copy rows, under a steel ruler with graduation ticks and no numerals, and a yellow chisel-tip highlighter.
+- The card stacks: plain blank plastic cards in mixed muted colours, first as one stack, then two, each with a folded white card-stock tent label standing behind it on the desk blotter (a large paper pad in a leather-cornered frame).
+- The working paper: a second stapled printed paper with a plain typed cover; no seal or emblem.
+- The impulse rack and shelves: a low chrome wire rack along the counter's customer face holding plain colour-banded foil packs, with hinged, two-sided clear tag holders on its front edge; in the aisle, steel gondola shelving with plain colour-banded cans and boxes (no brand labels) and the same hinged tag holders along every shelf edge; hanging aisle signs with neutral filler graphics.
+- The floor arrow: stencilled white floor paint on worn vinyl composition tiles, scuffed by boots and carts and worn through in patches.
+- The store: fluorescent tube fixtures under a dropped ceiling, the counter's laminate worn pale at the customer edge, a front door with a push bar, the front windows showing the street.
+- The grocery bag: a flat-bottomed kraft paper bag with its top folded over, creased and slightly soft at the corners.
+- The bank: a generic older stone bank, pale limestone with soot in its joints, tall arched windows lit gold from inside, patinated bronze double doors, carved lettering over the door; in one window a glass-tube neon sign on a black frame with visible tube bends and electrode caps; in the next a tall portrait digital display in a thin black frame. No real bank's name, signage or facade.
+- No icons-as-props and no blob shapes.
+
+STEP 5 — CAMERA, LAYOUT AND ANIMATIC
+- Build a reusable <Camera3D>: a real perspective camera in CSS 3D (perspective on the root, transform-style: preserve-3d), with every plate, character and prop placed at its true depth (translateZ, scaled to keep its intended framing size). The camera has a position (x, y, z), rotation, a lens (think 24 mm wide, 35 mm, 50 mm, 85 mm portrait) and a focus distance. Push-ins are dollies (the camera moves, so near layers grow faster than far ones), not zooms. Depth of field: each layer's blur comes from its distance to the focus plane and the shot's aperture; rack focus eases over 8–16 frames with a hint of focus breathing (1–2% scale). Handheld drift from noise2D in @remotion/noise (2–4 px, at most 0.3°), seeded per shot, with a documentary-camera feel: slow and organic on handheld shots, almost none on tripod shots.
+- Depth layers: 5–8 in every exterior, 4+ in every interior, and in most shots a foreground element near the lens that crosses the frame (the pole display's post and the impulse rack at the counter, the terminal's swivel post, the hanging aisle signs, the office window's mullion and the desk lamp's shade, chalk dust, passing cars and streetlight poles on the street).
+- Every shot has a camera plan: start framing, end framing, move type, easing and the beats that trigger changes. No locked-off camera; a deliberate held beat is still a moving hold (drift + atmosphere).
+- Screen direction: progress and time move left to right; money, cards and arrows move left to right (the coin rolls left to right along the floor arrow, the arrow on the office glass points right to the bank, the neon arrow points right, the tag flips cascade left to right, the card slides from the left stack to the right one), the cash payer always stands at frame left and the card user at frame right; a whip-pan continues the direction of the motion that motivated it.
+- Layout first: write out/card-rewards/layouts.md with one block per shot: framing (wide, medium, close, extreme close), camera move, layers, character key poses with their beat words, every text with its surface, the transition in and out, and the object that hands off to the next shot.
+- Animatic: render a fast pass with grey placeholder shapes in the correct positions and the real timing (`--scale=0.25`), watch it against the voice and fix the timing here, before painting and animating.
+
+STEP 6 — MOTION LANGUAGE
+- src/lib/ease.ts holds named curves (anticipate, overshoot, settle, slam, whip, float) and a few named spring() configs. Linear motion is allowed only for mechanical constant speed: the receipt printer's paper feed, the pole display's characters stepping in, the window display's line-by-line refresh and traffic passing on the street.
+- Every move follows anticipation → action → overshoot → settle.
+- Breakdowns: between every two key poses, add a breakdown pose that defines the arc and the overlap (never a straight interpolation from key to key). Spacing is slow out of a pose, fast through the middle and slow into the next, and no two body parts start or stop on the same frame.
+- Biomechanics: the centre of gravity stays over the supporting foot; before reaching, pulling or lifting, the body shifts its weight first; to lift, the knees bend and the back stays straight; effort shows in the whole body (shoulders tense, neck strains, a short pause before a heavy lift).
+- Timing from life at 30 fps (refine from reference): blink 5–7 frames; eye dart 2–3; head turn 8–14; reach for an object 12–20; tap 4–6; both arms up 10–16; hand opening or closing 6–10; sit-to-stand 30–45; laying the bills flat: a 12–16 frame reach, 4 to press; the cash drawer opening: 3 frames out, a hard stop, 6–8 of rattle; the drawer slam: 6 frames of wind-up, 2–3 of action, 8–10 of settle; the card swipe: 4 frames of wind-up, 3–4 of action, 8–10 of follow-through; the receipt tear: 6 frames to grip, 2–3 to tear, 10–14 of flutter; the ledger drop: 4 frames of fall, a hard stop, 6 of settle; the double underline: 4 frames of wind-up, 3 per stroke, 8 of settle; each tag flip: 3 frames, every tag starting 3 frames after the one before; the deck cut and slap: 6 frames to lift, 4 to split, 6–8 to settle; the coin flick: 2 frames of action, 12–16 to the apex.
+- Secondary motion is simulated: bake the old man's jacket hem and the grocery bag, the young woman's hair and coat hem, the cashier's apron ties and the key on his lanyard, the owner's glasses chain and its beads, the receipt's curl, the swinging hanging aisle sign, the flipped tag holders settling on their hinges and the tent labels wobbling with a deterministic spring/verlet simulation in scripts/bake-secondary.ts; save per-frame values to src/data/card-rewards/sim/ and read them in the components. Remotion renders frames in parallel, so anything physical must be baked or computed purely from the frame number.
+- Weight: heavy things (the cash drawer, the cloth-bound ledger, the full grocery bag) start slowly, stop hard and cause a small shake; light things (the receipt, the folded bills, the tent labels, a single plastic card, chalk dust, the hanging aisle sign) float, tumble and flutter.
+- Arcs: hands, heads and props travel on curved paths (IK targets follow arcs); never slide a hand in a straight line.
+- Overlapping action: the head leads, the torso follows 2 frames later, arms 2–4 frames later, hair, hems, bags and loose clothing 2–4 frames after that.
+- Smear frames (1–2 frames) on fast moves: the coin flick, the drawer slam, the card swipe, the receipt tear, the double underline, the tag flips, the deck split.
+- Impact frames (2–3 frames, restrained and filmic: an exposure flash and contrast punch with a touch of speed lines and very slight chromatic aberration) on key hits only, so they keep their punch: "dollars" (shot 1, the drawer slams shut), "billion" (shot 6, the double underline), "everyone" (shot 10, the last tag flips), "fifty" (shot 13, the highlighter stops), "forty" (shot 17, the total lands).
+- Screen shake on big hits: decaying over 3–6 frames, maximum 8 px.
+- Motion blur with @remotion/motion-blur during fast moves only (whip-pans, the coin flick, the card swipe, the tag-flip cascade, the card sliding across the blotter), with a 180° shutter feel and a low sample count to protect render time.
+- Particles (dust motes in the lamp cone and the window shafts, chalk dust, paper fibres from the receipt tear, street mist under the streetlights) are deterministic and layered in depth: near ones are bigger, blurrier and faster. Each piece tumbles in 3D (scaleX = cos of its spin) and drifts on its own curve.
+
+STEP 7 — KINETIC TYPOGRAPHY INSIDE THE WORLD
+- No captions, no word-by-word subtitles and no floating text cards. Every text sits on a surface in the world.
+- <SurfaceText> places text on any four-corner quad using a perspective transform (matrix3d computed from the four corner points), so it sits exactly on its sign, screen, paper or board and moves with that surface's parallax layer.
+- Light the text by surface type: emissive (screens, LED, neon: glow and bloom, and it lights nearby surfaces), printed (multiplied by the scene light, paper texture, shadowed), handwritten (marker or chalk texture), stamped.
+- Occlusion: foreground objects pass in front of text when natural (the young woman's coat hem sweeps across the far end of the floor arrow in shot 3; the cashier's fingers cross the receipt's filler lines as he tears it in shot 5; the owner's hand and marker pass in front of her writing on the glass in shot 7; the hanging aisle sign swings in front of the flipping tags in shot 10).
+- Entrances land on the exact beat frame and match the surface: LED digits roll and land; neon flickers on (2–3 flickers within 6 frames); screens switch on with a one-frame bright pop; printed text arrives with its object; handwriting is written stroke by stroke; stamps slam with a squash. Exits are motivated: switched off, wiped, washed out, torn, fallen away, scrolled off.
+- Handwriting: in a Node script, convert the needed glyphs of Permanent Marker (the .woff from @fontsource/permanent-marker) to outlines with opentype.js and save them to src/data/card-rewards/glyphs.json. Reveal each glyph in writing order through a mask of thick strokes that follow the glyph's centre line, animated with evolvePath from @remotion/paths; the marker or chalk tip follows the leading point (getPointAtLength). Writing finishes on its beat word. If a glyph's centre line is not available, reveal it with a directional wipe along its main stroke, still followed by the pen.
+- Fonts via @remotion/google-fonts: "VT323" for the pole display and the card terminal's screen; "IBM Plex Mono" for the thermal receipt, the ledger's newsletter clipping, the page taped to the office glass, the balance sheet and the bank's window display; "Libre Baskerville" for the report cover, the working paper and the carved lettering over the bank door; "Oswald" for the floor stencil, the shelf tags, the tent labels and the neon sign; "Permanent Marker" for the owner's handwriting in the ledger, on the office glass and on the blotter, and with a chalk texture for the chalkboard. Load only the weights you use, and confirm in the stills that no fallback font appears. Fit long lines with fitText from @remotion/layout-utils.
+- Readability on a phone: every key text and key action stays inside x 48–888, y 288–1248 of the 1080×1920 frame (clear of the Shorts buttons and title). Main words have a cap height of at least 72 px; secondary text (small print, attributions, source tags, sticky notes) at least 34 px and on screen for at least 1.2 seconds. Every text has strong contrast with what is behind it. Background art can fill the whole frame.
+- Add a showSafeZone prop that draws the safe box, for QA stills only.
+
+STEP 8 — TRANSITIONS
+- Lay the shots out on an absolute timeline (<Sequence from={cutFrame}> with premounting), and build each transition as an overlay that straddles the cut, so the audio timeline never shifts. If you use TransitionSeries from @remotion/transitions, remember that transitions overlap the shots and shorten the total: compensate the durations so every cut still lands exactly on its cut frame, and verify it.
+- Allowed transitions, each motivated by the story:
+  - Whip-pan (6–8 frames): accelerate out with motion blur and speed lines, cut at maximum blur on the cut frame, decelerate in, continuing the screen direction.
+  - Light-flash cut: a bright source in shot A blooms toward white over 3–4 frames; cut; shot B blooms down from its own brightest light over 4–6 frames.
+  - Match cut: a shape or motion in shot A matches the position, scale and direction of one in shot B on the exact cut frame.
+  - Continuous camera move: the camera travels from one setup to the next without a cut.
+  - Foreground wipe: an object passes the lens, fills the frame and the cut happens behind it.
+- Never crossfades, dips to black or generic slides.
+
+STEP 9 — SHOTS (CUT word → shot; beats inside)
+
+1. THE CASH LINE — CUT "Paying" (frame 0). LOW MEDIUM SHOT across the checkout counter from the customer side, blue hour. The register's pole display stands in the right foreground, its teal vacuum-fluorescent characters reading "PAYING CASH COSTS YOU $149", laid across its upper and lower rows with the break after CASH, big enough for a 72 px cap height. The cash payer fills the left foreground in a 3/4 back view (his corduroy collar, his stubbled cheek and ear), his right hand holding folded bills out over the counter and a coin at the top of its flip just above his open left palm, catching the teal light. Behind the counter the cashier in his green polo and black apron, eyes on the display, one hand by the register's touchscreen; the impulse rack soft along the bottom edge. Through the front windows behind the cashier: the street in cobalt dusk, mist under the streetlights and the bank's arched windows across the street as gold bokeh; streetlight shafts slant through the glass across the counter.
+   Frame 0 is fully composed: the display lit with the hook text, the bills held out, the coin at its apex, the camera at its start framing. Build this state as a <HookFrame /> component so the last frames can reproduce it exactly.
+   Beats: in the first frames the coin drops back into his palm and his fingers close over it, index to pinky; "cash" he lays the folded bills flat on the counter, his fingertips pressing them square (contact shadows); "costs" the cashier taps the register's touchscreen and the cash drawer shoots out on its spring and stops hard (heavy, small shake, the coin tray rattles); "hundred" the camera starts a slow dolly-in toward the display; "forty-nine" the "$149" characters flicker and flare brighter, the teal spill lifting on the old man's cheek; "dollars" the cashier drops the bills in the tray and slams the drawer shut with the flat of his hand (smear, impact frame, small shake), the old man's eyes flick to the drawer.
+   Out: the cashier glances up past the camera toward the office at the back of the store (eyes first, head 3 frames later) and the camera whip-pans after his eyeline.
+
+2. THE REPORT — CUT "Every" (the whip-pan lands on the desk lamp's glow). MEDIUM CLOSE in the owner's office, tungsten desk lamp, the window mullion soft in the foreground. The owner in her burgundy cable-knit cardigan, glasses hanging on their beaded chain, slides a stapled report out of a manila folder under the lamp. Its typed cover reads "WHO GAINS AND WHO LOSES FROM CREDIT CARD PAYMENTS?" with "FEDERAL RESERVE BANK OF BOSTON · 2010" below it and the small print "“CASH” = CASH, CHECKS, DEBIT & PREPAID" at its foot.
+   Beats: "year" the report slides out of the folder into the lamp light, its cover text arriving with it, dust jumping in the lamp cone; "according" she lifts her reading glasses off the chain onto her nose (the wrist leads, the beads swing); "Boston" rack focus from the rim of her glasses to the cover's "FEDERAL RESERVE BANK OF BOSTON · 2010" line; "study" her index finger taps the small print "“CASH” = CASH, CHECKS, DEBIT & PREPAID" twice and holds there, the camera easing in until it reads at 34 px or more.
+   Out: she looks up over her glasses through the interior window to the store floor below (eyes first, head 3 frames later), and the camera cranes up over her shoulder toward the glass; the mullion crosses the lens.
+
+3. THE FLOOR ARROW — CUT "It" (foreground wipe behind the mullion). HIGH WIDE SHOT from the office window, looking down the canned-goods aisle to the counter, the front windows and, across the street, the bank's lit arched windows. Along the queue in front of the counter, an arrow stencilled in white paint on the worn vinyl tiles runs left to right, lettered "$149 / YEAR → CREDIT-CARD HOUSEHOLDS". The cash payer stands at the counter's left end hefting his kraft paper bag; the card user in her camel overcoat waits at the right end by the terminal; the cashier behind the register, the pole display glowing teal.
+   Beats: "flows" the fluorescent tube above the queue flickers on and the arrow's letters catch the light from left to right, the dolly starting down toward the floor; "households" the old man hugs the heavy bag into his arm (knees bend first) and a coin slips from his hand and rolls onto the arrow, left to right; "credit" the coin wobbles to a stop against the young woman's white sneaker, her coat hem sweeping across the far end of the arrow; "card" she glances down (eyes first, head 3 frames later), then thumbs her charcoal card up out of her slim wallet.
+   Out: the dolly continues down to her card hand; match cut on the card's edge.
+
+4. THE SWIPE — CUT "Here's" (match cut: the card's edge in her fingers keeps its position and angle). EXTREME CLOSE INSERT at the card terminal on its swivel post at the counter's right end: her hand with the plain charcoal card held at its short end, the terminal's dark idle screen and rubber keys, its swivel post crossing the near foreground; the register soft behind and the bank's windows as gold bokeh through the front glass.
+   Beats: "how" the terminal's screen wakes with a one-frame bright pop; "swipe" she swipes the card down the side slot (4-frame wind-up, smear, motion blur), her coat cuff swinging late; "costs" the screen switches to "SWIPE FEE" in teal-white type, the status LED blinks, and the glow lifts on her knuckles; "store" rack focus to the cashier behind the terminal: his eyes drop to the screen, then his head; "fee" the register's receipt printer starts to feed beside him.
+   Out: the camera follows the paper feeding out of the printer; match cut on the paper's curl.
+
+5. THE RECEIPT — CUT "Visa" (match cut on the curling paper). CLOSE from the customer side on the register's thermal printer, the cashier behind it, the front windows and the bank's gold windows soft behind him, a streetlight shaft backlighting the paper. The receipt curls out of the printer, grey filler bars above and below the printed line "VISA / MASTERCARD CREDIT · AVG FEE ≈ 2.4% · 2025".
+   Beats: "Visa" the paper feeds out at constant speed and the copy line emerges with it; "credit" the cashier pinches the top corner and rips the receipt across the tear bar (smear, paper fibres fly), his fingers crossing the filler lines; "two" he holds the receipt up toward the young woman, the paper fluttering and settling over his knuckles; "percent" the camera pushes in until the copy line spans the safe width, the window light glowing through the paper.
+   Out: he hands the receipt across the counter and it sweeps past the lens (foreground wipe).
+
+6. THE LEDGER — CUT "Merchant" (foreground wipe behind the receipt). MEDIUM CLOSE at the owner's desk under the lamp, the lamp shade in the near foreground. She drops a heavy cloth-bound ledger open on the blotter; a printed newsletter clipping is taped into the corner of the page, its line "NILSON DATA, VIA MERCHANT GROUPS" readable from the moment the book lands. She uncaps the black marker.
+   Beats: "groups" the ledger lands open with a hard stop (heavy, small shake, dust jumps in the lamp cone, the shade trembles); "count" she begins writing "2025 SWIPE FEES ≈ $198B" in the total row in Permanent Marker, stroke by stroke, the marker tip leading; "ninety-eight" the camera eases in as the "$198B" forms; "billion" the last stroke of the "B" finishes and she strikes a hard double underline beneath the total (smear, impact frame, small shake); "twenty twenty-five" she taps the "2025" with the marker tip and the camera racks down to the clipping's "NILSON DATA, VIA MERCHANT GROUPS".
+   Out: she caps the marker, picks up the white glass marker and turns toward the window; her cardigan shoulder crosses the lens (foreground wipe).
+
+7. THE CARD'S BANK — CUT "Most" (foreground wipe behind her shoulder). MEDIUM OVER-THE-SHOULDER at the office's interior window: through the glass, the aisle, the counter with the pole display's teal glow, the front windows and, across the street, the bank with its carved "BANK" over the bronze doors. On the glass, in white marker, she is mid-diagram: "$2.20 FEE →" is written, its arrow aimed at the bank. A printed page taped in the lower corner of the glass reads "GAO EXAMPLE · $100 SALE · 2009".
+   Beats: "goes" she writes on after the arrow, stroke by stroke, her hand and marker passing in front of the letters; "bank" rack focus starts to ease from the glass toward the street; "issued" the writing finishes: "$2.20 FEE → $1.70 TO THE CARD’S BANK"; "card" she points through the glass at the bank, her index fingertip touching the glass at the arrowhead, and the focus lands on the carved "BANK" and the bank's lit windows.
+   Out: continuous camera move: the camera dollies past her pointing finger, through the glass, down over the aisle and the counter toward the front windows.
+
+8. THE REWARDS SIGN — CUT "And" (continuous camera move; the store's front window header crosses the lens and hides the join into the exterior plates). WIDE EXTERIOR at blue hour from the store's side of the street: the bank's pale limestone facade, its arched windows lit gold, the patinated bronze doors under the carved "BANK", mist hanging under the streetlights, a passing car's tail-lights sweeping across the near foreground. In one tall window, a dark glass-tube neon sign on a black frame.
+   Beats: "money" the bank's upper windows warm up one by one, left to right; "helps" the neon tubes glow faintly as the transformer warms; "rewards" the sign flickers on (3 flickers within 6 frames), "→ REWARDS" in warm amber, its arrow pointing right, throwing an amber pool across the damp sidewalk.
+   Out: whip-pan right along the arrow's direction, back across the street and through the store's front windows.
+
+9. SAME PRICE — CUT "But" (the whip-pan lands at the counter). CLOSE at the counter's customer face: the low chrome impulse rack with plain colour-banded foil packs, a hinged clear tag holder on its front edge; the cashier's hand sliding in a paper tag; above the rack, soft, the old man folding the top of his bag at the counter's left end and the young woman at the right end by the terminal; the pole display's teal glow at the top of frame.
+   Beats: "stores" the cashier slides the tag into the holder: "SAME PRICE · CARD OR CASH"; "charge" rack focus onto the tag; "card" the young woman's hand, her card still between two fingers, takes a pack from the right of the tag, quick and from above; "users" the old man's hand, his folded bills in the other hand, takes the identical pack from the left, slowly, from the side; "more" both packs land side by side on the counter, identical.
+   Out: the cashier's thumb slides under the tag holder; match cut on the holder in extreme close-up.
+
+10. PRICE UP — CUT "They" (match cut on the tag holder). EXTREME CLOSE on the hinged holder, then a tracking shot along the canned-goods aisle under overhead fluorescents: steel gondola shelves of plain colour-banded cans and boxes, a hinged tag holder on every shelf edge, a hanging aisle sign swinging in the foreground.
+   Beats: "raise" his thumb flicks the holder up on its hinge and it flips over to "PRICE ↑" (smear); "prices" the flip cascades: the camera trucks right along the shelf edges as holder after holder flips to "PRICE ↑", each 3 frames behind the last (motion blur), the hanging sign swinging in front of them; "everyone" the cascade reaches the last holder at the back of the aisle by the office steps and it flips hard (impact frame, small shake), the cans on that shelf jumping once.
+   Out: continuous camera move: the camera tilts up the office steps to the lit interior window and pushes through the glass.
+
+11. THE QUESTION — CUT "So" (continuous camera move through the office glass). MEDIUM SHOT in the office: the slate chalkboard on the wall beside the interior window, lit side-on by the desk lamp, ghosts of erased writing on it; the owner in front of it with a white chalk stub, her glasses on, the store floor glowing beyond the window at frame right.
+   Beats: "who" the chalk touches the slate with a puff of dust and she starts writing "WHO COMES OUT AHEAD?" stroke by stroke; "comes" the camera eases in along the line; "ahead" the question mark's dot lands with a tap (writing finishes) and she turns her head over her shoulder toward the window (eyes first, head 3 frames later, the cardigan following), chalk dust drifting toward the lens.
+   Out: the chalk dust drifts across the lens and fills the frame (foreground wipe).
+
+12. LOWEST INCOME — CUT "The" (foreground wipe through the chalk dust). CLOSE HIGH ANGLE at the desk under the lamp: a printed balance sheet with neutral filler rows, a steel ruler laid under the row "LOWEST INCOME: PAYS $21 / YEAR", the yellow highlighter in her hand; past the desk's edge, through the interior window, the old man small at the counter's left end in the teal glow of the pole display.
+   Beats: "poorest" she presses the ruler flat with spread fingertips; "households" the camera tilts onto the row; "twenty-one" the highlighter stroke sweeps along the row and lands on "$21"; "dollars" she glances up through the window at the old man (rack focus to him as he squares his bag on the counter), then back.
+   Out: focus racks back to the sheet as the ruler slides down one row; match cut on the ruler's edge.
+
+13. HIGHEST INCOME — CUT "The" (match cut: the ruler's edge holds its frame position, one row lower). Same desk, same lamp: the next row, "HIGHEST INCOME: GETS $750 / YEAR"; through the window, the young woman small at the counter's right end.
+   Beats: "richest" the ruler drops onto the row with a clack; "collect" the highlighter starts along the row as, through the window, the young woman slips her card back into her wallet; "fifty" the stroke slams to a stop past "$750" (impact frame, small shake, the highlighter's cap rattling on the desk).
+   Out: she sets the highlighter down and reaches for a stack of plain cards at the edge of the blotter; continuous camera move down with her hand to desk level.
+
+14. THE SPLIT — CUT "Even" (continuous camera move ending at desk level). LOW CLOSE on the leather-cornered blotter under the lamp: a single stack of plain blank plastic cards in muted colours in her hand; behind it, two folded tent labels standing on the blotter, soft: "CARRY A BALANCE" on the left and "PAY IN FULL" on the right; the window's cool spill on the back edge of the desk.
+   Beats: "among" she squares the stack in her deck grip with a tap on the blotter; "cardholders" her thumb lifts half the stack at one end; "split" she slaps the halves down as two stacks, one in front of each label (smear), the tent labels wobbling, and focus racks to the labels.
+   Out: the camera dollies low between the two stacks.
+
+15. FIFTEEN BILLION — CUT "Fed" (continuous camera move rising to a high angle over the blotter). The two stacks with their tent labels on the blotter; she slides a stapled working paper into the lamp light at the top of frame, its typed cover reading "FEDERAL RESERVE BOARD WORKING PAPER, 2023".
+   Beats: "economists" the working paper slides into the light, its cover text arriving with it; "estimate" she uncaps the black marker; "fifteen" she draws an arrow on the blotter from the left stack toward the right one; "billion" she writes "$15B / YEAR" along the arrow's shaft; "year" the writing finishes; "moves" her left index fingertip lands on the top card of the left stack and starts pushing it along the arrow, left to right.
+   Out: the card keeps sliding; the camera tracks with it.
+
+16. CARRY TO FULL — CUT "from" (continuous camera move tracking the card). LOW CLOSE tracking left to right across the blotter: her left fingertip pushing the card along above the arrow, her right hand writing beneath it in black marker, the "$15B / YEAR" arrow overhead in frame, the tent labels soft at each end.
+   Beats: "people" the card picks up speed (motion blur); "carry" she writes "CARRY A BALANCE" beneath the arrow; "balances" the card passes the middle of the arrow; "to" she draws the arrowhead stroke; "don't" "PAY IN FULL" finishes, the line reading "CARRY A BALANCE → PAY IN FULL", and the card drops onto the right stack with a tap, the right tent label wobbling.
+   Out: she looks up through the interior window: below, the young woman pushes out through the front door into the street; the camera whip-pans right after her.
+
+17. FORTY BILLION — CUT "Rewards" (the whip-pan lands). MEDIUM EXTERIOR at blue hour on the bank's sidewalk: the young woman stops at the bank's tall window, where a portrait digital display sits dark in its thin black frame; the neon "→ REWARDS" glows amber in the next window; the camera at 3/4 front so her face will take the screen light; behind her, across the street, the store's front windows glow with the pole display's teal dot and the old man soft at the counter; tail-lights pass in the foreground.
+   Beats: "earned" the display switches on with a one-frame bright pop, its cold glow hitting her face, and the source line "CFPB" appears at its foot; "twenty twenty-two" the statement line types in from the left; "forty" the total rolls in and lands, the full line reading "REWARDS EARNED, 2022: > $40B" (impact frame, small shake, a lens flare across the glass); "dollars" she tilts her head, the corners of her mouth lifting a hint, the display reflected in her eyes.
+   Out: the display blooms toward white (light-flash cut).
+
+18. YOUR $149 — CUT "In" (light-flash cut: the shot blooms down from the pole display's teal characters). From an extreme close on the pole display, the camera arcs and pulls back across the checkout counter toward the frame-0 framing: the cashier behind the register, the impulse rack along the bottom edge, the bank's gold windows as bokeh through the front glass, the streetlight shafts.
+   Beats: "cash" the bloom settles on the dark pole display, its filaments faintly visible; "line" the old man steps back up to the counter from the left and sets his bag down (heavy, knees bend first); "That's" he takes out his folded bills; "your" the display flickers on and the characters roll in from the right; "one forty-nine" the "$149" lands, he holds the bills out over the counter and flicks the coin up off his thumb, and the camera arrives at exactly the frame-0 composition with the display reading "PAYING CASH COSTS YOU $149" and the coin at its apex. The last 4 frames render <HookFrame /> exactly, so the Short loops seamlessly.
+
+STEP 10 — COMPOSITING AND FINISH
+- Layer order in every shot: plates → haze cards between depth layers → practical light pools → cast and contact shadows → characters (shading stack, texture, rim light, light wrap) → in-world text → atmosphere (particles) → light beams → glow, bloom and halation on emissive surfaces → lens flares → grade → grain → vignette → chromatic aberration (impact frames only).
+- Bloom: a blurred copy of emissive layers composited with a screen blend.
+- Blue-hour streetlight through the store's front windows: long, soft-edged shafts slanting across the counter and down the aisle, with dust and a little street haze drifting in them. The desk lamp's cone in the office: a warm, soft-edged cone falling over the desk, dust motes turning slowly in it. The bank's window light outside: gold slabs falling across the damp sidewalk, mist hanging in them under the streetlights.
+- Screen glow on faces: a coloured soft-light shape on the side of the face toward the screen that follows the screen's brightness.
+- Lens flares on the pole display's teal characters, the desk lamp's bulb, the streetlights, the neon "→ REWARDS" sign and the bank's window display.
+- Film finish in a reusable <Grade> (per-scene settings in style.ts): a filmic contrast curve with slightly lifted blacks and a soft highlight roll-off; split toning (shadows toward the scene's ambient colour, highlights toward the key light); halation (a thin warm-red glow around the brightest highlights and practical lights); light wrap (bright backgrounds bleed a few pixels over character edges); very subtle gate weave (at most 0.5 px).
+- Grain: reuse the earlier grain component, changing every frame, stronger in mid-tones and shadows than in highlights, at 4–7% opacity; pre-render a set of grain tiles and cycle them if per-frame turbulence slows the render. A gentle lens vignette (10–15%) with slight edge softness.
+- Keep renders fast: no full-frame SVG filters every frame; prefer pre-rendered plates, transforms and opacity.
+
+STEP 11 — AUDIO
+- My voice-over only, at full volume. No music and no sound effects: I add them by hand in Premiere using out/card-rewards/sfx-cues.csv.
+- For the render, use a copy of the voice-over normalised to −14 LUFS (two-pass ffmpeg loudnorm: measure first with print_format=json, then apply the measured values; true peak −1.5 dBTP; 48 kHz), saved as public/vo/card-rewards_norm.wav and played with <Audio> from @remotion/media. Never touch my original file.
+
+STEP 12 — QUALITY GATES (do not skip)
+Save every QA image to out/card-rewards/qa/. Open every image you render and look at it; describe what you actually see in out/card-rewards/review.md before deciding it passes. Never mark anything as passing without looking at it.
+
+Gate A — Design
+1. Model sheets (STEP 3), a prop sheet with every prop from STEP 4, and a hand sheet: every pose in the hand library at 600 px tall in back and palm views, plus each grip holding its real prop → out/card-rewards/qa/hands.png. Check five digits, finger lengths, the knuckle arc, the thumb's origin and opposition, nails on the correct side, and grips that wrap around the object with correct layering and contact shadows. Redo any hand that looks like a mitten or a bunch of sausages.
+2. STYLE FRAMES: one finished still per shot at its key beat, rendered with `npx remotion still`.
+3. Colour script: all the style frames tiled in one image (ffmpeg tile) → out/card-rewards/qa/color-script.png. Check the journey: teal-and-cobalt counter at blue hour → warm tungsten office → teal terminal insert and backlit receipt → tungsten office with the gold bank through the glass → indigo street lit amber and gold → teal counter → olive fluorescent aisle → tungsten office deepening around the chalkboard, the sheet and the cards → indigo street in the cold glow of the bank's display → back to the teal-and-cobalt counter.
+4. Value check: every style frame at 135×240 in greyscale. The focal point (a face or the key text) must be the highest-contrast spot in the frame; fix the staging if it is not. Texture and depth check: 100% crops of a face, a hand, a fabric area and a background area from every style frame → out/card-rewards/qa/crops-sNN.png; texture must be visible up close, and every style frame must show at least four depth cues.
+5. Score each style frame 1–5 on: looks like a frame from a premium cinematic animated documentary; characters, hands and props look like their real-life versions; cinematic lighting; depth; painterly texture; composition and readability; text spelled exactly as in IN-WORLD COPY. Redo anything that scores under 4.
+
+Gate B — Timing
+6. Watch the animatic (STEP 5) against the voice. Fix pacing before animating.
+
+Gate C — Animation
+7. Animate, then render a half-resolution draft (`npx remotion render CardRewards out/card-rewards/draft.mp4 --scale=0.5`).
+8. Contact sheet per shot: every 6th frame tiled → out/card-rewards/qa/contact-sNN.png. Check arcs, spacing, overlap and that nothing pops or slides without weight.
+   Puppet test: watch every character action at full resolution, frame by frame. It fails on rigid parts rotating on pins, seams or gaps at joints, sliding feet, evenly spaced floaty in-betweens, body parts starting and stopping together, mirrored poses, hands popping between poses, fingers moving all at once, or effort without a weight shift.
+   Reference test (when reference exists): render each action beside its reference clip at the same timing → out/card-rewards/qa/ref-sNN.mp4, and compare weight, timing and arcs.
+
+Gate D — Sync
+9. For every beat in out/card-rewards/timing-report.md, render the frame before the beat and the beat frame side by side. The hit must happen on the beat frame: not early (except anticipation) and not late. Fix every miss.
+
+Gate E — Automated checks
+10. Static frames: render a QA draft with grain and handheld drift turned off and run ffmpeg freezedetect (n=0.001:d=1). No frozen segment may last 1 second or more.
+11. Loop: compare frame 0 with the last frame using ffmpeg ssim (target ≥ 0.98) and view them side by side.
+12. Duration: ffprobe the final file; it must equal durationInFrames / 30.
+13. Copy: run the copy.ts check script.
+14. Safe zone: one still per shot with showSafeZone on; no key text or action outside x 48–888, y 288–1248, and nothing important cut off by the frame edges.
+15. Audio: the MP4 has one audio stream at about −14 LUFS (ffmpeg ebur128); the silent MOV has no audio stream.
+
+Gate F — Checklist review (fix every failure, up to 3 full passes)
+- Frame 0 shows the hook text and the checkout register with its pole display lit.
+- No static frames; something meaningful moves at least every second, and a new shot or new action lands every 2–3 seconds.
+- The film reads as one continuous story in one world; every cut is motivated and lands on its cut frame.
+- Every in-world text is readable on a phone, perspective-matched, lit by its scene, spelled exactly as written here, and enters on its exact word.
+- Characters look like characters from a premium cinematic animated documentary (not clip art or paper puppets), keep their design across shots, move with real weight and timing, breathe, blink and react; hands have correct anatomy and truly grip their props; everything animates on ones and stays smooth at 30 fps.
+- Every frame shows real depth (camera perspective, depth of field, haze, overlap, cast and contact shadows) and painterly texture.
+- Characters and props resemble their real-life versions.
+- No real logos, no Visa or Mastercard logos, wordmarks, brand colours or card designs anywhere (the receipt carries their names as plain printed text only), no real credit-card designs (no network marks, bank names, holograms or metal-card designs: every card is plain plastic with a chip), no contactless-payment symbol, no Federal Reserve, Boston Fed, GAO or CFPB seal, eagle or emblem on the report, the working paper, the taped page or the display, no Nilson Report masthead on the clipping, no real bank's name, signage or facade (the bank's only lettering is BANK), no real register, terminal or pole-display trade dress, no real grocery-chain branding or brand packaging on the packs and cans, no real currency design, no likeness of a real person.
+- No element cut off by the frame edges; key text inside x 48–888, y 288–1248.
+- Transitions are whip-pans, light-flash cuts, match cuts, continuous camera moves or foreground wipes; never fades.
+- The final frame matches frame 0. Total duration = audio duration (+4 frames).
+
+AVOID (this is what makes it look cheap)
+- Flat single-colour backgrounds, uniform line weight, pure black lines, grey shadows.
+- Clean vector surfaces: flat fills, plastic gradients, razor-sharp shadow edges with no texture, everything in focus at the same depth.
+- Elements that pop, scale or fade in from the centre like a slideshow; text floating in space.
+- Characters built from circles and rectangles; paper cut-out motion (rigid pieces rotating on pins, visible joint seams, the whole body moving as one block).
+- Mitten or sausage hands, fingers of equal length, a flat thumb lying beside the fingers, fingers that open or close all at once, objects floating in front of a hand instead of being gripped.
+- Floaty, evenly spaced in-betweens with no breakdown poses; sliding feet; mirrored (twinned) poses; perfect stillness.
+- Linear easing on organic motion; everything starting on the same frame; everything moving at once.
+- Locked-off cameras and frozen frames.
+- Any fact, number, date or name not in this prompt.
+
+OUTPUT
+- Final render: npx remotion render CardRewards out/card-rewards/card-rewards.mp4 --codec=h264 --crf=16 --image-format=png --color-space=bt709
+- Also out/card-rewards/card-rewards_master.mov (--codec=prores --prores-profile=hq --image-format=png) and out/card-rewards/card-rewards_silent.mov (ProRes HQ with --muted, no audio) for my Premiere edit.
+- out/card-rewards/review.md: what you reused and built, every gate with what you checked, what you fixed and how many passes it took, the style-frame scores, and anything you could not get right.
+- Tell me the final duration in seconds, the file paths, and summarise out/card-rewards/review.md.

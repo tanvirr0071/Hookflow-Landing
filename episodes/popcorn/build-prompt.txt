@@ -1,0 +1,401 @@
+Build a YouTube Short in Remotion from my voice-over: a "Markup" Short, "Why Movie Popcorn Costs So Much".
+
+THE GOAL
+It must look like a premium cinematic animated documentary short: painterly, richly textured, deep, lit like a film, with character acting so natural it feels observed from real life. Character design keeps the clean appeal of a high-end anime feature, but every frame is rendered with volume, texture and atmosphere. It must never look like flat vector art, motion graphics, an explainer, a slideshow or a paper cut-out puppet. It plays as one continuous story that moves with the voice: the same world, the same characters and the same hero prop carry the viewer from shot to shot, and every shot hands off to the next. Every cut, every action and every piece of text is synced to the voice-over to the frame.
+
+Work like a real feature-animation studio, in this order, and do not skip ahead:
+timing → reference (motion and hands) → design (model sheets, hand sheet, props, texture kit, background plates) → layout and animatic → key poses → breakdowns and in-betweens → secondary motion → lighting, texture and compositing → QA.
+Each stage has a quality gate (STEP 12). Do not start a stage until the previous gate passes.
+
+PRIORITIES WHEN SOMETHING HAS TO GIVE
+1. Sync and facts are never compromised.
+2. Believable movement and hands. A character who moves with real weight in a simple frame beats a detailed character who moves like a paper puppet.
+3. Quality over quantity. Fewer, better drawings, well staged, beat many crude ones. Use real animation staging cheats freely: silhouettes against bright windows, backs of heads, over-the-shoulder framing, characters cropped by foreground objects, and moving holds.
+4. Every frame must survive a pause. If a paused frame looks like a vector explainer, a PowerPoint slide, clip art or a cut-out puppet, it fails.
+
+INPUT
+- Voice-over: voiceover/popcorn.mp3 (ElevenLabs, English). It is my file: never edit, replace or regenerate it, and never create a voice. Copy it to public/vo/popcorn.mp3.
+- If there is no Remotion project in this folder, create one with `npx create-video@latest` (blank template, TypeScript). Run `npx remotion skills add` and follow /remotion-best-practices.
+- Free tools only: no paid APIs, no stock footage, no AI images. Install what is missing: `brew install ffmpeg cmake` and `npx remotion add @remotion/media @remotion/media-utils @remotion/install-whisper-cpp @remotion/google-fonts @remotion/transitions @remotion/noise @remotion/motion-blur @remotion/paths @remotion/shapes @remotion/layout-utils @remotion/animation-utils`. Also `npm i opentype.js @fontsource/permanent-marker` (for handwriting, see STEP 7).
+- If I have placed character or prop artwork in public/assets/ (SVG or PNG), use it instead of drawing that item from scratch.
+- Reference (my own recordings, not stock): reference/popcorn/sNN_<action>.mp4 are phone clips of me acting the key actions (tearing a ticket stub in two, scooping popcorn into a bucket, writing on a board with chalk, raising a stop palm and taking a bag from someone, snapping open a paper bag, pushing open a heavy double door, dropping a heavy binder onto a desk, slamming a rubber stamp, popping a kernel into my mouth), and reference/hands/<pose>.jpg are photos of my hand in each pose of the hand library (STEP 3). When they exist, they are the source for poses, timing and hand shapes (STEP 3B). When one is missing, key that action by hand with the timing table in STEP 6.
+- For reference analysis, install the free MediaPipe package: `pip3 install mediapipe opencv-python numpy`.
+
+STEP 0 — PROJECT AUDIT AND STRUCTURE
+- Read every file in src/components/ and src/lib/ from earlier episodes (grain, flares, speed lines, rigs and anything else). Reuse what fits. Upgrade components in place without breaking earlier episodes: add optional props, never rename or remove existing ones. Log what you reused, upgraded and built new in out/popcorn/review.md.
+- Structure:
+  - src/popcorn/Popcorn.tsx (the composition), src/popcorn/shots/Shot01<Name>.tsx … (one file per shot, named after the shot titles in STEP 9)
+  - src/data/popcorn/words.json, timeline.ts, copy.ts, glyphs.json, poses/ (keyed and reference-extracted poses), sim/ (baked secondary motion)
+  - src/lib/ (shared, reusable across episodes): ease.ts, Camera3D.tsx, SurfaceText.tsx, HandWrite.tsx, Particles.tsx, Grade.tsx, rig/ (Skeleton, IK2Bone, SkinnedLimb, HandRig, FaceRig, ShadingStack), textures/
+  - scripts/: extract-pose.py (MediaPipe), bake-secondary.ts, build-glyphs.ts, build-textures.ts
+  - src/components/characters/, props/, backgrounds/, fx/ (reusable in later videos)
+- Determinism: never use Math.random(). Use random(seed) from remotion for every particle, blink and drift, so every render is identical.
+
+STEP 1 — TIMING MAP (do this first)
+1. Get the exact audio duration with getAudioDurationInSeconds from @remotion/media-utils and confirm it with ffprobe (they must agree within one frame).
+2. Composition "Popcorn": 1080x1920 at 30 fps. durationInFrames = Math.ceil(duration * 30) + 4. The last 4 frames are the loop hold (see the last shot).
+3. Transcribe: make a 16 kHz mono WAV copy of the voice-over in a temp folder (whisper.cpp requires it). Install whisper.cpp and the large-v3-turbo model with @remotion/install-whisper-cpp and transcribe with tokenLevelTimestamps: true; use the DTW token timestamps (t_dtw) where present. Merge sub-word tokens into words.
+4. Align Whisper's words to the script below with a sequence alignment. The script wins: "AMC" may come out as "a.m.c.", "AMCs" or "Amy see", and "AMC's" as "AMCs" or "AMC is"; "U.S." as "US" or "us"; "Fast-forward" as two words ("fast forward"); and the numbers may come out as digits or prices ("$12.78", "12.78", "$8.57", "857", "8:57", "48", "20", "5 or 10", "2025", "1.38 billion", "$1.34B"); map them to the script's words. Save src/data/popcorn/words.json as [{ word, scriptIndex, startMs, endMs, rawFrame, frame }].
+5. Onset refinement: Whisper word starts are often 40–120 ms off. Decode the voice-over to PCM, compute a 10 ms RMS envelope, and snap every cut word and beat word to the nearest speech onset within ±3 frames. Run ffmpeg silencedetect (noise=-35dB:d=0.18) and record every pause. Keep both the raw and the refined frame.
+6. Build src/data/popcorn/timeline.ts: for every shot its cut word, cut frame, end frame (the next shot's cut frame) and every beat word inside it with its refined frame, plus helpers such as beat("s05", "word"). All animation reads from this file. Never hard-code seconds or absolute frames in components; offsets relative to a beat (beat - 3) are fine.
+7. Cut rule: a shot cuts in on its CUT word (usually the first word of the line). Actions land on their BEAT words. A big hit never lands on a shot's first frame: leave at least 6 frames between the cut and the first big hit so the anticipation reads.
+8. Sync rule: every action tied to a word lands ON that word's refined start frame. Big actions get 2–4 frames of anticipation before the hit (a wind-up, a squash, a held breath), then follow-through and settle over 6–12 frames after it.
+9. Pace: a new shot or a clear new action every 2–3 seconds. If a shot runs past 3 seconds on my voice, add a camera change or a new action on its next beat word. Something meaningful moves at least every second.
+10. Write out/popcorn/timing-report.md (shot, cut word, word time, raw frame, refined frame, every beat word → frame, every pause with its length) and out/popcorn/sfx-cues.csv (timecode HH:MM:SS:FF at 30 fps, frame, shot, action, suggested sound: ticket printer chatter, paper tear, popcorn popping, chalk scratch, newspaper flap, bulb pop, coin clink, binder thud, rubber-stamp thunk…) so I can add SFX by hand.
+
+VOICE-OVER SCRIPT (for reference; the audio is the source of truth)
+At AMC, snacks earn nearly as much as movies.
+AMC's average U.S. ticket: twelve seventy-eight.
+Plus eight fifty-seven on snacks and drinks.
+About forty-eight cents per ticket dollar goes to studios.
+Now the snack counter.
+The food itself costs about twenty cents per dollar.
+So why did theaters ever let popcorn in?
+Early movie palaces wanted nothing to do with it.
+They had rugs, and didn't want popcorn ground in.
+Then the Depression hit.
+A bag of popcorn cost five or ten cents.
+The theaters that sold snacks survived.
+Fast-forward to twenty twenty-five.
+Tickets kept one point three eight billion after studios.
+Snacks kept one point three four billion after food costs.
+Both before wages and rent.
+Economists argue pricey popcorn keeps tickets cheaper.
+The snack they once refused now pays like movies.
+
+FACT LOCK
+Every number, date, quote and name in this prompt is fact-checked. Do not add any number, date, name or claim that is not in this prompt (the box-office touchscreen, the receipt's item lines, the concession menu board, the other rows of both ledger binders, the newspaper's columns, the lobby calendar's grid, the study's body text and the one-sheets in the other poster cases use neutral filler graphics, not invented facts). Put every in-world string in src/data/popcorn/copy.ts exactly as written below, character for character (curly quotes “ ”, middle dot ·, en dash –, em dash —, tilde ~). Components import strings from copy.ts; no string literals for in-world text inside components. Write a small check script that compares copy.ts against this list and fails on any difference. Keep "≈", "AVG U.S.", "BEFORE WAGES & RENT", "— ANDREW F. SMITH, HISTORIAN, VIA SMITHSONIAN" and "HARTMANN & GIL · STANFORD GSB, 2009" wherever they appear, and keep the curly quotes and the ellipsis of “THEY HAD BEAUTIFUL CARPETS AND RUGS…”.
+
+IN-WORLD COPY (exact)
+SNACKS EARN NEARLY WHAT MOVIES DO
+ADMIT ONE · AVG U.S. TICKET $12.78 · 2025
+SNACKS & DRINKS $8.57 · AVG U.S. VISITOR
+48¢ OF EVERY TICKET $1 → STUDIOS
+CONCESSIONS
+FOOD COST ≈ 20¢ PER $1
+POPCORN?
+PLEASE CHECK YOUR POPCORN
+“THEY HAD BEAUTIFUL CARPETS AND RUGS…”
+— ANDREW F. SMITH, HISTORIAN, VIA SMITHSONIAN
+THE GREAT DEPRESSION
+FRESH POPCORN 5¢ · 10¢
+OPEN
+2025
+TICKETS, AFTER STUDIOS: $1.38B
+SNACKS, AFTER FOOD COST: $1.34B
+BEFORE WAGES & RENT
+PRICEY POPCORN · CHEAPER TICKETS
+HARTMANN & GIL · STANFORD GSB, 2009
+
+STEP 2 — LOOK BIBLE (before any shot is animated)
+Write src/popcorn/style.ts with the tokens below, then build and review the design stills in STEP 12, Gate A.
+
+THE WORLD (one geography, so camera moves and cuts make sense)
+- One building across time: a restored early movie palace on a downtown corner. Its marquee juts over the entrance and faces the street; directly above the marquee is the office window, which looks out over the marquee's back. Across the street, beside a row of storefronts, stands a cast-iron lamp post: the camera's frame-0 position (shots 1, 10, 18), and the wagon parks at the curb right under the marquee (11, 12).
+- Through the front doors: the entrance vestibule with the box-office window (2), then the lobby, with the ticket podium in the middle and the auditorium doors behind it (4), the brass poster case and the lobby calendar on the left wall (7, 13), and the grand staircase up to the office above the entrance (13–17).
+- The arch on the right-hand side of the lobby is the coatroom in the palace days (8, 9) and the concession counter in 2025 (3, 5, 6): the same arch, the same keystone and the same rug line, seen from the same side, so the match cut and the time-lapse read.
+- Reuse the same component for anything that appears twice: the marquee (1, 10, 11, 12, 13, 17, 18), the cast-iron lamp post (1, 10, 18), the right-hand arch as coatroom and concession counter (3, 5, 6, 8, 9, 13), the lobby rug (7, 8, 9, 12, 13), the brass poster case (6, 7, 13), the ticket stub (2, 4), the striped popcorn bucket (1, 3, 6, 7, 17), the kraft paper bags (8, 11), the glass popping cabinet on the wagon and the cart (11, 12), the ledger binders (14, 15, 16, 17), the shift manager (2–7, 14–18), the moviegoer (1, 2, 3, 4, 18), the usher (8, 9, 12) and the vendor (11, 12).
+
+PALETTE AND LIGHT (per scene: key light colour and direction, shadow tint, rim colour, line colour)
+- Street, 2025 night (1, 18): key warm-white bulb light from the marquee, above and in front; shadow tint deep blue-violet #2B2550; rim cyan #4CC2C4 from the storefronts across the street; lines deep plum.
+- Box office and lobby, 2025 (2, 4, 7, end of 13): key cool white LED from overhead; shadow tint teal-grey #24414A; rim warm gold from the marquee spill and the concession arch; lines deep teal.
+- Concession arch, 2025 (3, 5, 6): key amber heat-lamp light #FFB347 from above the cabinet; shadow tint warm red-brown #5A2A1E; rim cool white from the lobby; lines burnt umber.
+- Palace lobby, early days (8, 9): key warm gold chandelier light #F3C27A from high centre; shadow tint deep burgundy #4A1C2A; rim pale blue daylight #BFD6E8 from the transom windows over the doors; lines dark wine.
+- Depression street, grey day (10, 11): key flat cold overcast #C7CCD1 from high left; shadow tint slate green #34443F; rim warm orange #FF9A4A from the wagon's lantern and firebox; lines dark slate.
+- Depression street, dusk (12, start of 13): key warm bulb light #FFD27F from the relit marquee and the open doors; shadow tint dusk blue #263659; rim the last cyan sky light #7FB8C9; lines deep navy.
+- Office, 2025 night (14–17): key warm brass-lamp light #FFCC85, low from the left; shadow tint deep teal #163940; rim the marquee's warm white rising through the street window behind her; lines dark teal-brown.
+- Accent colour: popcorn butter yellow #F2C14E, in the marquee bulbs' brightest glow, the cabinet light and the kernels.
+
+RENDERING STYLE (painterly and cinematic, not flat cel)
+- Line art is thin, coloured and secondary to light: lines use the darkest local colour (never pure black), are heavier in shadow and on outer contours, thin out or break where light hits an edge, and taper at the ends (build them as filled shapes, not uniform strokes). Forms are defined mainly by light and shadow.
+- A reusable <ShadingStack> renders every character part and prop in this order: base colour → form shadow with a soft terminator (2–6 px feathered edge; colour = base tinted by the scene's shadow colour, never grey) → a darker core shadow and ambient occlusion in creases (under the chin and hair, inside the elbow, between the fingers, where a body meets a seat) → on skin, a warm, slightly saturated band along the terminator → bounce light on undersides from the floor or nearby colours → highlight → rim light in the key light's colour → specular glints on eyes, hair, lips, nails, a watch and phone glass.
+- Store the key-light direction per shot in style.ts; shadow and light shapes follow it, so a character who turns toward the light brightens on that side.
+- Cast shadows: characters and props cast soft shadows onto floors, walls, desks and each other, matching the key light's direction and softness. Contact shadows sit wherever something touches a surface: shoes on the palace rug, the bucket and cup on the counter, the binders and the stamp on the desk, the wagon's wheels on the wet brick paving.
+
+TEXTURE (every surface, characters included)
+- Build a texture kit once, procedurally and seeded (no outside images), with scripts/build-textures.ts, and pre-render it as seamless PNG tiles: paper grain, canvas weave, dry brush, wet-paint blooms, chalk dust, concrete, wet asphalt, skin micro-texture, brushed metal, wood grain, glass smudges, plus maroon wool serge (the usher's tunic), gold bullion braid and polished brass (the buttons, the shoulder cord, the front doors, the poster case and the box-office frame), piqué cotton (the polo), heavy black canvas (the shift manager's apron) and undyed canvas (the vendor's apron), herringbone tweed (the vendor's cap), cable knit (the cardigan), cut wool pile (the palace rug), fur and boiled wool (the patron's collar and coat), felt (the cloche and the bowler), gilt plaster and veined marble (the palace), thermal paper (the stub and the receipt), kraft paper (the bags), newsprint (the newspaper), slate and chalk (the price board), red-painted pinstriped wood and iron (the wagon), linen book cloth (the binders), striped paperboard (the bucket). Reuse tiles that earlier episodes already built.
+- On characters, each clothing and skin area gets its matching tile at low opacity (multiply or soft light), clipped to its shape, plus a brush mask that breaks up shadow edges so they look painted, not vector-perfect. Fabric shows seams, stitching, buttons, pockets, buckles, knit patterns and wrinkles that change with the pose.
+- In backgrounds, brushwork follows the form, edges break up, shadows hold painted texture, surfaces show dirt and wear, and fine detail concentrates around the focal point and falls away from it, as in a painting.
+- Texture must be visible in a 100% crop and subtle at phone size.
+
+DEPTH (every shot)
+- Combine depth cues: the real perspective camera (STEP 5), overlap, scale change, atmospheric haze between layers, depth of field with bokeh, cast and contact shadows, light falloff, and a foreground element close to the lens in most shots.
+- Plan the value structure in depth for each shot in the layout: the subject at the focal plane gets the highest contrast; the foreground is darker or out of focus; the background is hazier.
+- Volume: thin fog cards between depth layers; visible light beams (the marquee's soffit lights raking down onto the sidewalk, the projector beam through the auditorium-door portholes, daylight shafts through the palace transom windows, the cabinet heat lamps through butter steam, the desk lamp's cone); popcorn hulls and salt flecks, butter steam, chalk dust, palace dust motes, the wagon's steam and soot flecks, wind-blown grit on the Depression street catching the light.
+- Bokeh: out-of-focus point lights (the marquee's chaser bulbs, tail lights and storefront signs across the street, the chandelier crystals, the cabinet heat lamps, the wagon's gas lantern, the desk lamp) become soft discs with a slightly brighter rim, sized by their distance from the focal plane.
+
+PAINTED BACKGROUNDS
+- No flat fills anywhere. Every surface has a gradient, brush texture (feTurbulence into feDisplacementMap on edges, low-opacity noise multiplied over fills) and hand-placed detail: cables, signage, window frames, scuffs, plants, reflections, light pools.
+- Atmospheric perspective: far layers have lower contrast and are tinted toward the sky or ambient colour.
+- One key light, one fill, and practical lights (neon, screens, lamps) casting coloured pools on nearby surfaces.
+- Background plates: render each background layer once as a high-resolution transparent PNG through its own composition (Plate-s01-far, Plate-s01-mid…) with `npx remotion still`, saved to public/plates/popcorn/. Plates are rendered at 2× pixel density (`--scale=2`) and 1.25–2× the frame size on the axis the camera travels, so texture stays crisp through push-ins. Shots then composite plates + live elements (characters, lights, text, particles). This lets the painting use expensive filters without slowing the render. Keep the plate source code so plates can be re-rendered.
+
+STEP 3 — CHARACTERS (all original designs, never portraits or likenesses of real people)
+- THE SHIFT MANAGER (2025, main): late 20s, lean and quick, dark curly hair pulled back in a short ponytail, a pen behind her ear, a steel wristwatch; a black piqué-cotton polo with a blank name badge, a black heavy-canvas apron dusted with salt, dark jeans, black non-slip work shoes. Efficient and dry: she moves with no wasted motion and lets one raised eyebrow do the talking. In the office after close (14–18) the apron is off and a charcoal cable-knit cardigan hangs over the polo, sleeves pushed up; her shoulders sit lower and she leans on the desk, tired but sharp.
+- THE USHER (palace days and the Depression, main): early 20s in the palace days, slim and straight-backed, short pomaded hair with a hard side part; a fitted double-breasted maroon wool-serge tunic with two rows of brass buttons, gold braid at the cuffs and a gold shoulder cord, matching trousers with a gold stripe, a maroon pillbox cap and white cotton gloves. Proud and proper: chin up, heels together, every gesture from the shoulder. In the Depression (12) he is the same man older, a little thicker through the middle, the tunic faded, the braid tarnished and one elbow darned; his posture has softened and he holds the door with a reluctant half-smile.
+- THE VENDOR (the Depression, main): in his 50s, stocky and broad-shouldered, grey stubble, a herringbone tweed flat cap, a collarless shirt with rolled sleeves under a brown wool waistcoat, an undyed canvas apron with a leather coin pouch, fingerless knit gloves. Patient and warm: a planted stance, a salesman's small nod to every customer.
+- Minor: THE MOVIEGOER (2025): early 30s, average build, short beard, a heather-green hoodie and jeans, seen mostly from behind, over the shoulder and as hands. THE PALACE PATRON (palace days): a woman in her 30s, a cloche hat over a dark bob, a dark-green boiled-wool coat with a fur collar over a drop-waist dress, T-strap shoes, gloves. THE QUEUE (the Depression): men in overcoats and flat caps or fedoras, a boy in a cap and a short jacket, seen in silhouette and at mid-distance.
+- Every character must read in silhouette alone.
+
+MODEL SHEETS FIRST
+For each main character (in every outfit and mood they appear in), build and render a model sheet: front, 3/4, profile and back views, with a second panel showing the volume construction underneath (ribcage, pelvis, limb cylinders); an expression sheet (neutral, smile, laugh, surprised, unimpressed with half-lidded eyes, tired, plus any expression this episode needs); and a turn test (the head turning from front to profile in 5 steps through the face rig). Minor characters get at least front and 3/4. Save to out/popcorn/qa/model-<name>.png. Fix proportions, appeal and consistency between views before any shot uses the character.
+
+CONSTRUCTION
+- Realistic proportions with the appeal of a high-end anime feature, never chibi: the shift manager about 7.5 heads tall and lean; the young usher about 7.5 heads, narrow-waisted and very upright, the older usher the same height but thicker through the middle with rounder shoulders; the vendor about 7 heads, stocky and broad-shouldered, with a slight forward lean from pushing the wagon. Build every body from volumes first (ribcage, pelvis, tapered limb cylinders) and check the gesture line before adding detail. Necks, clavicles, shoulders, elbows, wrists, knees and ankles sit in anatomically correct places; elbows line up with the waist and fingertips reach mid-thigh.
+- Faces: small chin, eyes about one fifth of the face width, the nose shown by a soft shadow plane and a small highlight on the tip, a soft shadow under the lower lip. The shift manager: straight dark brows that do most of her acting, a light dusting of freckles across the nose, a faint tiredness under the eyes in the office. The young usher: a clean jaw, smooth skin, brows held level with effort. The older usher: the same face with faint lines at the eye corners and a slight softening at the jaw. The vendor: deep crow's feet, ruddy weathered cheeks, grey stubble as painted texture, a nose once broken.
+- Eyes (they get close-ups): a thick, tapered upper lash line with a flick at the outer corner, a thin broken lower lash line, an iris with a vertical gradient (dark at the top, lighter at the bottom), a pupil, two highlights (one large, one small), a reflection of the scene's light source, and a soft shadow cast by the upper lid onto the eyeball. Eyelids and eyebrows are separate layers.
+- Hair in pointed clumps with a shadow shape, a highlight band and a few flyaway strands.
+- Clothes have weight and thickness: folds radiate from tension points (shoulders, elbows, belts, behind the knees) and change with every pose. The shift manager's canvas apron is stiff, creases flat at the waist tie and swings late when she turns; her piqué polo stretches across the shoulders when she reaches; the cardigan is soft and sags at its pockets; the usher's serge tunic is stiff and holds its shape, creasing only at the elbows and pulling across the buttons when he bends, while the shoulder cord swings; the vendor's waistcoat pulls across his belly at the buttons and his canvas apron swings heavy with the coins; the patron's fur collar bounces and her coat hem swings a beat behind her.
+
+RIG (skinned, never a paper cut-out)
+- Skeleton: pelvis → lower spine → chest (a 3-segment spine), neck, head; clavicles (the shoulders rise when an arm lifts above shoulder height); upper arm, forearm with twist, wrist; thigh, shin, foot, toes.
+- Skinned body: never rotate rigid SVG pieces around pins. Compute each limb's outline every frame from its bones with a width profile (deltoid, upper arm, forearm taper, wrist; thigh, knee, calf, ankle), so elbows and knees bend smoothly: the inner side compresses and creases, the outer side sharpens into the joint. The torso outline follows the three spine bones the same way, so the chest and waist bend and twist. No seams, gaps or overlapping circles at joints, at any angle.
+- Two-bone IK with pole vectors for arms and legs: hands are placed on their targets (the touchscreen, the ticket stub, the receipt, the striped bucket and the lidded cup, the kettle's dump handle, the scoop, the chalk and the chalkboard, the patron's paper bag and the coatroom shelf, the vendor's kraft bags, scoop and coins, the brass doors, the popper cart's handle, the ledger binders, the rubber stamp, the study and the single kernel) and feet are planted; a foot carrying weight never slides.
+- 2.5D face rig: the eyes, brows, nose, mouth, ears and hairline sit on a virtual ellipsoid and move with head yaw and pitch. During a turn the far eye narrows and moves toward the edge, the nose moves toward the silhouette, the cheek and jaw contour change, the ear shifts, and the hair clumps layer over and under accordingly. For turns beyond about 45°, swap to a dedicated 3/4 or profile head at the fastest point of the turn, where the motion hides the swap.
+- Torso turns work the same way: lapels, buttons, belts and seams slide across the torso shape.
+- Pose library per character, stored as joint angles + IK targets + face values + hand poses in src/data/popcorn/poses/.
+- Every part draws its own shading stack and texture (STEP 2) from the shot's key-light direction.
+
+HANDS (treat them as their own sub-project)
+- Proportions: the hand is about as long as the face from chin to hairline, and the palm about as long as the middle finger. The middle finger is longest; index and ring are about equal; the pinky's tip reaches the last knuckle of the ring finger. The knuckles form an arc, not a straight line. The thumb starts at the wrist, its tip reaches about the middle knuckle of the index finger, and it sits at roughly 90° to the palm (it opposes the fingers; it never lies flat beside them).
+- Hand rig: wrist, palm, thumb (3 joints: base, middle, tip) and four fingers with 3 joints each. Each finger is one continuous skinned shape built from its bones with a width profile: slight bulges at the knuckles, a narrower middle, a rounded, padded tip, tapering toward the end.
+- Detail: the back of the hand shows nails (correct shape, a highlight, a cuticle line), knuckle creases and wrinkles, and on older characters tendons, veins and softer, older skin; the palm shows the thumb's padded base, the main creases and fingertip pads. Hands get the same shading stack, texture, cast shadows and contact shadows as the rest of the body.
+- Views: back, palm, thumb side, pinky side and 3/4. Choose the view per pose so the hand reads clearly; never show a hand edge-on where the fingers merge into one shape.
+- Curl rules: when fingers curl, the joints fold progressively (base least, tip most), curled fingers converge toward a point near the base of the palm, and each finger toward the pinky curls slightly more than the one before. Relaxed hands are never flat: the fingers rest in a gentle cascade of curls.
+- Grips are layered: the object sits between the hand's layers (palm and far fingers behind it, near fingers and thumb in front), the fingers flatten slightly where they press, and contact shadows sit where skin meets the object. Ticket stub: pinched between the thumb and index pads, the middle finger behind it as a backstop; for the tear, two pinches either side of the perforation, the wrists rolling apart. Receipt: held at its torn top edge between the thumb and the side of the index finger, the paper curling over the knuckles. Popcorn bucket: four fingers wrapped round its lower half, the thumb on the rim, the base against the heel of the palm. Lidded cup: the fingers wrapped round it, the paper dimpling slightly under them, the thumb opposite. Scoop: the handle in a fist, the index finger extended along the top. Chalk: pinched between the thumb, index and middle near its tip, the ring and pinky curled and resting on the board. Paper bag: the folded top gathered in a loose fist; to snap it open, one edge held between the thumb and a curled index. Coins: resting in a cupped palm, the fingers slightly closed. Brass doors: the palms flat on the push plates, the fingers spread, the heels of the hands driving. Popper cart: both hands overhand on its wooden handle, the wrists straight. Ledger binder: the spine in the palm and the four fingers along the cover, the thumb on top; when dropped, the hand opens in a cascade. Rubber stamp: the clear block's top edges in the palm, the thumb along one side and the fingers along the other, the other palm stacked on top for the slam. Study: held at its edge between the thumb on the front and the fingers behind. Kernel: pinched between the tips of the thumb and index, the other fingers curled loosely.
+- Motion: the wrist leads and the fingers follow 1–3 frames later; when a hand opens or closes, the fingers move in a cascade from index to pinky, never all at once. Fingers never pop between poses; they interpolate through the rig.
+- Pose library (from my reference photos when available, see STEP 3B): relaxed, point, pinch, tear (two opposed pinches), receipt hold, bucket hold, cup hold, scoop grip, chalk grip, gloved stop palm, gloved lift-and-take, bag snap, cupped coin palm, flat palms driving a door, two-hand cart grip, flat palm over a page, double tap with the index, stamp press, kernel pinch.
+- Close-ups (shots 2, 3, 4, 6, 11, 14, 16 and 18, and any insert) get the full detail level; wide shots simplify detail but keep correct proportions and silhouettes.
+
+ACTING (observed from life, never puppet-like)
+- Nobody is ever perfectly still: breathing moves the chest, shoulders and clavicles (1–2 px, a 3–4 second cycle, a different phase per character), and standing characters make tiny weight shifts between their feet. A held character is a moving hold.
+- Eyes lead: in every look or turn, the eyes move first, the head follows 2–4 frames later, then the torso. While watching or thinking, the eyes make small darts (saccades) every 0.5–1.5 seconds. Blinks take 5–7 frames (a fast close, a slower open), come every 2–4 seconds (seeded) and often accompany a head turn or a change of thought.
+- Asymmetry: no mirrored poses. Weight sits on one leg with the hips and shoulders tilted in opposite directions; the two hands do different things; the two sides of the face are never identical.
+- Faces act in small amounts: brow tension, lid height, the corners of the mouth, a jaw shift. A flicker of the coming emotion appears a few frames before the main expression (a flash of doubt in the eyes before a smile drops).
+- Extreme close-ups on the eyes for dramatic beats.
+- Mouths change only for expressions (smile, laugh, open surprise, flat). Characters never lip-sync: the narration is a voice-over; they act and react.
+- Eyelines: characters look at what matters (the box-office touchscreen, the ticket stub, the receipt, the chalk note, the POPCORN? card, the patron's paper bag, the kernel on the rug, the coins, the marquee, the two ledger totals and the study cover), and screen direction stays consistent across cuts.
+
+FRAME RATE
+Characters animate on ones (every frame, 30 per second) for smooth, natural movement; the puppet look is fixed with posing, timing, skinning and overlap, not by dropping frames. Camera, particles, lights, text and effects are also on ones.
+
+STEP 3B — REFERENCE-DRIVEN MOTION (when reference/ exists)
+- Run scripts/extract-pose.py with MediaPipe Pose Landmarker (33 body points) and Hand Landmarker (21 points per hand) on every reference clip and photo, and save per-frame 2D landmarks to src/data/popcorn/poses/ref/.
+- Smooth the landmarks (One Euro filter), convert them to the rig's joint angles and IK targets, and retarget them to each character's proportions. the shift manager moves quicker and more clipped than I do, with no wasted motion, then slower and heavier in the office after close; the young usher is stiffer and more upright than I am, every gesture from the shoulder; the older usher is slower, with a softer chest; the vendor is heavier and slower, with a planted, rolling stance. Scale timing where age or mood calls for it.
+- Never trace every frame: that looks floaty and rotoscoped. Take the key poses and extremes from the reference, keep its timing, rebuild the breakdowns and in-betweens with the motion rules in STEP 6, and push the poses about 10–20% further than the reference for clarity.
+- Align each reference action to its beat word so its contact or hit frame lands on that word.
+- Use the hand photos to set finger joint angles, view and grip for every pose in the hand library.
+- Without reference, key the action by hand with the timing table in STEP 6.
+
+STEP 4 — PROPS (they must resemble their real-life versions)
+- The hero prop: <Marquee>, the theater's marquee: a projecting sheet-metal canopy over the entrance, hung from the facade on iron rods, its fascia painted cream with red trim and pressed ornament; on its front, a backlit white letter board with three tracks of black changeable letters, framed by rows of round incandescent chaser bulbs in brass sockets; its soffit studded with bulbs that wash the sidewalk; on its front edge a small bulb-letter panel; seen from above (from the office window) its tar-paper roof, conduit and the light rising off its face. One component with states: lit (2025: the board reading "SNACKS EARN NEARLY WHAT MOVIES DO", the chaser run, the sidewalk wash), dim (the Depression: half the bulbs dead, a few broken, the board bare and grimy), blowout (the last bulbs popping out in sequence), relight (the bulbs chasing back on and the bulb panel spelling "OPEN" letter by letter) and from-above (its back and roof in the pull-back). It appears in shots 1, 10, 11, 12, 13, 17 (its glow through the window) and 18, and its gold spill shows through the doors in shots 2 and 4.
+- The palace facade: cream terracotta with arched windows, carved swags and a cornice, a vertical bulb-studded pylon with an ornamental pattern and no lettering above the marquee, the brass front doors with push plates and tall glass panels; the cast-iron lamp post across the street with a fluted shaft and a frosted globe.
+- The box-office window: brass-framed glass with a round speak-hole grille and a worn steel deal tray, a 2025 touchscreen terminal and a squat thermal ticket printer behind it.
+- The ticket stub: thermal card stock, slightly curled, a perforated tear line, printed in black: "ADMIT ONE · AVG U.S. TICKET $12.78 · 2025" on the front and "48¢ OF EVERY TICKET $1 → STUDIOS" on the back.
+- The ticket podium: a dark-wood lectern with a brass edge and a small tear-stub bin, brass stanchions with a red velvet rope, the auditorium doors behind it with round porthole windows.
+- The concession counter (2025): a stainless-steel and black-laminate counter set into the old plaster arch; a glass popcorn cabinet with a stainless kettle hung from its roof, a stirring arm, a dump handle, heat lamps and a steel scoop; a plain soda tower with blank tap faces; plain white lidded paper cups with straws; generic red-and-white striped paperboard popcorn buckets; a receipt printer; backlit channel letters "CONCESSIONS" on the panel above the arch; a menu board of neutral filler picture tiles (no prices) and a small slate chalkboard in a wooden frame.
+- The receipt: thermal paper, curling, printed item lines as neutral filler, the line "SNACKS & DRINKS $8.57 · AVG U.S. VISITOR" bold near the bottom, a serrated torn edge.
+- The poster case: a wall-mounted brass case with a gilt frame, a glass door and a backlight, holding the plain card "POPCORN?"; the other cases on the wall hold neutral filler one-sheets with no titles, studios or characters.
+- The palace lobby (early days): a coffered gilt-plaster ceiling, a tiered crystal chandelier, veined marble columns, a burgundy-and-gold patterned wool rug, transom windows over the doors; the coatroom in the right-hand arch with a wooden half door and shelf, wool coats and felt hats on brass hooks; the hand-lettered card "PLEASE CHECK YOUR POPCORN" in a gilt frame above it; on the column base by the arch, a small engraved brass plaque with darkened lettering: "“THEY HAD BEAUTIFUL CARPETS AND RUGS…”" and "— ANDREW F. SMITH, HISTORIAN, VIA SMITHSONIAN".
+- The paper bags: small kraft paper bags with folded tops and grease spots, a larger one for the second customer.
+- The newspaper: a broadsheet of yellowed newsprint with no masthead name, its columns neutral filler, the banner "THE GREAT DEPRESSION" across the top; it creases and wraps around the lamp post.
+- The vendor's wagon: a wooden street wagon painted deep red with yellow pinstriping and scuffed paint at the corners, iron-tyred spoked wheels, its shafts resting on a block (no horse in frame); a glass-windowed popping cabinet with an iron kettle, a small upright steam engine with a brass stack and pressure gauge, a gas lantern on a bracket, and the painted side sign "FRESH POPCORN 5¢ · 10¢"; no maker's plate, figures or ornaments copied from a real wagon. The same glass cabinet later sits on a low wheeled cart with a wooden push handle.
+- The coins: small worn generic coins with a plain rim and an abstract pattern, never a real currency design.
+- The lobby calendar: a large tear-off wall calendar on a board, a blank grid with no day numbers, the year "2025" on the top page.
+- The office: an oak desk, a brass desk lamp with a green glass shade, an interior window onto the lobby and a street window over the marquee; two heavy ledger binders in green linen book cloth with red leather corners, ruled pages of neutral filler rows, the total lines "TICKETS, AFTER STUDIOS: $1.38B" and "SNACKS, AFTER FOOD COST: $1.34B" printed bold; a rubber stamp on a clear acrylic block, carved red rubber printing "BEFORE WAGES & RENT", a red ink pad in a tin; a stapled study in a plain white cover, title "PRICEY POPCORN · CHEAPER TICKETS", small print "HARTMANN & GIL · STANFORD GSB, 2009", body text as neutral filler, no university crest.
+- Company and institution names appear only as plain lettering on the plaque and the study cover, never as logos.
+- No icons-as-props and no blob shapes.
+
+STEP 5 — CAMERA, LAYOUT AND ANIMATIC
+- Build a reusable <Camera3D>: a real perspective camera in CSS 3D (perspective on the root, transform-style: preserve-3d), with every plate, character and prop placed at its true depth (translateZ, scaled to keep its intended framing size). The camera has a position (x, y, z), rotation, a lens (think 24 mm wide, 35 mm, 50 mm, 85 mm portrait) and a focus distance. Push-ins are dollies (the camera moves, so near layers grow faster than far ones), not zooms. Depth of field: each layer's blur comes from its distance to the focus plane and the shot's aperture; rack focus eases over 8–16 frames with a hint of focus breathing (1–2% scale). Handheld drift from noise2D in @remotion/noise (2–4 px, at most 0.3°), seeded per shot, with a documentary-camera feel: slow and organic on handheld shots, almost none on tripod shots.
+- Depth layers: 5–8 in every exterior, 4+ in every interior, and in most shots a foreground element near the lens that crosses the frame (the cast-iron lamp post, tail-light streaks, the box-office glass and its speak-hole grille, the popcorn cabinet glass with steam and kernels, the brass stanchion and velvet rope, wool coats hanging in the coatroom, the wagon's steam, the brass lamp shade, the moviegoer's and the shift manager's shoulders).
+- Every shot has a camera plan: start framing, end framing, move type, easing and the beats that trigger changes. No locked-off camera; a deliberate held beat is still a moving hold (drift + atmosphere).
+- Screen direction: progress and time move left to right; the moviegoer walks left to right under the marquee; the torn stub slides left to right toward the auditorium doors and the whip-pan from the podium to the concession arch continues left to right; the newspaper blows in from the left; the popper cart rolls left to right over the threshold; the calendar pages fly off left to right; the final pull-back travels straight back from the office window across the street to the lamp post; a whip-pan continues the direction of the motion that motivated it.
+- Layout first: write out/popcorn/layouts.md with one block per shot: framing (wide, medium, close, extreme close), camera move, layers, character key poses with their beat words, every text with its surface, the transition in and out, and the object that hands off to the next shot.
+- Animatic: render a fast pass with grey placeholder shapes in the correct positions and the real timing (`--scale=0.25`), watch it against the voice and fix the timing here, before painting and animating.
+
+STEP 6 — MOTION LANGUAGE
+- src/lib/ease.ts holds named curves (anticipate, overshoot, settle, slam, whip, float) and a few named spring() configs. Linear motion is allowed only for mechanical constant speed: the marquee's chaser-bulb run, the popcorn kettle's stirring arm, the ticket and receipt printer feed, the steam engine's flywheel on the wagon.
+- Every move follows anticipation → action → overshoot → settle.
+- Breakdowns: between every two key poses, add a breakdown pose that defines the arc and the overlap (never a straight interpolation from key to key). Spacing is slow out of a pose, fast through the middle and slow into the next, and no two body parts start or stop on the same frame.
+- Biomechanics: the centre of gravity stays over the supporting foot; before reaching, pulling or lifting, the body shifts its weight first; to lift, the knees bend and the back stays straight; effort shows in the whole body (shoulders tense, neck strains, a short pause before a heavy lift).
+- Timing from life at 30 fps (refine from reference): blink 5–7 frames; eye dart 2–3; head turn 8–14; reach for an object 12–20; tap 4–6; both arms up 10–16; hand opening or closing 6–10; sit-to-stand 30–45; ticket tear: 4 frames of pinch and bow, 2 of tear, 10–12 of follow-through as the half slides; kettle dump: 6 frames of pull, 4 of tip, 12 of pour and settle; chalk writing: about 4–6 frames per glyph, a 3-frame underline; stop palm: 4 frames of rise, 2 of thrust, 6 of settle; bag snap: 3 frames of wind-up, 2 of snap, 6 of settle; heavy door push: 8–10 frames of lean before the doors move, 16–20 of swing; binder drop: 10 of lift, 4 of fall, a 3-frame shake; stamp slam: 6 frames of wind-up, 2 down with a 2-frame squash, 8–12 of settle; kernel to the mouth: 8 frames of lift, 3 of pop, 6 of settle.
+- Secondary motion is simulated: bake the shift manager's ponytail and apron strings, the young usher's gold shoulder cord, the patron's fur collar and coat hem, the vendor's apron and coin pouch, the paper bags, the curling receipt, the newspaper in the wind, the velvet rope, the chandelier crystals and the calendar pages with a deterministic spring/verlet simulation in scripts/bake-secondary.ts; save per-frame values to src/data/popcorn/sim/ and read them in the components. Remotion renders frames in parallel, so anything physical must be baked or computed purely from the frame number.
+- Weight: heavy things (the brass front doors, the popper cart, the popcorn kettle as it tips, the ledger binders, the stamp) start slowly, stop hard and cause a small shake; light things (popcorn kernels and hulls, the torn stub half, the receipt, the newspaper, the kraft paper bags, the calendar pages, chalk dust and steam) float, tumble and flutter.
+- Arcs: hands, heads and props travel on curved paths (IK targets follow arcs); never slide a hand in a straight line.
+- Overlapping action: the head leads, the torso follows 2 frames later, arms 2–4 frames later, hair, hems, bags and loose clothing 2–4 frames after that.
+- Smear frames (1–2 frames) on fast moves: the ticket tear, the usher's stop palm, the bag snap, the calendar riffle, the stamp slam.
+- Impact frames (2–3 frames, restrained and filmic: an exposure flash and contrast punch with a touch of speed lines and very slight chromatic aberration) on key hits only, so they keep their punch: "studios" (shot 4), "hit" (shot 10), "survived" (shot 12), "billion" (shot 14), "before" (shot 16).
+- Screen shake on big hits: decaying over 3–6 frames, maximum 8 px.
+- Motion blur with @remotion/motion-blur during fast moves only (whip-pans, the ticket tear, the newspaper's flight across the lens, the calendar riffle, the stamp slam, the final pull-back), with a 180° shutter feel and a low sample count to protect render time.
+- Particles (popcorn kernels and hulls, salt flecks, chalk dust, palace dust motes, the wagon's steam and soot flecks, wind-blown grit) are deterministic and layered in depth: near ones are bigger, blurrier and faster. Each piece tumbles in 3D (scaleX = cos of its spin) and drifts on its own curve.
+
+STEP 7 — KINETIC TYPOGRAPHY INSIDE THE WORLD
+- No captions, no word-by-word subtitles and no floating text cards. Every text sits on a surface in the world.
+- <SurfaceText> places text on any four-corner quad using a perspective transform (matrix3d computed from the four corner points), so it sits exactly on its sign, screen, paper or board and moves with that surface's parallax layer.
+- Light the text by surface type: emissive (screens, LED, neon: glow and bloom, and it lights nearby surfaces), printed (multiplied by the scene light, paper texture, shadowed), handwritten (marker or chalk texture), stamped.
+- Occlusion: foreground objects pass in front of text when natural (the moviegoer's fingers pass over the stub's edge in shot 2; wool coats hang in front of the corners of the PLEASE CHECK YOUR POPCORN sign as the usher reaches past them in shot 8; the wagon's steam rolls across the FRESH POPCORN 5¢ · 10¢ sign in shot 11 and clears before "five"; the shift manager's hand covers each ledger total until "billion" in shots 14 and 15).
+- Entrances land on the exact beat frame and match the surface: LED digits roll and land; neon flickers on (2–3 flickers within 6 frames); screens switch on with a one-frame bright pop; printed text arrives with its object; handwriting is written stroke by stroke; stamps slam with a squash. Exits are motivated: switched off, wiped, washed out, torn, fallen away, scrolled off.
+- Handwriting: in a Node script, convert the needed glyphs of Permanent Marker (the .woff from @fontsource/permanent-marker) to outlines with opentype.js and save them to src/data/popcorn/glyphs.json. Reveal each glyph in writing order through a mask of thick strokes that follow the glyph's centre line, animated with evolvePath from @remotion/paths; the marker or chalk tip follows the leading point (getPointAtLength). Writing finishes on its beat word. If a glyph's centre line is not available, reveal it with a directional wipe along its main stroke, still followed by the pen.
+- Fonts via @remotion/google-fonts: "Bebas Neue" for the marquee letters, the CONCESSIONS sign, the POPCORN? card, the OPEN bulb panel, the newspaper banner, the calendar year and the stamp; "Courier Prime" for the ticket stub, the receipt, the ledger totals and the study cover; "Limelight" for the palace coatroom sign and the quote plaque; "Rye" for the painted sign on the vendor's wagon; "Permanent Marker" for the chalk note on the price board. Check that ¢, ≈, →, “ ”, … and — exist in each font that carries them, and draw any missing glyph as a hand-built path in the same weight instead of letting a fallback font appear. Load only the weights you use, and confirm in the stills that no fallback font appears. Fit long lines with fitText from @remotion/layout-utils.
+- Readability on a phone: every key text and key action stays inside x 48–888, y 288–1248 of the 1080×1920 frame (clear of the Shorts buttons and title). Main words have a cap height of at least 72 px; secondary text (small print, attributions, source tags, sticky notes) at least 34 px and on screen for at least 1.2 seconds. Every text has strong contrast with what is behind it. Background art can fill the whole frame.
+- Add a showSafeZone prop that draws the safe box, for QA stills only.
+
+STEP 8 — TRANSITIONS
+- Lay the shots out on an absolute timeline (<Sequence from={cutFrame}> with premounting), and build each transition as an overlay that straddles the cut, so the audio timeline never shifts. If you use TransitionSeries from @remotion/transitions, remember that transitions overlap the shots and shorten the total: compensate the durations so every cut still lands exactly on its cut frame, and verify it.
+- Allowed transitions, each motivated by the story:
+  - Whip-pan (6–8 frames): accelerate out with motion blur and speed lines, cut at maximum blur on the cut frame, decelerate in, continuing the screen direction.
+  - Light-flash cut: a bright source in shot A blooms toward white over 3–4 frames; cut; shot B blooms down from its own brightest light over 4–6 frames.
+  - Match cut: a shape or motion in shot A matches the position, scale and direction of one in shot B on the exact cut frame.
+  - Continuous camera move: the camera travels from one setup to the next without a cut.
+  - Foreground wipe: an object passes the lens, fills the frame and the cut happens behind it.
+- Never crossfades, dips to black or generic slides.
+
+STEP 9 — SHOTS (CUT word → shot; beats inside)
+
+1. THE MARQUEE — CUT "At" (frame 0). LOW WIDE SHOT from across the street at night, beside the cast-iron lamp post (foreground left, its frosted globe a soft disc), up at the restored palace facade on the corner: cream terracotta, arched windows, the office window lit above the marquee. The marquee juts over the entrance; its backlit white letter board carries "SNACKS EARN NEARLY WHAT MOVIES DO" in black changeable letters on three tracks, framed by running chaser bulbs, and its bulb-studded soffit washes the sidewalk gold. The moviegoer, in his heather-green hoodie, walks under it left to right with a red-and-white striped popcorn bucket in one hand; tail lights smear past in the foreground haze and popcorn hulls skitter along the curb.
+   Frame 0 is fully composed: the letter board lit, the chaser bulbs mid-run, the moviegoer mid-step under the marquee, a tail-light streak entering frame right, hulls mid-tumble, the camera at its start framing. Build this state as a <HookFrame /> component so the last frames can reproduce it exactly.
+   Beats: "AMC" the camera starts a slow crane-up and push-in toward the letter board; "snacks" the moviegoer lifts the bucket to his chest and a few kernels tip off its crown; "nearly" the chaser run speeds up around the board; "movies" the run closes its lap and every bulb flashes full at once (glow pulse, lens flare across the letters).
+   Out: the crane reverses into a continuous crane-down under the marquee to the box-office window.
+
+2. THE BOX OFFICE — CUT "AMC's" (continuous camera move). MEDIUM CLOSE over the moviegoer's shoulder at the box-office window in the entrance vestibule, the marquee's gold spill behind him: brass-framed glass, a round speak-hole grille, a steel deal tray worn bright in the middle. Behind the glass the shift manager, in her black polo with a blank name badge, works a touchscreen (neutral filler) beside a thermal ticket printer. The stub reads "ADMIT ONE · AVG U.S. TICKET $12.78 · 2025".
+   Beats: "average" she taps the screen (a one-frame bright pop on it); "ticket" the printer chatters and feeds the stub out; "twelve" she slides it into the deal tray; "seventy-eight" the stub comes to rest in the moviegoer's pinch, its line lit by the downlight.
+   Out: he turns toward the lobby and his hoodie shoulder passes the lens (foreground wipe).
+
+3. THE RECEIPT — CUT "Plus" (foreground wipe). MEDIUM CLOSE at the concession counter set into the lobby's right-hand arch, warm under the popcorn cabinet's heat lamps: the cabinet glass in the foreground fogged with butter steam and popcorn heaped behind it, a stainless counter, a plain soda tower with blank tap faces, a receipt printer. The shift manager, now in a black canvas apron, faces the moviegoer across the counter. The receipt reads "SNACKS & DRINKS $8.57 · AVG U.S. VISITOR".
+   Beats: "eight" the receipt printer starts feeding; "fifty-seven" she tears the receipt off and it curls into the moviegoer's fingers, its line legible; "snacks" she sets a striped bucket on the counter (contact shadow, kernels bounce off its crown); "drinks" a plain lidded cup lands beside it, the ice shifting, condensation beads catching the lamps.
+   Out: he turns away with both, and the bucket's striped side fills the lens (foreground wipe).
+
+4. THE TEAR — CUT "About" (foreground wipe). CLOSE on hands at the ticket podium in the middle of the lobby, cool overhead light, a brass stanchion and velvet rope soft in the foreground, the auditorium doors behind with the projector beam flickering through their porthole windows. The shift manager takes the moviegoer's stub; its back is printed "48¢ OF EVERY TICKET $1 → STUDIOS".
+   Beats: "forty-eight" she pinches both ends and the card bows (anticipation); "ticket" the stub tears along its perforation (smear); "dollar" the torn half flips over, showing "48¢ OF EVERY TICKET $1 → STUDIOS"; "studios" it slides across the podium left to right toward the auditorium doors and stops at the edge (impact frame, the porthole beam flares).
+   Out: the camera whip-pans left to right after it, past the doors, to the concession arch.
+
+5. THE COUNTER — CUT "Now" (whip-pan). MEDIUM WIDE on the concession arch from the lobby floor: the old plaster arch with its carved keystone, backlit channel letters "CONCESSIONS" on the panel above it, the glass popcorn cabinet with a stainless kettle hanging from its roof, heat lamps, a menu board of neutral filler picture tiles and a small chalkboard beside it. The shift manager stands at the cabinet, one hand on the kettle's dump handle.
+   Beats: "snack" the CONCESSIONS letters flicker on (three flickers within 6 frames) and their glow spills down the arch; "counter" she pulls the handle, the kettle tips and popcorn pours into the cabinet in a rolling wave, kernels bouncing against the glass toward the lens.
+   Out: a continuous dolly in toward the chalkboard.
+
+6. FOOD COST — CUT "The" (continuous camera move). CLOSE on the chalkboard beside the menu board, the shift manager's scooping arm soft in the foreground, cabinet steam drifting between. The chalk note reads "FOOD COST ≈ 20¢ PER $1".
+   Beats: "food" she scoops popcorn into a striped bucket in the foreground; "costs" she picks up a stick of chalk and starts writing "FOOD COST ≈ 20¢ PER $1" stroke by stroke; "twenty" the "20¢" is written; "dollar" the "$1" finishes with a quick underline and a puff of chalk dust.
+   Out: she glances across the lobby; the camera swings past her shoulder and racks focus to the brass poster case on the far wall (continuous camera move).
+
+7. THE QUESTION — CUT "So" (continuous camera move). MEDIUM over the shift manager's shoulder (soft foreground, the striped bucket in her hand) across the lobby to a backlit brass poster case with a gilt frame on the left wall; inside it, instead of a poster, a plain card reads "POPCORN?".
+   Beats: "why" the camera begins a slow push toward the case; "popcorn" the case's backlight switches on with a one-frame bright pop and the card glows; "in" a single kernel tumbles off her bucket into the foreground and bounces on the rug.
+   Out: the push fills the frame with the case's gilt frame and card (match cut to the coatroom sign's gilt frame at the same position and scale).
+
+8. THE COATROOM — CUT "Early" (match cut). WIDE in the same lobby in its early palace days, warm under a crystal chandelier: a coffered gilt ceiling, marble columns, a burgundy-and-gold patterned rug, and the right-hand arch as a coatroom, wool coats and hats on hooks behind a wooden half door with a shelf. Above the half door, in a gilt frame matching the poster case, a hand-lettered card reads "PLEASE CHECK YOUR POPCORN". The young usher, in his maroon tunic with brass buttons, gold braid, pillbox cap and white gloves, faces the palace patron in her cloche hat and fur-collared coat, a small paper bag of popcorn in her hand.
+   Beats: "palaces" the camera cranes down from the chandelier toward the arch; "nothing" the usher's gloved palm rises and stops her mid-step (smear); "it" he lifts the bag from her fingers and sets it on the coatroom shelf beside a bowler hat.
+   Out: the camera tilts down the column to the rug (continuous camera move).
+
+9. THE RUG — CUT "They" (continuous camera move). CLOSE at rug level beside the coatroom arch: the rug's wool pile and pattern, the patron's T-strap shoe, and on the marble column base a brass plaque engraved "“THEY HAD BEAUTIFUL CARPETS AND RUGS…”" with "— ANDREW F. SMITH, HISTORIAN, VIA SMITHSONIAN" below it, both sharp at the focal plane and legible from "They" to the end of the shot; the usher's polished shoes soft behind.
+   Beats: "rugs" the camera eases lower along the pile; "popcorn" a single kernel she kept slips from her gloved fingers and tumbles down into the focal plane beside the plaque; "ground" her heel comes down on it and grinds it into the pile, crumbs spraying; "in" the usher's shoes step in and he bends toward the spot, appalled.
+   Out: the usher's maroon sleeve sweeps across the lens as he kneels (foreground wipe).
+
+10. THE HEADLINE — CUT "Then" (foreground wipe). LOW MEDIUM from across the street on a cold grey Depression day: the same cast-iron lamp post in the foreground, men in overcoats and caps with their collars up, and beyond them the theater with its marquee dim, half its bulbs dead and its letter board bare. A newspaper with no masthead name tumbles in from the left on the wind; its banner reads "THE GREAT DEPRESSION".
+   Beats: "Depression" the newspaper slaps flat against the lamp post, banner square to camera; "hit" across the street the marquee's last bulbs pop and die (impact frame, small shake).
+   Out: the wind peels the newspaper off and it flies across the lens (foreground wipe).
+
+11. FIVE OR TEN — CUT "A" (foreground wipe). MEDIUM at the curb under the dark marquee: the vendor's wooden wagon, painted deep red with yellow pinstriping, iron-tyred spoked wheels on the wet brick paving, its shafts resting on a block, a glass-windowed popping cabinet, a small upright steam engine with brass fittings puffing from its stack, a gas lantern; the sign on its side reads "FRESH POPCORN 5¢ · 10¢". The vendor, in his herringbone cap and canvas apron, works the cabinet; a boy and a man in a worn overcoat wait.
+   Beats: "bag" the vendor snaps open a kraft paper bag (smear); "popcorn" he scoops from the cabinet and steam rolls across the sign; "cost" the lantern flares and the steam clears off the sign; "five" the boy drops a coin into his cupped palm and takes a small bag; "ten" the man takes a larger bag and his coin clinks into the apron pouch.
+   Out: the vendor looks up at the theater doors; the camera pans left to right with his look (continuous camera move).
+
+12. OPEN — CUT "The" (continuous camera move). LOW WIDE from the curb at dusk: the theater's brass front doors under the dark marquee, the bulb panel on the marquee's front edge unlit. The usher, older now, his tunic faded, the braid tarnished and one elbow darned, stands inside the doors; the vendor waits at the threshold with the glass popping cabinet lifted onto a wheeled cart; people queue behind him with coins in their hands.
+   Beats: "theaters" the usher leans into the heavy doors and they swing open slowly, warm lobby light flooding the sidewalk; "sold" the vendor rolls the popper cart left to right over the threshold onto the rug while the usher holds the door; "snacks" coins pass from the queue into the vendor's palm; "survived" the marquee's bulbs chase back on and the bulb panel spells "OPEN" letter by letter (impact frame, light-flash bloom).
+   Out: the bloom carries a continuous camera move up and in through the open doors.
+
+13. THE CALENDAR — CUT "Fast-forward" (continuous camera move). The camera surges through the doors into the lobby, which time-lapses around it: the popper cart becomes the glass cabinet in the concession arch, the warm bulbs turn to cool white LED, the coats vanish from the arch, the rug is restored. On the left wall beside the poster case hangs a large tear-off lobby calendar with a blank grid.
+   Beats: "Fast-forward" the calendar's pages start flying off left to right in a blur; "twenty" the riffle slows; "twenty-five" the last page tears away and "2025" lands, the page settling with a flutter.
+   Out: the camera cranes up the grand staircase toward the lit interior window of the office above the entrance (continuous camera move).
+
+14. TICKETS — CUT "Tickets" (continuous camera move through the office's interior window). MEDIUM CLOSE in the office after close: an oak desk under a brass desk lamp, the street window behind with the marquee's glow rising past the sill. The shift manager, apron off, a charcoal cable-knit cardigan over her polo with the sleeves pushed up, holds the box-office ledger binder; its total line reads "TICKETS, AFTER STUDIOS: $1.38B".
+   Beats: "kept" she drops the heavy binder open on the desk (a thud, a small shake), her palm flat over the total line; "billion" her hand slides off and the total reads in the lamplight (impact frame); "studios" she taps the line twice with her index.
+   Out: the camera tracks left to right along the desk (continuous camera move).
+
+15. SNACKS — CUT "Snacks" (continuous camera move). MEDIUM CLOSE, the same desk: the shift manager brings the concession ledger binder beside the first; its total line reads "SNACKS, AFTER FOOD COST: $1.34B".
+   Beats: "kept" she drops the concession binder open next to the first, her hand covering its total; "billion" her hand slides off and the total reads level with the first; "costs" she squares the two binders edge to edge, her eyes darting from one total to the other.
+   Out: the camera cranes up to a top-down over both binders (continuous camera move).
+
+16. THE STAMP — CUT "Both" (continuous camera move). TOP-DOWN on both open binders in the lamp's cone, a red ink pad in a tin beside them; the shift manager lifts a rubber stamp mounted on a clear acrylic block. The stamp prints "BEFORE WAGES & RENT".
+   Beats: "before" she slams the stamp across the seam of both binders with a squash, the red impression "BEFORE WAGES & RENT" showing through the clear block (impact frame, small shake, ink flecks; if fewer than 6 frames separate "Both" from "before", the slam lands on "wages" instead); "wages" she leans her weight onto it; "rent" she lifts it away and the impression reads across both pages.
+   Out: the camera eases down to desk level (continuous camera move).
+
+17. THE STUDY — CUT "Economists" (continuous camera move). CLOSE at desk level: the shift manager slides a stapled study from under the binders into the lamplight; its cover reads "PRICEY POPCORN · CHEAPER TICKETS", with the small print "HARTMANN & GIL · STANFORD GSB, 2009" below, legible from "argue" to the end of the shot.
+   Beats: "argue" the cover turns square into the light; "popcorn" she sets her striped bucket on its corner and two kernels bounce off; "tickets" her eyes dart to the ticket binder; "cheaper" she sits back and looks to the street window, the marquee's glow on her face.
+   Out: the marquee's glow on the window blooms toward white (light-flash cut).
+
+18. THE LOOP — CUT "The" (light-flash cut, blooming down from the marquee bulbs below the sill). MEDIUM from outside the office's street window: the shift manager stands at the glass, the lamplit office behind her, a single popcorn kernel pinched between thumb and index.
+   Beats: "snack" she lifts the kernel to the glass and studies it against the marquee light; "refused" she pops it into her mouth with a dry half-smile, and the camera begins to pull back from the window; "now" the camera clears the marquee's top edge and passes over the letter board "SNACKS EARN NEARLY WHAT MOVIES DO", the chaser bulbs running; "movies" the camera sweeps back across the street, down beside the cast-iron lamp post, and arrives at exactly the frame-0 composition (letter board lit, chaser bulbs mid-run, the moviegoer mid-step under the marquee, the tail-light streak, the hulls mid-tumble).
+   Out: the last 4 frames render <HookFrame /> exactly, so the Short loops seamlessly back to shot 1.
+
+STEP 10 — COMPOSITING AND FINISH
+- Layer order in every shot: plates → haze cards between depth layers → practical light pools → cast and contact shadows → characters (shading stack, texture, rim light, light wrap) → in-world text → atmosphere (particles) → light beams → glow, bloom and halation on emissive surfaces → lens flares → grade → grain → vignette → chromatic aberration (impact frames only).
+- Bloom: a blurred copy of emissive layers composited with a screen blend.
+- The marquee's soffit lights: soft downward cones raking the sidewalk, with hulls and haze drifting in them. The projector beam through the auditorium-door portholes: a narrow, flickering shaft with dust. The palace transom windows: pale, soft-edged daylight shafts slanting across the gilt and the rug, dust motes turning in them. The cabinet heat lamps: amber cones through rising butter steam. The desk lamp: a warm, hard-edged cone on the binders, salt and dust drifting through its edge.
+- Screen glow on faces: a coloured soft-light shape on the side of the face toward the screen that follows the screen's brightness.
+- Lens flares on the marquee bulbs (frame 0, the relight and the pull-back), the chandelier, the cabinet heat lamps and the wagon's gas lantern.
+- Film finish in a reusable <Grade> (per-scene settings in style.ts): a filmic contrast curve with slightly lifted blacks and a soft highlight roll-off; split toning (shadows toward the scene's ambient colour, highlights toward the key light); halation (a thin warm-red glow around the brightest highlights and practical lights); light wrap (bright backgrounds bleed a few pixels over character edges); very subtle gate weave (at most 0.5 px).
+- Grain: reuse the earlier grain component, changing every frame, stronger in mid-tones and shadows than in highlights, at 4–7% opacity; pre-render a set of grain tiles and cycle them if per-frame turbulence slows the render. A gentle lens vignette (10–15%) with slight edge softness.
+- Keep renders fast: no full-frame SVG filters every frame; prefer pre-rendered plates, transforms and opacity.
+
+STEP 11 — AUDIO
+- My voice-over only, at full volume. No music and no sound effects: I add them by hand in Premiere using out/popcorn/sfx-cues.csv.
+- For the render, use a copy of the voice-over normalised to −14 LUFS (two-pass ffmpeg loudnorm: measure first with print_format=json, then apply the measured values; true peak −1.5 dBTP; 48 kHz), saved as public/vo/popcorn_norm.wav and played with <Audio> from @remotion/media. Never touch my original file.
+
+STEP 12 — QUALITY GATES (do not skip)
+Save every QA image to out/popcorn/qa/. Open every image you render and look at it; describe what you actually see in out/popcorn/review.md before deciding it passes. Never mark anything as passing without looking at it.
+
+Gate A — Design
+1. Model sheets (STEP 3), a prop sheet with every prop from STEP 4, and a hand sheet: every pose in the hand library at 600 px tall in back and palm views, plus each grip holding its real prop → out/popcorn/qa/hands.png. Check five digits, finger lengths, the knuckle arc, the thumb's origin and opposition, nails on the correct side, and grips that wrap around the object with correct layering and contact shadows. Redo any hand that looks like a mitten or a bunch of sausages.
+2. STYLE FRAMES: one finished still per shot at its key beat, rendered with `npx remotion still`.
+3. Colour script: all the style frames tiled in one image (ffmpeg tile) → out/popcorn/qa/color-script.png. Check the journey: warm marquee night → cool box-office glass → buttery concession amber → cool lobby white → gilded palace gold → cold grey Depression day → warm bulb relight at dusk → time-lapse back to cool LED → lamp-lit office amber and teal → back to the marquee night.
+4. Value check: every style frame at 135×240 in greyscale. The focal point (a face or the key text) must be the highest-contrast spot in the frame; fix the staging if it is not. Texture and depth check: 100% crops of a face, a hand, a fabric area and a background area from every style frame → out/popcorn/qa/crops-sNN.png; texture must be visible up close, and every style frame must show at least four depth cues.
+5. Score each style frame 1–5 on: looks like a frame from a premium cinematic animated documentary; characters, hands and props look like their real-life versions; cinematic lighting; depth; painterly texture; composition and readability; text spelled exactly as in IN-WORLD COPY. Redo anything that scores under 4.
+
+Gate B — Timing
+6. Watch the animatic (STEP 5) against the voice. Fix pacing before animating.
+
+Gate C — Animation
+7. Animate, then render a half-resolution draft (`npx remotion render Popcorn out/popcorn/draft.mp4 --scale=0.5`).
+8. Contact sheet per shot: every 6th frame tiled → out/popcorn/qa/contact-sNN.png. Check arcs, spacing, overlap and that nothing pops or slides without weight.
+   Puppet test: watch every character action at full resolution, frame by frame. It fails on rigid parts rotating on pins, seams or gaps at joints, sliding feet, evenly spaced floaty in-betweens, body parts starting and stopping together, mirrored poses, hands popping between poses, fingers moving all at once, or effort without a weight shift.
+   Reference test (when reference exists): render each action beside its reference clip at the same timing → out/popcorn/qa/ref-sNN.mp4, and compare weight, timing and arcs.
+
+Gate D — Sync
+9. For every beat in out/popcorn/timing-report.md, render the frame before the beat and the beat frame side by side. The hit must happen on the beat frame: not early (except anticipation) and not late. Fix every miss.
+
+Gate E — Automated checks
+10. Static frames: render a QA draft with grain and handheld drift turned off and run ffmpeg freezedetect (n=0.001:d=1). No frozen segment may last 1 second or more.
+11. Loop: compare frame 0 with the last frame using ffmpeg ssim (target ≥ 0.98) and view them side by side.
+12. Duration: ffprobe the final file; it must equal durationInFrames / 30.
+13. Copy: run the copy.ts check script.
+14. Safe zone: one still per shot with showSafeZone on; no key text or action outside x 48–888, y 288–1248, and nothing important cut off by the frame edges.
+15. Audio: the MP4 has one audio stream at about −14 LUFS (ffmpeg ebur128); the silent MOV has no audio stream.
+
+Gate F — Checklist review (fix every failure, up to 3 full passes)
+- Frame 0 shows the hook text and the lit marquee.
+- No static frames; something meaningful moves at least every second, and a new shot or new action lands every 2–3 seconds.
+- The film reads as one continuous story in one world; every cut is motivated and lands on its cut frame.
+- Every in-world text is readable on a phone, perspective-matched, lit by its scene, spelled exactly as written here, and enters on its exact word.
+- Characters look like characters from a premium cinematic animated documentary (not clip art or paper puppets), keep their design across shots, move with real weight and timing, breathe, blink and react; hands have correct anatomy and truly grip their props; everything animates on ones and stays smooth at 30 fps.
+- Every frame shows real depth (camera perspective, depth of field, haze, overlap, cast and contact shadows) and painterly texture.
+- Characters and props resemble their real-life versions.
+- No real logos, no AMC logo, lettering style or red-and-white trade dress, no studio logos, film titles, posters or movie characters, no movie-character popcorn buckets, no soda-brand cups, fountain heads or candy boxes, no copy of a real popcorn-machine maker's wagon, nameplate or mechanical figure, no Smithsonian sunburst, no Stanford block S, tree or crest, no real newspaper masthead, no real currency design, no likeness of a real person.
+- No element cut off by the frame edges; key text inside x 48–888, y 288–1248.
+- Transitions are whip-pans, light-flash cuts, match cuts, continuous camera moves or foreground wipes; never fades.
+- The final frame matches frame 0. Total duration = audio duration (+4 frames).
+
+AVOID (this is what makes it look cheap)
+- Flat single-colour backgrounds, uniform line weight, pure black lines, grey shadows.
+- Clean vector surfaces: flat fills, plastic gradients, razor-sharp shadow edges with no texture, everything in focus at the same depth.
+- Elements that pop, scale or fade in from the centre like a slideshow; text floating in space.
+- Characters built from circles and rectangles; paper cut-out motion (rigid pieces rotating on pins, visible joint seams, the whole body moving as one block).
+- Mitten or sausage hands, fingers of equal length, a flat thumb lying beside the fingers, fingers that open or close all at once, objects floating in front of a hand instead of being gripped.
+- Floaty, evenly spaced in-betweens with no breakdown poses; sliding feet; mirrored (twinned) poses; perfect stillness.
+- Linear easing on organic motion; everything starting on the same frame; everything moving at once.
+- Locked-off cameras and frozen frames.
+- Any fact, number, date or name not in this prompt.
+
+OUTPUT
+- Final render: npx remotion render Popcorn out/popcorn/popcorn.mp4 --codec=h264 --crf=16 --image-format=png --color-space=bt709
+- Also out/popcorn/popcorn_master.mov (--codec=prores --prores-profile=hq --image-format=png) and out/popcorn/popcorn_silent.mov (ProRes HQ with --muted, no audio) for my Premiere edit.
+- out/popcorn/review.md: what you reused and built, every gate with what you checked, what you fixed and how many passes it took, the style-frame scores, and anything you could not get right.
+- Tell me the final duration in seconds, the file paths, and summarise out/popcorn/review.md.
