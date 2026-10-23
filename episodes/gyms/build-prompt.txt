@@ -267,23 +267,85 @@ STEP 8 — TRANSITIONS
 
 STEP 9 — SHOTS (CUT word → shot; beats inside)
 
-<SLOT: one numbered shot per voice-over beat, in order, each in exactly this form:
-N. SHOT TITLE — CUT "word" (how it cuts in). FRAMING, place and time of day: what we see, who is there, what they wear and hold, and every in-world text on its surface.
-   Beats: "word" action or text entrance; "word" …; every beat word is a word of this line as spoken.
-   Out: the move, object or light that hands off to the next shot.
-Shot 1 cuts on the first word at frame 0, describes the fully composed frame 0 and builds it as a <HookFrame /> component so the last frames can reproduce it exactly. The last shot arrives at exactly the frame-0 composition, and its last 4 frames render <HookFrame /> exactly, so the Short loops seamlessly. Match the depth of these three example shots from another episode, then delete the examples and this instruction:
+1. THE BOARD — CUT "Planet" (frame 0). LOW WIDE SHOT across the gym's lobby at night from beside the turnstile, its steel arm soft and dark in the near foreground at lower left: the wood-grain front desk with its check-in tablet and a disinfectant spray bottle, and on the wall above it the <MemberBoard> in its hook state, "7,200 MEMBERS PER GYM" lit red-orange with "AVG · 20.8M MEMBERS ÷ 2,896 CLUBS · 2025" on its bottom strip. The Clerk sits behind the desk in her charcoal polo, the highlighter behind her ear, her elbows on the counter over her open journal, its cover turned away. To the left the cardio floor's rows of treadmills recede into blue haze, their consoles glowing; at the right edge of frame the glass entrance door, with the avenue's streetlights beyond it. Dust motes drift through the board's glow.
+   Frame 0 is fully composed: the hook line and its small print lit, the tally dots mid-sweep across the board's top band, the Clerk mid-breath with her eyes on the page, dust mid-air, the camera at its start framing. Build this state as a <HookFrame /> component so the last frames can reproduce it exactly.
+   Beats: "averages" the camera starts a slow dolly-in toward the board; "about" the Clerk's eyes lift to the board, her head following; "hundred" the board's digits refresh in a fast roll and slam back onto "7,200" (impact frame, LED flash across the desk and her face, lens flare along the board, small shake); "gym" the tally sweep completes and the dust swirls in the afterglow.
+   Out: whip-pan left to right off the board to the entrance door.
 
-1. THE BILLBOARD — CUT "This" (frame 0). LOW WIDE SHOT up at a rooftop billboard on a Hollywood street at night: haze over the sky, palm silhouettes, neon storefronts, a streetlight and overhead wires in the foreground. The billboard shows a phone with the orange "QUIBI" app icon and the headline "$1.75 BILLION. 6 MONTHS."; an LED counter strip runs below it. Cash bills flutter down through the neon in three depths.
-   Frame 0 is fully composed: the headline and the phone lit, the LED counter mid-roll (blurred digits), cash mid-air, the camera at its start framing. Build this state as a <HookFrame /> component so the last frames can reproduce it exactly.
-   Beats: "raised" the camera starts a slow crane-up and push-in; "one point seven five" the digits slow down; "billion" the counter slams onto "$1,750,000,000" (impact frame, LED flash, lens flare across the billboard, small shake).
-   Out: the crane-up continues toward the catwalk.
+2. ROOM FOR 300 — CUT "NPR" (whip-pan in, left to right). MEDIUM CLOSE on the wall beside the glass entrance door at night: the brushed aluminium plaque engraved "CAPACITY ≈ 300" with "NPR, 2014" beneath it, rain beads on the door glass in the foreground, and through the glass the wet avenue, a passing cab and the brick walk-up across it with the No-Show's lit third-floor kitchen window. Cold streetlight from the right, the board's red-orange spill from behind on the left.
+   Beats: "reported" the camera decelerates out of the whip and settles on the plaque; "most" the Regular, in her sweatband with her windbreaker tied at her waist, pushes the door open with a flat palm on the push bar, her arm crossing the plaque and the door's reflection sweeping across the engraving; "hold" she nods toward the desk off-screen and walks past; "three hundred" the swinging glass throws a glint across "300" as the camera racks focus onto the plaque and the door swings back.
+   Out: the door swings shut toward the lens and its dark bronze frame fills the frame (foreground wipe) into the back office.
 
-9. CAN'T CAST — CUT "At". The commuter's apartment in grey daylight, rain on the window. She sits on the sofa in her oversized sweater and messy bun, the remote in one hand and her phone in the other.
-   Beats: "launch" she raises the phone toward the TV; "cast" she taps cast (a pop on her screen); "TV" the TV shows a red "CAN'T CAST" screen and its red glow hits her face; in the pause that follows, she drops the remote and it bounces on the cushion before "You".
-   Out: rack focus to the phone in her hand.
+3. HOW? — CUT "So" (behind the foreground wipe). MEDIUM CLOSE in the back office at night, the green-shaded desk lamp low on the left: the Clerk stands at the whiteboard beside a neutral sketch of a big circle crowded with dots next to a small door shape, the uncapped marker in her right hand and its cap in her left.
+   Beats: "how" she starts writing "HOW?" stroke by stroke, the marker tip leading and her hand passing in front of the letters; "does" the question mark's curve sweeps on; "work" she taps the dot with a small squeak, finishing "HOW?", and caps the marker.
+   Out: her eyes go to the desk, her head following, and the camera tilts down and pans with her eyeline to the lamp.
 
-21. UNDERSTOOD — CUT "before". The teleprompter continues: "before they actually understood what it was." with "— JEFFREY KATZENBERG, CNBC, OCT 2020" below it, visible from "before" onward.
-   Beats: "understood" the last words "understood what it was." are underlined with a drawn stroke; on "was" (or on "understood" if fewer than 24 frames remain after "what") the mogul turns to the window, and the camera arcs past him and PULLS BACK through the glass, out over the street, to the billboard. The billboard relights (the orange icon lit again, the headline, the counter rolling), and the framing arrives at exactly the frame-0 composition. The last 4 frames render <HookFrame /> exactly, so the Short loops seamlessly.>
+4. THE BADGE — CUT "One". INSERT CLOSE on the office desk under the lamp: the manager's badge "CLUB MANAGER · MIDTOWN MANHATTAN" hangs on its navy lanyard from the lamp's arm, turning slightly; below it the field recorder points its crossed microphones at an empty wheeled office chair that is still rocking. The manager herself is never shown.
+   Beats: "Manhattan" the camera racks focus from the chair to the badge as it turns face-on in its swing; "told" the recorder's red record light blinks on, its bokeh disc blooming; "NPR" the badge settles and the recorder's filler meter jumps.
+   Out: the camera drifts right past the lamp to the cork strip on the interior window, where a card is pinned.
+
+5. THE QUOTE — CUT "Thank". OVER-THE-SHOULDER past the edge of the cork strip, inside the office: the typed index card pinned in sharp focus, "“THANK GOODNESS THEY ALL DON’T SHOW UP" on its top lines and its lower lines below frame; through the interior window beyond it, the cardio floor at night: rows of empty treadmills in blue haze, their consoles dark, streetlight shafts through the storefront crossing the room, and far down one row the Regular jogging alone.
+   Beats: "goodness" a slow push toward the card; "all" rack focus from the card to the floor, revealing row after row of dark, empty machines; "show up" the Regular's console brightens, the only lit screen in the room.
+   Out: the camera starts to tilt down the card.
+
+6. ALL AT ONCE — CUT "at" (continuous camera move). The tilt continues down the card to "AT ONE TIME.”" and, in smaller type, "— CHRYSANTHI LASKARIS, CLUB MANAGER, TO NPR, 2014", visible from "at" onward, the floor still soft through the glass beyond it.
+   Beats: "one" every treadmill console on the floor flicks on in a cascade from the back row forward, and faceless member silhouettes begin to crowd in through the haze; "time" the floor is packed wall to wall, every screen lit (impact frame, a cyan-white flood through the window, the rim light flaring along the card's edge); in the pause that follows, the vision snaps off and the floor is empty again except for the Regular.
+   Out: light-flash cut from the flood of screens to the lobby TV.
+
+7. THE LOBBY TV — CUT "In" (light-flash cut). MEDIUM SHOT, low across the front desk in the lobby at night: the flat-screen TV on the wall to the right of the <MemberBoard>, a muted news broadcast with a soft filler picture, the Clerk at the desk below it in its blue flicker.
+   Beats: "twenty-two" the lower-third bar slides on from the left reading "CNN, 2022"; "said" the Clerk's eyes go up to the TV, her head following; "sixty" the camera tilts and pans left onto the board, whose tally grid begins to go dark row by row from the left (attendance state) as its bottom strip switches off.
+   Out: the tilt continues up onto the board.
+
+8. NO VISIT — CUT "didn't" (continuous camera move). CLOSE on the <MemberBoard> in its attendance state: the tally grid still going dark, the red-orange light on the wall dimming in patches, one tired module flickering.
+   Beats: "visit" the main line rolls and lands on "≈ 60% · NO VISIT IN 30 DAYS"; "thirty-day" the grid's last rows go out until about 60% of its dots are dark; "stretch" the tired module flickers once more and the remaining dots hold.
+   Out: whip-pan left to right off the board, across the lobby and out through the storefront glass onto the avenue.
+
+9. THE OLD SIGN — CUT "And" (whip-pan in). EXTERIOR WIDE SHOT of the avenue in drizzle at night, low from the curb on the gym's side: the long storefront glowing cool white, treadmill rows and the board's distant red-orange glow inside, the walk-up's fire escapes across the avenue reflected in the glass, and on the glass beside the door the old faded vinyl sign "$10 / MONTH". Steam rises from a street vent. The No-Show walks left to right along the storefront in his navy puffer vest over the grey hoodie, hood up, a takeout bag in one hand.
+   Beats: "famous" he slows and glances at the sign; "ten-dollar" a yellow cab hisses past in the foreground and its headlights sweep across the glass and flare on the sign; "plan" he stops, reads it and scratches the back of his neck.
+   Out: the next cab's headlights bloom across the lens (light-flash cut) into the dawn sun on the same glass.
+
+10. REPAINTED — CUT "New" (light-flash cut). CLOSE on the same glass from outside at dawn, the low pink-gold sun straight down the avenue from the left: the Clerk at the end of her shift, in her olive work jacket on a two-step ladder whose rail crosses the foreground; "NEW MEMBERS FROM" already lettered on the glass in wet white paint, and below it the old "$10 / MONTH" vinyl, half-scraped, one corner curling.
+   Beats: "members" she pinches the curling corner and peels the old vinyl off in one long strip (smear, flecks of vinyl tumbling in the sun); "start" she sets the mahlstick against the glass and starts lettering in the cleared space; "fifteen" "$15" lands, brushed stroke by stroke (impact frame, the dawn sun flaring on the wet paint), and "/ MONTH" follows in the pause before "But", completing "NEW MEMBERS FROM $15 / MONTH".
+   Out: the camera pushes through the fresh lettering and the glass into the morning lobby (continuous camera move).
+
+11. BLACK CARD — CUT "But" (continuous camera move). MEDIUM SHOT across the front desk in bright morning light: the No-Show at the counter, his vest zipped, standing straighter than before, his forearms on the laminate; behind him in the queue the man in the red track jacket and the woman in the camel coat; the Clerk behind the desk.
+   Beats: "two-thirds" rack focus past the No-Show's shoulder to the queue, where both members waiting behind him lift the same black card; "pay" the Clerk slides a black card left to right across the laminate under two fingertips (smear); "ninety-nine" it stops under his fingers, "BLACK CARD · $24.99 / MONTH" and "66.5% OF MEMBERS" catching the light; "Black" he lifts it by its edges; "Card" a glint sweeps across its face and his half-smile pulls to one side.
+   Out: the camera tilts down past the card to the counter.
+
+12. ANNUAL FEE — CUT "Plus". INSERT CLOSE on the laminate counter, a disinfectant spray bottle soft in the foreground, the No-Show's hand resting by the edge with the card.
+   Beats: "forty-nine" the Clerk tears the fee notice off its pad; "yearly" her flat palm rises with it (wind-up); "fee" she slaps "ANNUAL FEE $49" down beside his hand (impact frame, the paper flattens, the card hops, small shake, the spray bottle wobbles).
+   Out: match cut from the white fee notice on the counter to a white page sliding out of the printer.
+
+13. RECURRING — CUT "Over" (match cut). MEDIUM CLOSE in the back office in the afternoon, under flat, green-tinged fluorescent tubes: the laser printer on the filing cabinet feeding out a statement page, the Clerk reaching for it, the whiteboard with "HOW?" soft behind her.
+   Beats: "ninety" the header band "> 90% RECURRING REVENUE" emerges from the slot; "revenue" "CLUB & FRANCHISE REVENUE · 10-K" follows beneath it; "recurring" she pinches the page's edge and pulls it free, and the next page starts feeding.
+   Out: the camera follows the next page down.
+
+14. MONTH AFTER MONTH — CUT "pulled" (continuous camera move). CLOSE, tilting down the feeding page: "EFT · MONTHLY DUES" printing line after line down it, paper dust floating in the light.
+   Beats: "automatically" the lines print faster, one every few frames; "month" a finished page drops into the output tray; "after" another lands on it; the second "month" a third lands and the tall stack settles with a small shake.
+   Out: match cut from the last page settling on the stack to the cancellation form on the No-Show's fridge.
+
+15. CANCEL? — CUT "And" (match cut). MEDIUM SHOT in the No-Show's kitchen across the avenue in the evening: the fridge with the cancellation form "CANCEL?" under a round magnet, its pen hanging on a string; the No-Show in his grey hoodie, sleeves pushed up, shoulders slumped; through the window behind him, past the fire-escape railing, the gym's storefront glows across the avenue with the board a red-orange dot at its back.
+   Beats: "people" he shuffles in and reaches toward the fridge; "slow" his hand drifts to the dangling pen, fingers half-curled, and hesitates; "to" his hand snaps past the pen to the handle and the fridge light spills over him as he takes a can; "quit" he shoves the door shut (impact frame, the form lifts in the draft and settles back untouched, the pen swinging on its string).
+   Out: he turns to the window, and the camera continues past him through the glass and straight across the avenue into the gym (continuous camera move).
+
+16. THE STUDY — CUT "In" (the continuous move arrives). MEDIUM CLOSE across the front desk late at night, the clip-on lamp warm from the left and the board's red-orange from above: the Clerk, elbows on the counter, holds up her journal, its cover toward us, "“PAYING NOT TO GO TO THE GYM” · 7,752 MEMBERS" with "DELLAVIGNA & MALMENDIER · AER · 2006" beneath it.
+   Beats: "study" she flips the journal shut and its cover turns into the lamplight; "seven thousand" the camera eases in on the title line; "members" she opens it flat on the counter and spreads her palm across the pages.
+   Out: the camera pushes down into the open page.
+
+17. 2.31 MONTHS — CUT "people" (continuous camera move). INSERT on the open page: the printed figure, a long horizontal bar reading "LAST VISIT → CANCEL: 2.31 MONTHS", the Clerk's highlighter poised at its left end and her forearm resting on the page.
+   Beats: "paying" the highlighter starts its drag along the bar, left to right; "two months" it passes the arrow; "last" it reaches "2.31 MONTHS"; "workout" she lifts the highlighter and her eyes rise toward the cardio floor.
+   Out: whip-pan left to right with her eyeline onto the cardio floor.
+
+18. EMPTY MACHINE — CUT "As" (whip-pan in). MEDIUM SHOT at the end of a treadmill row on the cardio floor at night, streetlight shafts through the storefront: an empty treadmill, its belt still, the safety key dangling on its red cord, its readout dark; beyond it rows of empty machines and, soft at the back of the room, the board's red-orange glow.
+   Beats: "NPR" the camera starts a slow dolly left to right along the row; "people" the readout wakes with a one-frame pop; "don't" "DON’T SHOW UP" starts to scroll on; "up" it lands and holds over the still belt.
+   Out: the dolly continues left to right to the next machine.
+
+19. THE REGULAR — CUT "help" (continuous dolly). MEDIUM CLOSE on the next treadmill: the Regular jogging in her sweatband, the windbreaker sleeves bouncing at her hips, her towel over the handrail, her readout below her hands.
+   Beats: "pay" the readout scrolls on "→ PAY FOR THOSE WHO DO", its arrow pointing from the empty machine to hers, with "NPR PLANET MONEY, 2014" small beneath; "people" she glances at the empty treadmill beside her; "do" she gives a small nod and her towel swings across the readout.
+   Out: the camera rises and pulls back over the treadmill rows toward the lobby.
+
+20. 7,200 — CUT "That's" (continuous camera move). The pull-back continues up and back over the cardio floor, through the haze and the streetlight shafts, into the lobby, sinking toward turnstile height as the Clerk settles back over her journal at the desk.
+   Beats: "hundred" the <MemberBoard> refreshes from its attendance state back to its hook state, the digits rolling and landing on "7,200 MEMBERS PER GYM" and "AVG · 20.8M MEMBERS ÷ 2,896 CLUBS · 2025" relighting on its bottom strip; "fit" the turnstile arm slides into the near foreground at lower left; "gym" the Clerk's eyes drop to the page, the tally dots sweep, and the framing arrives at exactly the frame-0 composition. The last 4 frames render <HookFrame /> exactly, so the Short loops seamlessly.
 
 STEP 10 — COMPOSITING AND FINISH
 - Layer order in every shot: plates → haze cards between depth layers → practical light pools → cast and contact shadows → characters (shading stack, texture, rim light, light wrap) → in-world text → atmosphere (particles) → light beams → glow, bloom and halation on emissive surfaces → lens flares → grade → grain → vignette → chromatic aberration (impact frames only).

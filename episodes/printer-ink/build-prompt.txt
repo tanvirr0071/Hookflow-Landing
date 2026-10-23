@@ -1,0 +1,420 @@
+Build a YouTube Short in Remotion from my voice-over: a "Markup" Short, "Why Printer Ink Costs More Than Champagne".
+
+THE GOAL
+It must look like a premium cinematic animated documentary short: painterly, richly textured, deep, lit like a film, with character acting so natural it feels observed from real life. Character design keeps the clean appeal of a high-end anime feature, but every frame is rendered with volume, texture and atmosphere. It must never look like flat vector art, motion graphics, an explainer, a slideshow or a paper cut-out puppet. It plays as one continuous story that moves with the voice: the same world, the same characters and the same hero prop carry the viewer from shot to shot, and every shot hands off to the next. Every cut, every action and every piece of text is synced to the voice-over to the frame.
+
+Work like a real feature-animation studio, in this order, and do not skip ahead:
+timing → reference (motion and hands) → design (model sheets, hand sheet, props, texture kit, background plates) → layout and animatic → key poses → breakdowns and in-betweens → secondary motion → lighting, texture and compositing → QA.
+Each stage has a quality gate (STEP 12). Do not start a stage until the previous gate passes.
+
+PRIORITIES WHEN SOMETHING HAS TO GIVE
+1. Sync and facts are never compromised.
+2. Believable movement and hands. A character who moves with real weight in a simple frame beats a detailed character who moves like a paper puppet.
+3. Quality over quantity. Fewer, better drawings, well staged, beat many crude ones. Use real animation staging cheats freely: silhouettes against bright windows, backs of heads, over-the-shoulder framing, characters cropped by foreground objects, and moving holds.
+4. Every frame must survive a pause. If a paused frame looks like a vector explainer, a PowerPoint slide, clip art or a cut-out puppet, it fails.
+
+INPUT
+- Voice-over: voiceover/printer-ink.mp3 (ElevenLabs, English). It is my file: never edit, replace or regenerate it, and never create a voice. Copy it to public/vo/printer-ink.mp3.
+- If there is no Remotion project in this folder, create one with `npx create-video@latest` (blank template, TypeScript). Run `npx remotion skills add` and follow /remotion-best-practices.
+- Free tools only: no paid APIs, no stock footage, no AI images. Install what is missing: `brew install ffmpeg cmake` and `npx remotion add @remotion/media @remotion/media-utils @remotion/install-whisper-cpp @remotion/google-fonts @remotion/transitions @remotion/noise @remotion/motion-blur @remotion/paths @remotion/shapes @remotion/layout-utils @remotion/animation-utils`. Also `npm i opentype.js @fontsource/permanent-marker` (for handwriting, see STEP 7).
+- If I have placed character or prop artwork in public/assets/ (SVG or PNG), use it instead of drawing that item from scratch.
+- Reference (my own recordings, not stock): reference/printer-ink/sNN_<action>.mp4 are phone clips of me acting the key actions (turning a small cartridge in my fingers and holding it up to the light, tearing open a cardboard box tab with a thumb, flipping a ring binder open on an index tab, dragging a highlighter along a printed line and flicking it off the end, slapping a card onto a whiteboard under a magnet, unrolling a curled paper strip and smoothing it flat with the side of the hand, striking through a ledger row with a red pen, hanging a price tag on a hook and flipping it over, twisting out a champagne cork and pouring a flute, writing on a whiteboard with a marker and snapping the cap back on), and reference/hands/<pose>.jpg are photos of my hand in each pose of the hand library (STEP 3). When they exist, they are the source for poses, timing and hand shapes (STEP 3B). When one is missing, key that action by hand with the timing table in STEP 6.
+- For reference analysis, install the free MediaPipe package: `pip3 install mediapipe opencv-python numpy`.
+
+STEP 0 — PROJECT AUDIT AND STRUCTURE
+- Read every file in src/components/ and src/lib/ from earlier episodes (grain, flares, speed lines, rigs and anything else). Reuse what fits. Upgrade components in place without breaking earlier episodes: add optional props, never rename or remove existing ones. Log what you reused, upgraded and built new in out/printer-ink/review.md.
+- Structure:
+  - src/printer-ink/PrinterInk.tsx (the composition), src/printer-ink/shots/Shot01<Name>.tsx … (one file per shot, named after the shot titles in STEP 9)
+  - src/data/printer-ink/words.json, timeline.ts, copy.ts, glyphs.json, poses/ (keyed and reference-extracted poses), sim/ (baked secondary motion)
+  - src/lib/ (shared, reusable across episodes): ease.ts, Camera3D.tsx, SurfaceText.tsx, HandWrite.tsx, Particles.tsx, Grade.tsx, rig/ (Skeleton, IK2Bone, SkinnedLimb, HandRig, FaceRig, ShadingStack), textures/
+  - scripts/: extract-pose.py (MediaPipe), bake-secondary.ts, build-glyphs.ts, build-textures.ts
+  - src/components/characters/, props/, backgrounds/, fx/ (reusable in later videos)
+- Determinism: never use Math.random(). Use random(seed) from remotion for every particle, blink and drift, so every render is identical.
+
+STEP 1 — TIMING MAP (do this first)
+1. Get the exact audio duration with getAudioDurationInSeconds from @remotion/media-utils and confirm it with ffprobe (they must agree within one frame).
+2. Composition "PrinterInk": 1080x1920 at 30 fps. durationInFrames = Math.ceil(duration * 30) + 4. The last 4 frames are the loop hold (see the last shot).
+3. Transcribe: make a 16 kHz mono WAV copy of the voice-over in a temp folder (whisper.cpp requires it). Install whisper.cpp and the large-v3-turbo model with @remotion/install-whisper-cpp and transcribe with tokenLevelTimestamps: true; use the DTW token timestamps (t_dtw) where present. Merge sub-word tokens into words.
+4. Align Whisper's words to the script below with a sequence alignment. The script wins: "HP's" may come out as "HPs", "H.P.'s" or "HP", "CEO" as "C.E.O." or "C-E-O", "Which?" as "which" or "witch", "Epson" as "Epsom" or "Epsen", "Dom Pérignon" as "Dom Perignon", "Don Perignon" or "dom perrin yon", "milliliter" as "millilitre" or "ml", "out-earns" as "out earns" or "outearns", "PCs" as "PC's", "P.C.s" or "pieces", "long-term" as "long term", and numbers may come out as digits or symbols ("$10.9 billion", "10.9", "$30 million", "30 million", "1.15 billion", "2024", "1 in 4", "7", "2018", "$93"); map them to the script's words. Save src/data/printer-ink/words.json as [{ word, scriptIndex, startMs, endMs, rawFrame, frame }].
+5. Onset refinement: Whisper word starts are often 40–120 ms off. Decode the voice-over to PCM, compute a 10 ms RMS envelope, and snap every cut word and beat word to the nearest speech onset within ±3 frames. Run ffmpeg silencedetect (noise=-35dB:d=0.18) and record every pause. Keep both the raw and the refined frame.
+6. Build src/data/printer-ink/timeline.ts: for every shot its cut word, cut frame, end frame (the next shot's cut frame) and every beat word inside it with its refined frame, plus helpers such as beat("s05", "word"). All animation reads from this file. Never hard-code seconds or absolute frames in components; offsets relative to a beat (beat - 3) are fine.
+7. Cut rule: a shot cuts in on its CUT word (usually the first word of the line). Actions land on their BEAT words. A big hit never lands on a shot's first frame: leave at least 6 frames between the cut and the first big hit so the anticipation reads.
+8. Sync rule: every action tied to a word lands ON that word's refined start frame. Big actions get 2–4 frames of anticipation before the hit (a wind-up, a squash, a held breath), then follow-through and settle over 6–12 frames after it.
+9. Pace: a new shot or a clear new action every 2–3 seconds. If a shot runs past 3 seconds on my voice, add a camera change or a new action on its next beat word. Something meaningful moves at least every second.
+10. Write out/printer-ink/timing-report.md (shot, cut word, word time, raw frame, refined frame, every beat word → frame, every pause with its length) and out/printer-ink/sfx-cues.csv (timecode HH:MM:SS:FF at 30 fps, frame, shot, action, suggested sound: printer carriage whirr and paper feed, paper bag rustle, card tab tear, binder page riffle, pump-counter drum clunk, magnet snap, champagne cork pop, rain on glass…) so I can add SFX by hand.
+
+VOICE-OVER SCRIPT (for reference; the audio is the source of truth)
+HP's CEO called some customers "a bad investment."
+The ones who skip HP ink.
+Last year, HP sold ink and toner
+worth ten point nine billion dollars.
+That's about thirty million dollars a day.
+Home printers? Just one point one five billion.
+So why are printers cheap?
+The CEO said it in twenty twenty-four:
+"We lose money on the hardware,
+we make money on the supplies."
+It loses money on about one in four customers.
+In Britain, Which? found one Epson ink set
+cost over seven times Dom Pérignon, per milliliter.
+In twenty eighteen, Consumer Reports priced one HP cartridge
+at ninety-three dollars an ounce.
+Print rarely? Half the ink may never hit paper.
+Printing even out-earns HP's PCs.
+A billion more profit, on under half the sales.
+The long-term goal: "make printing a subscription."
+The printer's the bait. The ink's the business.
+
+FACT LOCK
+Every number, date, quote and name in this prompt is fact-checked. Do not add any number, date, name or claim that is not in this prompt (the TV's studio picture and the rest of its broadcast graphics, the annual report's other tabs and body text, the other lines on the printed sheets, the ledger's customer rows, the report cover's other cover lines, the magazine's body columns, the printer's control panel, the box and blister-pack printing, the store's other shelf tags, cartridge boxes and laptop boxes, the wine shop's other bottles, and the gauge's graduations use neutral filler graphics, not invented facts). Put every in-world string in src/data/printer-ink/copy.ts exactly as written below, character for character (curly quotes “ ”, middle dot ·, en dash –, em dash —, tilde ~). Components import strings from copy.ts; no string literals for in-world text inside components. Write a small check script that compares copy.ts against this list and fails on any difference. Keep "≈", ">", "≤", "UK PRICES", "OCCASIONAL USE", the source tags "HP EXECUTIVES, 2020 & 2022", "CONSUMER REPORTS, 2018 · OCCASIONAL USE" and "FY2025", and all three attribution lines ("— ENRIQUE LORES, HP CEO, CNBC, JAN 2024", "— ENRIQUE LORES, 2024, VIA THE REGISTER" and "— ENRIQUE LORES, CNBC, JAN 2024") wherever they appear.
+
+IN-WORLD COPY (exact)
+SOME CUSTOMERS: “A BAD INVESTMENT”
+— ENRIQUE LORES, HP CEO, CNBC, JAN 2024
+NON-HP INK
+SUPPLIES · FY2025
+INK & TONER $10.9 BILLION
+≈ $30 MILLION / DAY
+CONSUMER PRINTER HARDWARE $1.15B
+WHY SO CHEAP?
+ENRIQUE LORES · HP CEO · 2024
+“WE LOSE MONEY ON THE HARDWARE,
+— ENRIQUE LORES, 2024, VIA THE REGISTER
+WE MAKE MONEY ON THE SUPPLIES.”
+≈ 1 IN 4 CUSTOMERS: LOSS
+HP EXECUTIVES, 2020 & 2022
+WHICH? · UK · SEPT 2022
+EPSON INK SET · £1.78 / ML
+> 7× DOM PÉRIGNON PER ML
+UK PRICES
+CONSUMER REPORTS · 2018
+HP 64XL BLACK · $93 / OZ
+≤ HALF THE INK ON THE PAGE
+CONSUMER REPORTS, 2018 · OCCASIONAL USE
+PRINTING
+PCs
+PRINTING $3.1B OPERATING PROFIT · PCs $2.1B
+FY2025
+— ENRIQUE LORES, CNBC, JAN 2024
+“MAKE PRINTING A SUBSCRIPTION”
+BAIT
+BUSINESS
+
+STEP 2 — LOOK BIBLE (before any shot is animated)
+Write src/printer-ink/style.ts with the tokens below, then build and review the design stills in STEP 12, Gate A.
+
+THE WORLD (one geography, so camera moves and cuts make sense)
+- The whole film happens on one narrow city street on a rainy night. On its east side, in a brick row house, the homeowner's second-floor front room is her home office: her wooden desk faces the TV on the north wall; on the low shelf under the TV stand the home printer, the glass gauge beside it and the old petrol-pump counter at the shelf's right end; the window to her left (west) looks down across the street; the whiteboard hangs on the right (east) wall (shots 1–6, 8–12, 14–16, 19, and the end of 20).
+- Directly opposite her window, across the wet street, is the office-supply store: its big lit front window, with the display printer on a white plinth, faces her window; just inside, the printing shelf and its pegboard of cartridges stand on the left behind the glass, the long PCs aisle runs back to the right, and the demo printer stands at the printing shelf's end (shots 7, 17, 18, 20).
+- Next door to the store, on the same side of the street, is a small wine shop whose gold-lit window we glimpse from her window in shot 7 and see up close in shot 13.
+- Every crossing from her room to the shops goes left and out through her window glass; every return crosses back up the street and in through the same window.
+- Reuse the same component for anything that appears twice: the hero cartridge (<HeroCartridge>), the home printer (the same model drives her printer and the store's display and demo printers), the TV and its lower third, the desk and its anglepoise lamp, her window and the street plate seen through it, the whiteboard with its cards and strips, the store window and its two-sided price tag, the pegboard, the homeowner and the clerk.
+
+PALETTE AND LIGHT (per scene: key light colour and direction, shadow tint, rim colour, line colour)
+- Home office, the TV wall, night (shots 1, 5, and the end of 20): key light cold blue-white from the TV screen, straight ahead and slightly above; shadow tint deep indigo; rim warm amber from the desk lamp behind her right shoulder; line colour dark navy. The episode's accent is contact gold #D4A23C: the hero cartridge's contact pads, the champagne's foil and the brass eyelets of the price tags.
+- Home office, the desk under the lamp (shots 2–4, 11, 12, 14, 15): key light warm amber tungsten from the anglepoise lamp, low from the left; shadow tint burnt umber; rim cold blue from the TV; line colour dark sepia.
+- Home office, the printer shelf (shots 6, 16): key light the lamp's soft amber spill from above left, with the printer's green and amber LEDs as small practicals; shadow tint charcoal-teal; rim cold blue from the TV above; line colour deep slate.
+- Home office, the whiteboard (shots 8–10, 19): key light cool white bounced off the melamine from the TV, from the left; shadow tint dusty violet; rim amber from the desk lamp behind her; line colour dark plum.
+- The street, rainy night (shot 7 and every crossing in shots 13, 18, 19 and 20): key light sodium orange from the streetlights, high from the right; shadow tint deep teal; rim cold green-white from the store window; line colour blue-black.
+- The office-supply store (shots 17, 18, 20, and its window in shot 7): key light flat cool green-white fluorescent tubes overhead; shadow tint muted olive-grey; rim warm sodium orange from the street through the front window; line colour dark bottle green.
+- The wine shop window (shot 13): key light one warm gold spotlight from above left; shadow tint deep oxblood; rim cool blue-teal from the wet street; line colour dark burgundy.
+
+RENDERING STYLE (painterly and cinematic, not flat cel)
+- Line art is thin, coloured and secondary to light: lines use the darkest local colour (never pure black), are heavier in shadow and on outer contours, thin out or break where light hits an edge, and taper at the ends (build them as filled shapes, not uniform strokes). Forms are defined mainly by light and shadow.
+- A reusable <ShadingStack> renders every character part and prop in this order: base colour → form shadow with a soft terminator (2–6 px feathered edge; colour = base tinted by the scene's shadow colour, never grey) → a darker core shadow and ambient occlusion in creases (under the chin and hair, inside the elbow, between the fingers, where a body meets a seat) → on skin, a warm, slightly saturated band along the terminator → bounce light on undersides from the floor or nearby colours → highlight → rim light in the key light's colour → specular glints on eyes, hair, lips, nails, a watch and phone glass.
+- Store the key-light direction per shot in style.ts; shadow and light shapes follow it, so a character who turns toward the light brightens on that side.
+- Cast shadows: characters and props cast soft shadows onto floors, walls, desks and each other, matching the key light's direction and softness. Contact shadows sit wherever something touches a surface: the hero cartridge standing on the desk, the binder and the ledger on the desk, the printer's feet and the gauge's base on the shelf, the champagne bottle on its velvet stand, the clerk's shoes on the store floor.
+
+TEXTURE (every surface, characters included)
+- Build a texture kit once, procedurally and seeded (no outside images), with scripts/build-textures.ts, and pre-render it as seamless PNG tiles: paper grain, canvas weave, dry brush, wet-paint blooms, chalk dust, concrete, wet asphalt, skin micro-texture, brushed metal, wood grain, glass smudges, plus glossy black moulded plastic (the cartridges), copper-gold flex circuit (the cartridge contacts), matte textured ABS (the printers), uncoated copy paper with toner and inkjet dot gain (the printed sheets, strips, labels and the chart), black vinyl (the ring binder), bookcloth and ruled ledger paper (the ledger), matte coated stock (the report cover), glossy magazine paper gone soft with age (the magazine), kraft paper (the shopping bag), printed cardboard (the boxes), clear blister plastic (the ink set), melamine with ghosted marker (the whiteboard), chrome and cream enamel (the petrol-pump counter), graduated glass (the gauge), dark green bottle glass and crinkled gold foil (the champagne), crushed velvet (the wine-shop stand), laminate shelving and perforated pegboard (the store), chunky wool knit (the homeowner's cardigan), washed cotton jersey (her t-shirt and lounge trousers), polyester twill (the clerk's store vest), cotton poplin (his shirt), corduroy (his trousers), washed linen (the wine merchant's apron), fine-gauge merino (her turtleneck). Reuse tiles that earlier episodes already built.
+- On characters, each clothing and skin area gets its matching tile at low opacity (multiply or soft light), clipped to its shape, plus a brush mask that breaks up shadow edges so they look painted, not vector-perfect. Fabric shows seams, stitching, buttons, pockets, buckles, knit patterns and wrinkles that change with the pose.
+- In backgrounds, brushwork follows the form, edges break up, shadows hold painted texture, surfaces show dirt and wear, and fine detail concentrates around the focal point and falls away from it, as in a painting.
+- Texture must be visible in a 100% crop and subtle at phone size.
+
+DEPTH (every shot)
+- Combine depth cues: the real perspective camera (STEP 5), overlap, scale change, atmospheric haze between layers, depth of field with bokeh, cast and contact shadows, light falloff, and a foreground element close to the lens in most shots.
+- Plan the value structure in depth for each shot in the layout: the subject at the focal plane gets the highest contrast; the foreground is darker or out of focus; the background is hazier.
+- Volume: thin fog cards between depth layers; visible light beams (the desk lamp's warm cone over the desk, the TV's cold glow through hanging dust, the streetlight cones cut by falling rain, the store window's light falling across the wet pavement, the wine shop's gold spotlight cone on the bottle); rain, dust motes, card fibres from the torn box tab, champagne spray and bubbles, and fine ink droplets catching the light.
+- Bokeh: out-of-focus point lights (the streetlights, car headlights and tail lights on the wet street, the store's fluorescent tubes, the printer's LEDs, the studio lights in the TV picture, the wine shop's spotlights) become soft discs with a slightly brighter rim, sized by their distance from the focal plane.
+
+PAINTED BACKGROUNDS
+- No flat fills anywhere. Every surface has a gradient, brush texture (feTurbulence into feDisplacementMap on edges, low-opacity noise multiplied over fills) and hand-placed detail: cables, signage, window frames, scuffs, plants, reflections, light pools.
+- Atmospheric perspective: far layers have lower contrast and are tinted toward the sky or ambient colour.
+- One key light, one fill, and practical lights (neon, screens, lamps) casting coloured pools on nearby surfaces.
+- Background plates: render each background layer once as a high-resolution transparent PNG through its own composition (Plate-s01-far, Plate-s01-mid…) with `npx remotion still`, saved to public/plates/printer-ink/. Plates are rendered at 2× pixel density (`--scale=2`) and 1.25–2× the frame size on the axis the camera travels, so texture stays crisp through push-ins. Shots then composite plates + live elements (characters, lights, text, particles). This lets the painting use expensive filters without slowing the render. Keep the plate source code so plates can be re-rendered.
+
+STEP 3 — CHARACTERS (all original designs, never portraits or likenesses of real people)
+- THE HOMEOWNER: a woman in her early forties, medium build, long-limbed, with square shoulders; dark brown hair twisted into a loose low bun held with a pencil, a few strands falling loose; tortoiseshell reading glasses pushed up into her hair, pulled down onto her nose for reading; an oversized oatmeal chunky-knit wool cardigan over a faded navy cotton t-shirt, grey cotton-jersey lounge trousers, thick grey wool socks; a smudge of black ink on her right index finger. Dry and sceptical: she squints, purses her lips and taps things with one fingertip before she trusts them. From shot 8 her cardigan sleeves are pushed up to the elbows and her moves get quicker and more determined; she is calm and certain at the end.
+- THE CLERK: a man in his late fifties, tall and thin with a slight stoop and long arms; short grey hair, a neat grey beard; a red polyester-twill store vest with a blank name badge and no logo, over a pale blue cotton-poplin shirt with the sleeves rolled to the forearm, brown corduroy trousers, black work shoes, a roll of price tags in his vest pocket. Patient and wry: he hangs every tag with a small showman's flourish and steps back to admire it.
+- Minor: THE WINE MERCHANT, a woman in her sixties, small and round, with a silver bob and reading glasses on a chain; a dark washed-linen apron over a black merino turtleneck; quick, deft hands. Passers-by on the street: dark coats under black umbrellas, mostly silhouetted against the shop windows.
+- Every character must read in silhouette alone.
+
+MODEL SHEETS FIRST
+For each main character (in every outfit and mood they appear in), build and render a model sheet: front, 3/4, profile and back views, with a second panel showing the volume construction underneath (ribcage, pelvis, limb cylinders); an expression sheet (neutral, smile, laugh, surprised, unimpressed with half-lidded eyes, tired, plus any expression this episode needs); and a turn test (the head turning from front to profile in 5 steps through the face rig). Minor characters get at least front and 3/4. Save to out/printer-ink/qa/model-<name>.png. Fix proportions, appeal and consistency between views before any shot uses the character.
+
+CONSTRUCTION
+- Realistic proportions with the appeal of a high-end anime feature, never chibi: the homeowner about 7.25 heads tall, long-limbed and square-shouldered, with a slight forward lean over her desk; the clerk about 7.75 heads, lanky and narrow, his stoop deepening when he reaches down; the wine merchant about 6.5 heads, small and round. Build every body from volumes first (ribcage, pelvis, tapered limb cylinders) and check the gesture line before adding detail. Necks, clavicles, shoulders, elbows, wrists, knees and ankles sit in anatomically correct places; elbows line up with the waist and fingertips reach mid-thigh.
+- Faces: small chin, eyes about one fifth of the face width, the nose shown by a soft shadow plane and a small highlight on the tip, a soft shadow under the lower lip. The homeowner has faint lines at the outer corners of her eyes, a small vertical crease between her brows that deepens when she is sceptical, and a faint red mark on the bridge of her nose from her glasses; the clerk has hollow cheeks, deep lines from nose to mouth, heavy grey brows and crow's feet that bunch when he smiles; the wine merchant has round, soft cheeks and laugh lines.
+- Eyes (they get close-ups): a thick, tapered upper lash line with a flick at the outer corner, a thin broken lower lash line, an iris with a vertical gradient (dark at the top, lighter at the bottom), a pupil, two highlights (one large, one small), a reflection of the scene's light source, and a soft shadow cast by the upper lid onto the eyeball. Eyelids and eyebrows are separate layers.
+- Hair in pointed clumps with a shadow shape, a highlight band and a few flyaway strands.
+- Clothes have weight and thickness: folds radiate from tension points (shoulders, elbows, belts, behind the knees) and change with every pose. The homeowner's chunky cardigan is heavy and soft, sags at the pockets, bunches thickly where the sleeves are pushed up and slides down her forearm when she reaches; her t-shirt pulls in small diagonal folds across the shoulder when she lifts an arm; the clerk's polyester vest is flat and slightly shiny, hangs open and swings late when he reaches up, while his poplin shirt creases sharply at the rolled sleeves and the elbows; the wine merchant's linen apron crumples in soft breaks at the waist tie.
+
+RIG (skinned, never a paper cut-out)
+- Skeleton: pelvis → lower spine → chest (a 3-segment spine), neck, head; clavicles (the shoulders rise when an arm lifts above shoulder height); upper arm, forearm with twist, wrist; thigh, shin, foot, toes.
+- Skinned body: never rotate rigid SVG pieces around pins. Compute each limb's outline every frame from its bones with a width profile (deltoid, upper arm, forearm taper, wrist; thigh, knee, calf, ankle), so elbows and knees bend smoothly: the inner side compresses and creases, the outer side sharpens into the joint. The torso outline follows the three spine bones the same way, so the chest and waist bend and twist. No seams, gaps or overlapping circles at joints, at any angle.
+- Two-bone IK with pole vectors for arms and legs: hands are placed on their targets (the hero cartridge, the shopping bag, the third-party box and its tab, the binder's tab and pages, the highlighter, the index card and its magnet, the paper strips and their tape, the attribution labels, the ledger and the red pen, the report and the blister-packed ink set, the magazine, the whiteboard marker and its cap, the price tag and its hook, the pegboard hooks and cartridges, the demo printer's button and the printed chart, the champagne bottle, its cork and the flute) and feet are planted; a foot carrying weight never slides.
+- 2.5D face rig: the eyes, brows, nose, mouth, ears and hairline sit on a virtual ellipsoid and move with head yaw and pitch. During a turn the far eye narrows and moves toward the edge, the nose moves toward the silhouette, the cheek and jaw contour change, the ear shifts, and the hair clumps layer over and under accordingly. For turns beyond about 45°, swap to a dedicated 3/4 or profile head at the fastest point of the turn, where the motion hides the swap.
+- Torso turns work the same way: lapels, buttons, belts and seams slide across the torso shape.
+- Pose library per character, stored as joint angles + IK targets + face values + hand poses in src/data/printer-ink/poses/.
+- Every part draws its own shading stack and texture (STEP 2) from the shot's key-light direction.
+
+HANDS (treat them as their own sub-project)
+- Proportions: the hand is about as long as the face from chin to hairline, and the palm about as long as the middle finger. The middle finger is longest; index and ring are about equal; the pinky's tip reaches the last knuckle of the ring finger. The knuckles form an arc, not a straight line. The thumb starts at the wrist, its tip reaches about the middle knuckle of the index finger, and it sits at roughly 90° to the palm (it opposes the fingers; it never lies flat beside them).
+- Hand rig: wrist, palm, thumb (3 joints: base, middle, tip) and four fingers with 3 joints each. Each finger is one continuous skinned shape built from its bones with a width profile: slight bulges at the knuckles, a narrower middle, a rounded, padded tip, tapering toward the end.
+- Detail: the back of the hand shows nails (correct shape, a highlight, a cuticle line), knuckle creases and wrinkles, and on older characters tendons, veins and softer, older skin; the palm shows the thumb's padded base, the main creases and fingertip pads. Hands get the same shading stack, texture, cast shadows and contact shadows as the rest of the body.
+- Views: back, palm, thumb side, pinky side and 3/4. Choose the view per pose so the hand reads clearly; never show a hand edge-on where the fingers merge into one shape.
+- Curl rules: when fingers curl, the joints fold progressively (base least, tip most), curled fingers converge toward a point near the base of the palm, and each finger toward the pinky curls slightly more than the one before. Relaxed hands are never flat: the fingers rest in a gentle cascade of curls.
+- Grips are layered: the object sits between the hand's layers (palm and far fingers behind it, near fingers and thumb in front), the fingers flatten slightly where they press, and contact shadows sit where skin meets the object. Cartridge: held at its two short ends between the thumb pad and the index and middle fingertips, the ring finger under its base, the pinky curled free, the contacts facing out. Shopping bag: the fingers hooked over its rolled top edge, the thumb outside. Third-party box: lying in the palm of the left hand, the fingers wrapped round its sides, the right thumb pushing under the tab. Binder tab: hooked by the index finger, the thumb on the page edge. Highlighter and red pen: pinched between thumb and index, the middle finger supporting it, the ring and pinky curled and resting on the page. Index card and labels: pressed flat under the fingertips, the card held by its edges between thumb and fingers on the way to the board. Paper strip: its curled end pinched between the thumb and the first two fingers, the side of the other hand pressing it flat. Ledger: both hands at its edges, the thumbs on top and the fingers under the boards. Blister pack: the fingers behind the card, the thumb in front on the plastic. Magazine: pinched at its corner between thumb and index, the other fingers under the pages. Marker: pinched between thumb and index, the middle finger supporting it; the cap held in the other hand's fingertips. Price tag: its string pinched between thumb and index, the tag swinging below. Pegboard cartridge: its hanging card pinched at the top, the hole lined up on the hook. Champagne bottle: one hand round the neck with the thumb pressed over the cork, the other hand round the base turning the bottle; pouring, the thumb in the punt and the fingers spread under the body. Flute: its stem between the thumb and the first two fingers.
+- Motion: the wrist leads and the fingers follow 1–3 frames later; when a hand opens or closes, the fingers move in a cascade from index to pinky, never all at once. Fingers never pop between poses; they interpolate through the rig.
+- Pose library (from my reference photos when available, see STEP 3B): relaxed, point, cartridge pinch raised to the light, cartridge quarter turn with the thumb, thumb tab-tear, tab hook, highlighter drag and flick, flat palm slap with the magnet, side-of-hand smoothing, thumb tape press, fingertip tap, fingertip row trace, red-pen strike, blister-pack lift, magazine corner pinch, marker grip, cap snap, tag-string pinch and flip, peg-hook hang, one-finger button press, page-edge catch, cork twist with the thumb over the cork, pour with the thumb in the punt, flute stem hold.
+- Close-ups (shots 1, 2, 4, 9, 10, 11, 12, 13, 15 and 20, and any insert) get the full detail level; wide shots simplify detail but keep correct proportions and silhouettes.
+
+ACTING (observed from life, never puppet-like)
+- Nobody is ever perfectly still: breathing moves the chest, shoulders and clavicles (1–2 px, a 3–4 second cycle, a different phase per character), and standing characters make tiny weight shifts between their feet. A held character is a moving hold.
+- Eyes lead: in every look or turn, the eyes move first, the head follows 2–4 frames later, then the torso. While watching or thinking, the eyes make small darts (saccades) every 0.5–1.5 seconds. Blinks take 5–7 frames (a fast close, a slower open), come every 2–4 seconds (seeded) and often accompany a head turn or a change of thought.
+- Asymmetry: no mirrored poses. Weight sits on one leg with the hips and shoulders tilted in opposite directions; the two hands do different things; the two sides of the face are never identical.
+- Faces act in small amounts: brow tension, lid height, the corners of the mouth, a jaw shift. A flicker of the coming emotion appears a few frames before the main expression (a flash of doubt in the eyes before a smile drops).
+- Extreme close-ups on the eyes for dramatic beats.
+- Mouths change only for expressions (smile, laugh, open surprise, flat). Characters never lip-sync: the narration is a voice-over; they act and react.
+- Eyelines: characters look at what matters (the TV's lower third, the hero cartridge, the bag's label, the binder's tab and its bold line, the petrol-pump counter, the printer's output, the store window and its price tag, the cards and strips on the whiteboard, the ledger's rows, the report cover, the magazine page, the cartridge's sticker, the gauge, the pegboard and the PCs aisle, the printed chart, the champagne bottle and the flute), and screen direction stays consistent across cuts.
+
+FRAME RATE
+Characters animate on ones (every frame, 30 per second) for smooth, natural movement; the puppet look is fixed with posing, timing, skinning and overlap, not by dropping frames. Camera, particles, lights, text and effects are also on ones.
+
+STEP 3B — REFERENCE-DRIVEN MOTION (when reference/ exists)
+- Run scripts/extract-pose.py with MediaPipe Pose Landmarker (33 body points) and Hand Landmarker (21 points per hand) on every reference clip and photo, and save per-frame 2D landmarks to src/data/printer-ink/poses/ref/.
+- Smooth the landmarks (One Euro filter), convert them to the rig's joint angles and IK targets, and retarget them to each character's proportions. The homeowner moves a little quicker and sharper than I do, with small, precise finger work and a sceptical pause before each look; the clerk moves slower and longer-limbed than I do, with a flourish and a settle at the end of every tag hang; the wine merchant is quick and economical, with short, deft wrist moves. Scale timing where age or mood calls for it.
+- Never trace every frame: that looks floaty and rotoscoped. Take the key poses and extremes from the reference, keep its timing, rebuild the breakdowns and in-betweens with the motion rules in STEP 6, and push the poses about 10–20% further than the reference for clarity.
+- Align each reference action to its beat word so its contact or hit frame lands on that word.
+- Use the hand photos to set finger joint angles, view and grip for every pose in the hand library.
+- Without reference, key the action by hand with the timing table in STEP 6.
+
+STEP 4 — PROPS (they must resemble their real-life versions)
+- The hero prop: <HeroCartridge>, a black inkjet cartridge about the size of a matchbox: a glossy black moulded plastic body with a slightly rounded top and a row of fine finger-grip ridges, a small vent maze moulded into the top, a recessed plain white paper label with neutral filler and no logo, a copper-gold flex-circuit strip folded round one corner with a grid of tiny gold contact pads, a narrow nozzle plate underneath with a crust of dried black ink. It is a generic design, not a copy of any real cartridge's shape, label or colour bands. One component with states: in hand (raised in the homeowner's fingers against the TV glow, the contacts catching the blue light: shots 1 and the end of 20), set aside (standing on the desk under the lamp: shots 2, 3, 11, 14), stickered (turned over to show a white store price sticker with plain black print reading "HP 64XL BLACK · $93 / OZ", a bead of ink swelling at the nozzle: shot 15) and tagged (the same body hanging on a store peg hook by a clear hanging card, a manila tag on a string reading "BUSINESS": shot 20). The gloss, the gold contacts and the ink crust keep the same design in every state.
+- The home office: a wooden desk with ring marks and scuffs, a black anglepoise desk lamp with a warm tungsten bulb, a pencil cup, a stack of old curled magazines; a flat-screen TV with a thin black bezel on a wall bracket above a low painted shelf; a sash window with a painted wooden frame, rain running down its glass.
+- The home printer: a compact home all-in-one inkjet as they look today: matte charcoal textured plastic, a hinged flatbed scanner lid, a fold-out front paper-output tray, a rear paper-feed tray with a few sheets in it, a small tilting control panel with backlit buttons, a green power LED and an amber ink LED, a front access lid that opens on the carriage riding a metal rail with a ribbon cable, and a service-station sponge stained black at one end; no logo and no lettering. The store's display printer and demo printer are the same model, new and dust-free.
+- The TV picture: a business-news interview in a generic studio with soft city-light bokeh and a faceless, out-of-focus seated figure in a dark suit, never a likeness of anyone; a plain lower-third bar with no network logo, bug or real graphics package.
+- The petrol-pump counter: a salvaged old petrol-pump computing head used as a bookend: a domed chrome bezel with pitting, a cream enamel face with chips, a glass window over white number drums with black figures, fixed painted lettering either side of the drums, a worn crank boss on its side.
+- The annual report: a thick printout in a black vinyl three-ring binder with scuffed corners, coloured plastic index tabs with printed inserts, pages of dense small columns of neutral filler; a yellow chisel-tip highlighter.
+- The shopping bag and the box: a brown kraft-paper bag with twisted paper handles and a printed sticker label, from the store across the street; a plain white-and-grey printed cardboard cartridge box with a perforated tear tab, no logo.
+- The ledger: a heavy green clothbound accounts book with red cloth corners and a worn spine, ruled blue lines and red margin rules, printed headings; a red ballpoint pen.
+- The report and the ink set: a printed consumer report with a matte coated cover and plain bold masthead lettering (no logo or real cover design); a set of colour ink cartridges in a clear blister pack on a plain printed backing card with no logo or real packaging design.
+- The magazine: an old glossy magazine, its cover curled and its pages gone soft, a plain printed page header with no masthead logo or real page design.
+- The gauge: a tall glass laboratory graduated cylinder on a hexagonal glass foot, etched graduation marks with no numbers, full of black ink with a meniscus, a printed paper label strip taped down its side.
+- The whiteboard: a melamine board in a brushed aluminium frame with a pen tray, ghosts of old marker, round black magnets, torn pieces of masking tape, a black bullet-tip marker with a click-on cap.
+- The office-supply store: a narrow shop with a big plate-glass front window and a plain unlit fascia with no name or logo; inside, white laminate shelving, perforated pegboard walls with steel peg hooks and cartridges on clear hanging cards, a short aisle of printers, a much longer aisle of laptop boxes with plain printed packaging and no brand, clear plastic shelf-label holders, flat fluorescent tubes; in the window a white display plinth with a display printer and its plain box. The price tag: a large red-and-white card tag with a brass eyelet on a cotton string, printed on both faces.
+- The wine shop: a small wine merchant with a dark-wood shopfront and no lettering, a single champagne bottle in its window as a generic bottle (dark green glass, plain gold foil and a wire cage over the cork, a blank cream label, never any real champagne house's label, shield or bottle shape) on a crushed-velvet stand under a spotlight, a crystal flute, and a small brass easel holding a printed price card.
+- The street: wet asphalt with faded lane paint and streams of reflected light, a kerb and a drain grate, cast-iron streetlights with sodium lamps, parked and passing cars of no make, passers-by under black umbrellas.
+- No icons-as-props and no blob shapes.
+
+STEP 5 — CAMERA, LAYOUT AND ANIMATIC
+- Build a reusable <Camera3D>: a real perspective camera in CSS 3D (perspective on the root, transform-style: preserve-3d), with every plate, character and prop placed at its true depth (translateZ, scaled to keep its intended framing size). The camera has a position (x, y, z), rotation, a lens (think 24 mm wide, 35 mm, 50 mm, 85 mm portrait) and a focus distance. Push-ins are dollies (the camera moves, so near layers grow faster than far ones), not zooms. Depth of field: each layer's blur comes from its distance to the focus plane and the shot's aperture; rack focus eases over 8–16 frames with a hint of focus breathing (1–2% scale). Handheld drift from noise2D in @remotion/noise (2–4 px, at most 0.3°), seeded per shot, with a documentary-camera feel: slow and organic on handheld shots, almost none on tripod shots.
+- Depth layers: 5–8 in every exterior, 4+ in every interior, and in most shots a foreground element near the lens that crosses the frame (her shoulder and the desk lamp's shade, the pencil cup, the printer's edge, the whiteboard's pen tray, the rain-streaked window glass and its sash bar, peg hooks, umbrellas of passers-by, the stack of old magazines).
+- Every shot has a camera plan: start framing, end framing, move type, easing and the beats that trigger changes. No locked-off camera; a deliberate held beat is still a moving hold (drift + atmosphere).
+- Screen direction: progress and time move left to right; her window is always on her left and the whiteboard on her right, so every look to the street whip-pans left and every turn to the whiteboard whip-pans right; the camera crosses the street outward to the left and returns up and in through her window; the strips are smoothed onto the board left to right; the clerk steps left to right toward the PCs aisle; the printed sheets feed toward the lens; a whip-pan continues the direction of the motion that motivated it.
+- Layout first: write out/printer-ink/layouts.md with one block per shot: framing (wide, medium, close, extreme close), camera move, layers, character key poses with their beat words, every text with its surface, the transition in and out, and the object that hands off to the next shot.
+- Animatic: render a fast pass with grey placeholder shapes in the correct positions and the real timing (`--scale=0.25`), watch it against the voice and fix the timing here, before painting and animating.
+
+STEP 6 — MOTION LANGUAGE
+- src/lib/ease.ts holds named curves (anticipate, overshoot, settle, slam, whip, float) and a few named spring() configs. Linear motion is allowed only for mechanical constant speed: the petrol-pump counter's drum rolls, the printers' paper feeds and the carriage's cleaning shuttle, the falling rain.
+- Every move follows anticipation → action → overshoot → settle.
+- Breakdowns: between every two key poses, add a breakdown pose that defines the arc and the overlap (never a straight interpolation from key to key). Spacing is slow out of a pose, fast through the middle and slow into the next, and no two body parts start or stop on the same frame.
+- Biomechanics: the centre of gravity stays over the supporting foot; before reaching, pulling or lifting, the body shifts its weight first; to lift, the knees bend and the back stays straight; effort shows in the whole body (shoulders tense, neck strains, a short pause before a heavy lift).
+- Timing from life at 30 fps (refine from reference): blink 5–7 frames; eye dart 2–3; head turn 8–14; reach for an object 12–20; tap 4–6; both arms up 10–16; hand opening or closing 6–10; sit-to-stand 30–45; the box-tab tear: 3 frames of thumb pressure, 2 of rip, 8 of the flap settling; the binder flip: 6 frames of lift, 4 of riffle, 10–12 of pages settling; the highlighter drag: 3 frames of touch-down, 8–12 of drag, 2 of flick-off; a drum landing on the counter: 2 frames of clunk, 4–6 of judder; the magnet slap: 4 frames of wind-up, 2 of action, 6–8 of settle; the strip smooth: 10–14 frames of sweep; the tag hang or flip: 6 frames of lift, 3 of flip, 12–16 of the tag swinging to rest; the cork pop: 8 frames of twist, 1–2 of pop, 10–14 of foam and her recoil; the red-pen strike: 2 frames of touch, 5–6 of stroke; the marker cap snap: 3 frames.
+- Secondary motion is simulated: bake the homeowner's loose hair strands, cardigan hem and pushed-up sleeves, the clerk's open vest fronts, the price tag and the BUSINESS tag on their strings, the curled ends of the paper strips, the shopping bag's handles, the binder's pages, the wine merchant's apron and the passers-by's umbrellas with a deterministic spring/verlet simulation in scripts/bake-secondary.ts; save per-frame values to src/data/printer-ink/sim/ and read them in the components. Remotion renders frames in parallel, so anything physical must be baked or computed purely from the frame number.
+- Weight: heavy things (the ring binder, the ledger, the petrol-pump counter and its drums, the stack of magazines, the champagne bottle, the printer's scanner lid) start slowly, stop hard and cause a small shake; light things (the printed sheets and strips, the index card and labels, the price tags on their strings, the cork, champagne foam, card fibres, dust and rain) float, tumble and flutter.
+- Arcs: hands, heads and props travel on curved paths (IK targets follow arcs); never slide a hand in a straight line.
+- Overlapping action: the head leads, the torso follows 2 frames later, arms 2–4 frames later, hair, hems, bags and loose clothing 2–4 frames after that.
+- Smear frames (1–2 frames) on fast moves: the box-tab tear, the binder riffle, the highlighter's flick off the line, the magnet slap, the price tag snapping onto its hook and flipping over, the cork pop, the marker cap snap.
+- Impact frames (2–3 frames, restrained and filmic: an exposure flash and contrast punch with a touch of speed lines and very slight chromatic aberration) on key hits only, so they keep their punch: "investment" (shot 1), "billion" (shot 4), "cheap" (shot 7), "seven" (shot 13), "bait" (shot 20).
+- Screen shake on big hits: decaying over 3–6 frames, maximum 8 px.
+- Motion blur with @remotion/motion-blur during fast moves only (whip-pans, the binder riffle, the cork flying past the lens, the price tag's flip, the carriage's cleaning shuttle, cars passing on the wet street), with a 180° shutter feel and a low sample count to protect render time.
+- Particles (rain, dust motes in the lamp cone and the TV's glow, card fibres from the torn tab, champagne spray and bubbles, fine ink spit from the cleaning cycle, rain spray off the umbrellas) are deterministic and layered in depth: near ones are bigger, blurrier and faster. Each piece tumbles in 3D (scaleX = cos of its spin) and drifts on its own curve.
+
+STEP 7 — KINETIC TYPOGRAPHY INSIDE THE WORLD
+- No captions, no word-by-word subtitles and no floating text cards. Every text sits on a surface in the world.
+- <SurfaceText> places text on any four-corner quad using a perspective transform (matrix3d computed from the four corner points), so it sits exactly on its sign, screen, paper or board and moves with that surface's parallax layer.
+- Light the text by surface type: emissive (screens, LED, neon: glow and bloom, and it lights nearby surfaces), printed (multiplied by the scene light, paper texture, shadowed), handwritten (marker or chalk texture), stamped.
+- Occlusion: foreground objects pass in front of text when natural (rain streaks on her window run across "WHY SO CHEAP?" in shot 7; her hand and the highlighter pass over the report line in shot 4; the rising champagne foam and the flute cross the bottom of the price card in shot 13; the clerk's arm crosses the "PRINTING" label in shot 17; her marker hand covers each letter as she writes in shot 19).
+- Entrances land on the exact beat frame and match the surface: LED digits roll and land; neon flickers on (2–3 flickers within 6 frames); screens switch on with a one-frame bright pop; printed text arrives with its object; handwriting is written stroke by stroke; stamps slam with a squash. Exits are motivated: switched off, wiped, washed out, torn, fallen away, scrolled off.
+- Handwriting: in a Node script, convert the needed glyphs of Permanent Marker (the .woff from @fontsource/permanent-marker) to outlines with opentype.js and save them to src/data/printer-ink/glyphs.json. Reveal each glyph in writing order through a mask of thick strokes that follow the glyph's centre line, animated with evolvePath from @remotion/paths; the marker or chalk tip follows the leading point (getPointAtLength). Writing finishes on its beat word. If a glyph's centre line is not available, reveal it with a directional wipe along its main stroke, still followed by the pen.
+- Fonts via @remotion/google-fonts: "Oswald" for the TV lower third and its attribution line, the bag's sticker label, the petrol-pump counter's drums and painted lettering, the store price tag on both faces, the shelf labels, the BUSINESS tag and the gauge's label; "Libre Baskerville" for the annual report's tab and its bold line, the ledger's heading and small print, the report cover, the magazine's page header and the champagne price card; "IBM Plex Mono" for everything that came out of a printer: the CONSUMER PRINTER HARDWARE sheet, the name card, the two quote strips and the two attribution labels on the whiteboard, the cartridge's price sticker and the printed chart; "Permanent Marker" for the quote handwritten on the whiteboard. Check that every special character (“ ” · ≈ ≤ × > £ É & — ?) exists in the font of its surface; if one is missing, move that surface to another of these fonts that has it. Load only the weights you use, and confirm in the stills that no fallback font appears. Fit long lines with fitText from @remotion/layout-utils.
+- Readability on a phone: every key text and key action stays inside x 48–888, y 288–1248 of the 1080×1920 frame (clear of the Shorts buttons and title). Main words have a cap height of at least 72 px; secondary text (small print, attributions, source tags, sticky notes) at least 34 px and on screen for at least 1.2 seconds. Every text has strong contrast with what is behind it. Background art can fill the whole frame.
+- Add a showSafeZone prop that draws the safe box, for QA stills only.
+
+STEP 8 — TRANSITIONS
+- Lay the shots out on an absolute timeline (<Sequence from={cutFrame}> with premounting), and build each transition as an overlay that straddles the cut, so the audio timeline never shifts. If you use TransitionSeries from @remotion/transitions, remember that transitions overlap the shots and shorten the total: compensate the durations so every cut still lands exactly on its cut frame, and verify it.
+- Allowed transitions, each motivated by the story:
+  - Whip-pan (6–8 frames): accelerate out with motion blur and speed lines, cut at maximum blur on the cut frame, decelerate in, continuing the screen direction.
+  - Light-flash cut: a bright source in shot A blooms toward white over 3–4 frames; cut; shot B blooms down from its own brightest light over 4–6 frames.
+  - Match cut: a shape or motion in shot A matches the position, scale and direction of one in shot B on the exact cut frame.
+  - Continuous camera move: the camera travels from one setup to the next without a cut.
+  - Foreground wipe: an object passes the lens, fills the frame and the cut happens behind it.
+- Never crossfades, dips to black or generic slides.
+
+STEP 9 — SHOTS (CUT word → shot; beats inside)
+
+1. THE LOWER THIRD — CUT "HP's" (frame 0). OVER-THE-SHOULDER MEDIUM SHOT in the homeowner's second-floor home office at night, rain streaking the window at the left edge: on the north wall the flat-screen TV glows with a business-news interview (a generic studio with soft city-light bokeh and a faceless, out-of-focus figure in a dark suit; no network logo or on-screen bug), its lower third reading "SOME CUSTOMERS: “A BAD INVESTMENT”" with "— ENRIQUE LORES, HP CEO, CNBC, JAN 2024" below it; under the TV, on the low shelf, the home printer and, at the shelf's right end, the old petrol-pump counter. The homeowner sits at her desk in her oatmeal cardigan, her glasses pushed up into her bun; in the foreground her right hand holds the hero cartridge (in-hand state) up against the screen, its gold contacts catching the blue light; the desk lamp's shade soft at the right edge, dust hanging in the TV's glow. The lower third sits high in the safe box and the cartridge in its lower half.
+   Frame 0 is fully composed: the TV lit with the lower third and its attribution line, the hero cartridge raised in her fingers, rain and dust mid-air, the camera at its start framing. Build this state as a <HookFrame /> component so the last frames can reproduce it exactly.
+   Beats: "CEO" the camera starts a slow push-in over her shoulder; "customers" her thumb turns the cartridge a quarter turn and its contacts flash gold; "bad" her eyes lift from the cartridge to the screen and her head follows; "investment" the lower third flares with a bright emphasis sweep and the screen's light pops across her face (impact frame, small shake), her fingers tightening on the cartridge.
+   Out: she lowers the cartridge out of frame and the camera tilts down with it to the desk.
+
+2. THE BAG — CUT "The" (continuous camera move: the tilt lands on the desk). CLOSE SHOT on the desk under the amber anglepoise lamp: a brown kraft-paper shopping bag from the store across the street, its twisted handles slumped, a printed sticker label on its front reading "NON-HP INK"; the pencil cup soft in the foreground, the TV's blue spill along the far edge of the desk.
+   Beats: "ones" she stands the spent hero cartridge (set-aside state) on the desk beside the bag with a small click; "skip" she tips the bag toward her and its label turns square into the lamp light; "ink" she draws out a plain boxed third-party cartridge and tears its tab open with her thumb (smear, card fibres drifting in the lamp cone).
+   Out: she pushes the bag aside and the camera rises into an overhead over the black binder lying under the lamp.
+
+3. THE BINDER — CUT "Last" (continuous camera move: the rise ends overhead). OVERHEAD SHOT on the desk: the company's annual report, printed out and held in a thick black vinyl ring binder, its coloured plastic index tabs stepped along the edge, one tab reading "SUPPLIES · FY2025"; the torn-open box and the hero cartridge (set-aside state) at the top of the frame; her hands, sleeves bunched, entering from below.
+   Beats: "year" her fingertips walk down the tabs; "HP" her index finger hooks the "SUPPLIES · FY2025" tab; "sold" she flips the binder open on it in one heavy riffle of pages (smear, motion blur); "toner" the page settles flat into the lamp light, small columns of neutral filler around one bold line.
+   Out: she uncaps the yellow highlighter and the camera dives toward the bold line.
+
+4. TEN POINT NINE — CUT "worth" (continuous camera move: the dive ends in an extreme close insert). EXTREME CLOSE INSERT on the page under the lamp: paper grain and toner, the bold printed line "INK & TONER $10.9 BILLION", the highlighter's chisel tip hovering over its first letter, her hand large and soft in the foreground.
+   Beats: "ten point nine" the tip touches down at the start of the line; "billion" she drags it across the whole line in one stroke and flicks it off the end (smear, impact frame, the wet yellow flaring in the lamp light, small shake); "dollars" the camera eases back as her hand passes over the line and clears it, the wet highlighter glistening.
+   Out: her eyes lift to the shelf beside the TV and the camera whip-pans up.
+
+5. THE COUNTER — CUT "That's" (whip-pan, continuing up). CLOSE SHOT on the old petrol-pump counter at the right end of the low shelf under the TV: the domed chrome bezel, the chipped cream enamel face, a glass window over white number drums, fixed painted lettering either side of them, the whole line reading "≈ $30 MILLION / DAY" once the drums land; the TV's cold glow from above, the printer's edge soft in the foreground.
+   Beats: "about" the drums start to roll behind the glass (blurred digits, linear and mechanical); "thirty" the left drum clunks onto its digit; "million" the right drum clunks home and the whole line reads; "day" the counter judders on the shelf and settles, the TV's glow flickering across the chrome.
+   Out: the camera cranes down the shelf to the printer.
+
+6. THE PRINTOUT — CUT "Home" (continuous camera move: the crane-down lands on the printer). LOW CLOSE SHOT at the home printer's output tray on the shelf under the TV: matte charcoal plastic, the scanner lid closed, the small tilting control panel with its green power LED, the TV's glow from above and the lamp's spill from the left; the homeowner leaning in soft at the right edge.
+   Beats: "printers" the printer wakes, its LEDs blink and the carriage whirrs behind the lid; "Just" a sheet starts to feed out toward the lens; "one point one five" the printed line "CONSUMER PRINTER HARDWARE $1.15B" emerges into the light with its paper and reads; "billion" the sheet drops onto the tray with a light flutter.
+   Out: her eyes go to the rain-streaked window on her left and the camera whip-pans left through the glass.
+
+7. WHY SO CHEAP? — CUT "So" (whip-pan, continuing left). HIGH WIDE SHOT from her window down across the wet street at night: sodium streetlights, falling rain, a car's tail lights sliding through the reflections, passers-by under black umbrellas; directly opposite, the office-supply store's big lit window with the display printer on its white plinth beside its plain box, and next door the wine shop's small gold-lit window; her window's sash bar and rain-streaked glass soft in the foreground. In the store window the clerk in his red vest holds the large red-and-white price tag up by its string, edge-on to us.
+   Beats: "why" the clerk lifts the tag toward its hook over the display printer; "printers" the camera eases forward to the glass; "cheap" the tag snaps onto the hook and swings round to face the street, "WHY SO CHEAP?" (impact frame, the store's fluorescents flickering, small shake), rain streaks running across its lettering.
+   Out: rack focus from the store to her own reflection in the glass; she turns right toward the whiteboard and the camera whip-pans right with her.
+
+8. THE NAME CARD — CUT "The" (whip-pan, continuing right). MEDIUM SHOT at the whiteboard on the right wall of her home office: an aluminium-framed melamine board with ghosts of old marker and round black magnets, its pen tray soft in the foreground; the TV's cold light from the left, the lamp's amber from behind. Her cardigan sleeves are pushed up now; she holds a printed index card by its edges.
+   Beats: "CEO" she lifts the card to the top left of the board; "said" she slaps it flat under a magnet (smear, a small snap), "ENRIQUE LORES · HP CEO · 2024"; "twenty twenty-four" her ink-smudged fingertip runs along the card's line and stops at its end.
+   Out: she pulls a curled printed strip from her cardigan pocket and the camera tilts down with her hands.
+
+9. THE FIRST STRIP — CUT "We" (continuous camera move: the tilt lands below the name card). CLOSE SHOT on the board: she holds a curled strip of printed copy paper against it, its left end under a torn piece of masking tape.
+   Beats: "lose" she presses the left tape down with her thumb; "money" she smooths the strip to the right with the side of her other hand and the printed line unrolls under it, "“WE LOSE MONEY ON THE HARDWARE,"; "hardware" she presses the right-hand tape and the line lies flat and reads.
+   Out: the camera drops one line down the board with her hands.
+
+10. THE SECOND STRIP — CUT "we" (continuous camera move: the drop ends one line lower). CLOSE SHOT one line lower on the board: a small printed label stuck to her fingertip, a second curled strip in her other hand.
+   Beats: "make" she presses the label onto the board, "— ENRIQUE LORES, 2024, VIA THE REGISTER", readable to the end of the shot; "money" just above it she unrolls the second strip with the side of her hand, "WE MAKE MONEY ON THE SUPPLIES.”"; "supplies" she presses its right-hand tape down with a hard thumb and steps back.
+   Out: she turns back to her desk and the camera pans left with her.
+
+11. THE LEDGER — CUT "It" (continuous camera move: the pan lands on the desk). CLOSE SHOT on a heavy green clothbound accounts ledger lying open under the lamp: ruled blue lines and red margin rules, the printed heading "≈ 1 IN 4 CUSTOMERS: LOSS", four customer rows of neutral filler, and small print at the foot of the page, "HP EXECUTIVES, 2020 & 2022", both readable through the shot; a red pen beside it, the hero cartridge (set-aside state) soft in the foreground.
+   Beats: "loses" she drops into her chair and pulls the heavy ledger into the light; "one" her fingertip touches the first row; "four" her fingertip lands on the fourth row; "customers" she strikes that row through with one stroke of the red pen.
+   Out: she shuts the ledger and its cover sweeps across the lens (foreground wipe).
+
+12. THE REPORT COVER — CUT "In" (foreground wipe behind the closing ledger cover). CLOSE SHOT on the desk under the lamp: a printed consumer report with a matte coated cover, its bold masthead line "WHICH? · UK · SEPT 2022" and below it the cover line "EPSON INK SET · £1.78 / ML"; beside it a set of colour ink cartridges in a clear blister pack; the rain-streaked window soft behind.
+   Beats: "Britain" she slides the report into the lamp's pool; "Which?" her fingertip taps the masthead; "Epson" her finger drops to the cover line; "ink set" she lifts the blister pack into the light beside it, the cartridges rattling in their plastic.
+   Out: she holds the pack up toward the window, and the camera travels past it and out through the rain-streaked glass across the street.
+
+13. CHAMPAGNE — CUT "cost" (continuous camera move: her window's sash bar crosses the lens as we pass through the glass). MEDIUM SHOT on the wine shop's window next door to the store, rain running down its glass: a single generic champagne bottle (dark green glass, plain gold foil and wire cage, a blank cream label) on a crushed-velvet stand under the warm spotlight, a crystal flute beside it, and a small brass easel holding a printed price card, "> 7× DOM PÉRIGNON PER ML", with "UK PRICES" in small print below it, both readable through the shot. Behind the display the wine merchant in her linen apron holds the bottle, her thumb over the cork.
+   Beats: "seven" after a short twist the cork pops out from under her thumb and the foam leaps (impact frame, small shake, the cork flying up past the lens, bubbles glittering in the spotlight); "Dom Pérignon" she tips the bottle into the flute and the foam rises across the bottom of the card; "milliliter" the pour stops at a thin measure and she sets the heavy bottle back on its stand.
+   Out: a passer-by's black umbrella crosses close to the lens and fills the frame (foreground wipe).
+
+14. THE MAGAZINE — CUT "In" (foreground wipe behind the umbrella). MEDIUM CLOSE SHOT at her desk under the lamp: the stack of old curled magazines, her reading glasses down on her nose, the hero cartridge (set-aside state) on the desk beside her.
+   Beats: "eighteen" she slides an old magazine out of the stack and a puff of dust rises into the lamp cone; "Consumer Reports" she opens it flat and its page header "CONSUMER REPORTS · 2018" comes into the light; "priced" her finger runs down the columns of neutral filler; "cartridge" she picks up the spent hero cartridge from beside the page.
+   Out: she turns it over and the camera pushes in to an extreme close insert.
+
+15. THE STICKER — CUT "at" (continuous camera move: the push-in ends in an extreme close insert). EXTREME CLOSE INSERT on the hero cartridge in her fingers above the open magazine: the glossy black body, the copper-gold contacts, the crust of dried ink on the nozzle plate, the magazine's page header soft below.
+   Beats: "ninety-three" its underside turns into the lamp light, a white store price sticker (stickered state) reading "HP 64XL BLACK · $93 / OZ"; "dollars" she tilts it and a glint runs along the sticker; "ounce" a single bead of black ink swells at the nozzle plate and drops.
+   Out: the drop falls out of the bottom of the frame; match cut on its fall.
+
+16. THE GAUGE — CUT "Print" (match cut: the falling drop holds the same screen position and lands in the gauge's ink with a ring). MEDIUM CLOSE SHOT on the low shelf beside the home printer: the tall glass graduated cylinder full of black ink, its etched graduations unnumbered, a printed paper label strip down its side reading "≤ HALF THE INK ON THE PAGE" with "CONSUMER REPORTS, 2018 · OCCASIONAL USE" in small print below it, both readable through the shot; the printer beside it under a skin of dust, its front access lid open on the carriage; the homeowner soft in the background with her arms folded.
+   Beats: "rarely" dust motes drift down onto the idle printer in the lamp's spill; "Half" the printer wakes into a cleaning cycle, the carriage shuttling and spitting ink into the black-stained service sponge, and the ink in the cylinder starts to sink; "never" the level settles at the halfway graduation; "paper" a single faintly printed sheet slides out onto the tray.
+   Out: her eyes go to the window and the camera whip-pans left through the glass and across the street into the store.
+
+17. TWO SHELVES — CUT "Printing" (whip-pan, continuing left). MEDIUM SHOT inside the office-supply store under flat fluorescent tubes, the street's sodium glow through the front window behind: on the left the short printing shelf and its pegboard of cartridges on hooks, its shelf label "PRINTING" in a plastic holder; the clerk in his red vest restocking the pegs; peg hooks soft in the foreground.
+   Beats: "even" the clerk hangs a cartridge on a hook and the whole peg wall glints; "out-earns" he steps right, his arm crossing the "PRINTING" label; "PCs" the camera pans right with him along a far longer aisle of laptop boxes to its shelf label, "PCs".
+   Out: the clerk turns back to the demo printer at the end of the printing shelf and the camera swings left with him.
+
+18. THE CHART — CUT "A" (continuous camera move: the swing lands on the demo printer). CLOSE SHOT on the store's demo printer on a laminate stand at the end of the printing shelf, its output tray toward the lens, the fluorescent tubes as bokeh behind; the clerk's finger has just pressed its button.
+   Beats: "billion" a page starts to feed out and its title line prints first, "PRINTING $3.1B OPERATING PROFIT · PCs $2.1B", readable by "profit"; "profit" the tall left bar begins to print below it, dense and dark; "half" the shorter right bar joins it lower down the page; "sales" both bars reach their baseline, "FY2025" prints small at the foot of the page, and the page drops free into the clerk's hand.
+   Out: he holds the page up to the shop window, and the camera pulls back out through the glass, cranes up across the wet street and in through her window.
+
+19. THE SUBSCRIPTION — CUT "The" (continuous camera move: the crane ends at the whiteboard). MEDIUM SHOT at her whiteboard, lamp-lit from behind: the name card and the two quote strips on its left half, its right half clear; she holds the black marker, its cap in her other hand.
+   Beats: "long-term" she presses a small printed label low on the right half, "— ENRIQUE LORES, CNBC, JAN 2024", readable to the end of the shot; "goal" the marker touches the board above it and she starts writing, stroke by stroke, the marker tip leading, "“MAKE PRINTING A SUBSCRIPTION”"; "make" the first word is done; "subscription" the writing finishes and she snaps the cap back on (smear).
+   Out: her eyes go to the window behind her; she turns and the camera whip-pans left with her, out through the glass to the store.
+
+20. BAIT — CUT "The" (whip-pan, continuing left). MEDIUM SHOT on the office-supply store's window from the wet street: the display printer on its white plinth with the red-and-white price tag "WHY SO CHEAP?" hanging over it, the clerk inside, the pegboard behind the glass to the right; rain and an umbrella's edge soft in the foreground.
+   Beats: "printer's" the clerk flips the tag over on its hook; "bait" it swings round to its other face, "BAIT", and settles (impact frame, small shake, the fluorescents flickering); "ink's" the camera slides right along the window to the pegboard, where a cartridge of the hero design (tagged state) hangs on its hook, its manila tag "BUSINESS" swinging into the light. On "business" (or on "ink's" if fewer than 18 frames remain after "business"), the camera whip-pans up and back across the street, in through her rain-streaked window and round onto the TV, decelerating as her hand raises the hero cartridge (in-hand state) against the screen, "SOME CUSTOMERS: “A BAD INVESTMENT”" and "— ENRIQUE LORES, HP CEO, CNBC, JAN 2024" lit on the lower third, and the framing arrives at exactly the frame-0 composition. The last 4 frames render <HookFrame /> exactly, so the Short loops seamlessly.
+   Out: the loop: <HookFrame /> hands back to frame 0 of shot 1.
+
+STEP 10 — COMPOSITING AND FINISH
+- Layer order in every shot: plates → haze cards between depth layers → practical light pools → cast and contact shadows → characters (shading stack, texture, rim light, light wrap) → in-world text → atmosphere (particles) → light beams → glow, bloom and halation on emissive surfaces → lens flares → grade → grain → vignette → chromatic aberration (impact frames only).
+- Bloom: a blurred copy of emissive layers composited with a screen blend.
+- The desk lamp's cone: a warm, soft-edged shaft over the desk with dust drifting slowly in it; the TV's cold glow throwing a faint blue shaft through the hanging dust of the home office; the streetlight cones cut by falling rain and their reflections smeared down the wet asphalt; the store window's light falling as a long green-white slab across the wet pavement; the wine shop's gold spotlight cone on the bottle, with bubbles and spray glittering in it.
+- Screen glow on faces: a coloured soft-light shape on the side of the face toward the screen that follows the screen's brightness.
+- Lens flares on the TV screen's bright edge, the desk lamp's bulb, the streetlights and car headlights through the rain, the store's fluorescent tubes and the wine shop's spotlight on the gold foil.
+- Film finish in a reusable <Grade> (per-scene settings in style.ts): a filmic contrast curve with slightly lifted blacks and a soft highlight roll-off; split toning (shadows toward the scene's ambient colour, highlights toward the key light); halation (a thin warm-red glow around the brightest highlights and practical lights); light wrap (bright backgrounds bleed a few pixels over character edges); very subtle gate weave (at most 0.5 px).
+- Grain: reuse the earlier grain component, changing every frame, stronger in mid-tones and shadows than in highlights, at 4–7% opacity; pre-render a set of grain tiles and cycle them if per-frame turbulence slows the render. A gentle lens vignette (10–15%) with slight edge softness.
+- Keep renders fast: no full-frame SVG filters every frame; prefer pre-rendered plates, transforms and opacity.
+
+STEP 11 — AUDIO
+- My voice-over only, at full volume. No music and no sound effects: I add them by hand in Premiere using out/printer-ink/sfx-cues.csv.
+- For the render, use a copy of the voice-over normalised to −14 LUFS (two-pass ffmpeg loudnorm: measure first with print_format=json, then apply the measured values; true peak −1.5 dBTP; 48 kHz), saved as public/vo/printer-ink_norm.wav and played with <Audio> from @remotion/media. Never touch my original file.
+
+STEP 12 — QUALITY GATES (do not skip)
+Save every QA image to out/printer-ink/qa/. Open every image you render and look at it; describe what you actually see in out/printer-ink/review.md before deciding it passes. Never mark anything as passing without looking at it.
+
+Gate A — Design
+1. Model sheets (STEP 3), a prop sheet with every prop from STEP 4, and a hand sheet: every pose in the hand library at 600 px tall in back and palm views, plus each grip holding its real prop → out/printer-ink/qa/hands.png. Check five digits, finger lengths, the knuckle arc, the thumb's origin and opposition, nails on the correct side, and grips that wrap around the object with correct layering and contact shadows. Redo any hand that looks like a mitten or a bunch of sausages.
+2. STYLE FRAMES: one finished still per shot at its key beat, rendered with `npx remotion still`.
+3. Colour script: all the style frames tiled in one image (ffmpeg tile) → out/printer-ink/qa/color-script.png. Check the journey: cold TV-blue home office → amber lamp-lit desk → slate printer shelf → sodium-and-teal rainy street with the store's green-white window → violet-cool whiteboard → amber desk → gold-and-oxblood wine shop window → amber desk → slate printer shelf → green-white store → violet-cool whiteboard → green-white store window in the rain → back to the cold TV-blue frame 0.
+4. Value check: every style frame at 135×240 in greyscale. The focal point (a face or the key text) must be the highest-contrast spot in the frame; fix the staging if it is not. Texture and depth check: 100% crops of a face, a hand, a fabric area and a background area from every style frame → out/printer-ink/qa/crops-sNN.png; texture must be visible up close, and every style frame must show at least four depth cues.
+5. Score each style frame 1–5 on: looks like a frame from a premium cinematic animated documentary; characters, hands and props look like their real-life versions; cinematic lighting; depth; painterly texture; composition and readability; text spelled exactly as in IN-WORLD COPY. Redo anything that scores under 4.
+
+Gate B — Timing
+6. Watch the animatic (STEP 5) against the voice. Fix pacing before animating.
+
+Gate C — Animation
+7. Animate, then render a half-resolution draft (`npx remotion render PrinterInk out/printer-ink/draft.mp4 --scale=0.5`).
+8. Contact sheet per shot: every 6th frame tiled → out/printer-ink/qa/contact-sNN.png. Check arcs, spacing, overlap and that nothing pops or slides without weight.
+   Puppet test: watch every character action at full resolution, frame by frame. It fails on rigid parts rotating on pins, seams or gaps at joints, sliding feet, evenly spaced floaty in-betweens, body parts starting and stopping together, mirrored poses, hands popping between poses, fingers moving all at once, or effort without a weight shift.
+   Reference test (when reference exists): render each action beside its reference clip at the same timing → out/printer-ink/qa/ref-sNN.mp4, and compare weight, timing and arcs.
+
+Gate D — Sync
+9. For every beat in out/printer-ink/timing-report.md, render the frame before the beat and the beat frame side by side. The hit must happen on the beat frame: not early (except anticipation) and not late. Fix every miss.
+
+Gate E — Automated checks
+10. Static frames: render a QA draft with grain and handheld drift turned off and run ffmpeg freezedetect (n=0.001:d=1). No frozen segment may last 1 second or more.
+11. Loop: compare frame 0 with the last frame using ffmpeg ssim (target ≥ 0.98) and view them side by side.
+12. Duration: ffprobe the final file; it must equal durationInFrames / 30.
+13. Copy: run the copy.ts check script.
+14. Safe zone: one still per shot with showSafeZone on; no key text or action outside x 48–888, y 288–1248, and nothing important cut off by the frame edges.
+15. Audio: the MP4 has one audio stream at about −14 LUFS (ffmpeg ebur128); the silent MOV has no audio stream.
+
+Gate F — Checklist review (fix every failure, up to 3 full passes)
+- Frame 0 shows the hook text and the hero cartridge raised in the homeowner's fingers in front of the lit TV.
+- No static frames; something meaningful moves at least every second, and a new shot or new action lands every 2–3 seconds.
+- The film reads as one continuous story in one world; every cut is motivated and lands on its cut frame.
+- Every in-world text is readable on a phone, perspective-matched, lit by its scene, spelled exactly as written here, and enters on its exact word.
+- Characters look like characters from a premium cinematic animated documentary (not clip art or paper puppets), keep their design across shots, move with real weight and timing, breathe, blink and react; hands have correct anatomy and truly grip their props; everything animates on ones and stays smooth at 30 fps.
+- Every frame shows real depth (camera perspective, depth of field, haze, overlap, cast and contact shadows) and painterly texture.
+- Characters and props resemble their real-life versions.
+- No real logos, no HP logo or monogram, no real HP printer or cartridge design (the real 64XL's shape, label or colour bands), no Epson logo, cartridges or packaging, no Which? logo or real report cover design, no Consumer Reports logo, masthead or page design, no CNBC logo, peacock, on-air graphics package or studio set, no The Register logo, no Dom Pérignon shield label, bottle shape or any real champagne house's label, no real office-supply retailer's shopfront, colours or signage, no real laptop or PC brand logo or packaging, no likeness of Enrique Lores, no real currency design, no likeness of a real person.
+- No element cut off by the frame edges; key text inside x 48–888, y 288–1248.
+- Transitions are whip-pans, light-flash cuts, match cuts, continuous camera moves or foreground wipes; never fades.
+- The final frame matches frame 0. Total duration = audio duration (+4 frames).
+
+AVOID (this is what makes it look cheap)
+- Flat single-colour backgrounds, uniform line weight, pure black lines, grey shadows.
+- Clean vector surfaces: flat fills, plastic gradients, razor-sharp shadow edges with no texture, everything in focus at the same depth.
+- Elements that pop, scale or fade in from the centre like a slideshow; text floating in space.
+- Characters built from circles and rectangles; paper cut-out motion (rigid pieces rotating on pins, visible joint seams, the whole body moving as one block).
+- Mitten or sausage hands, fingers of equal length, a flat thumb lying beside the fingers, fingers that open or close all at once, objects floating in front of a hand instead of being gripped.
+- Floaty, evenly spaced in-betweens with no breakdown poses; sliding feet; mirrored (twinned) poses; perfect stillness.
+- Linear easing on organic motion; everything starting on the same frame; everything moving at once.
+- Locked-off cameras and frozen frames.
+- Any fact, number, date or name not in this prompt.
+
+OUTPUT
+- Final render: npx remotion render PrinterInk out/printer-ink/printer-ink.mp4 --codec=h264 --crf=16 --image-format=png --color-space=bt709
+- Also out/printer-ink/printer-ink_master.mov (--codec=prores --prores-profile=hq --image-format=png) and out/printer-ink/printer-ink_silent.mov (ProRes HQ with --muted, no audio) for my Premiere edit.
+- out/printer-ink/review.md: what you reused and built, every gate with what you checked, what you fixed and how many passes it took, the style-frame scores, and anything you could not get right.
+- Tell me the final duration in seconds, the file paths, and summarise out/printer-ink/review.md.
