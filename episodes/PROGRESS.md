@@ -4,7 +4,7 @@ Steps: facts → baseline → arena → polished → checked → build prompt �
 
 | # | id | series | step reached | note |
 |---|----|--------|--------------|------|
-| 1 | costco | Markup | baseline | |
+| 1 | costco | Markup | arena | round 1 done: 4 of 8 left |
 | 2 | delta | Markup | facts | |
 | 3 | popcorn | Markup | facts | |
 | 4 | card-rewards | Markup | facts | |
