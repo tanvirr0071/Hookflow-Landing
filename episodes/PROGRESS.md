@@ -4,7 +4,7 @@ Steps: facts → baseline → arena → polished → checked → build prompt �
 
 | # | id | series | step reached | note |
 |---|----|--------|--------------|------|
-| 1 | costco | Markup | arena | round 1 done: 4 of 8 left; round 2 done: 2 left |
+| 1 | costco | Markup | polished | arena: R1 4 left, R2 2 left, R3 champion a001; final check winner 86 vs baseline 51. Polish changed 2 spoken lines (beat 04 names Jelinek, beat 14 adds "dollars"). |
 | 2 | delta | Markup | facts | |
 | 3 | popcorn | Markup | facts | |
 | 4 | card-rewards | Markup | facts | |
