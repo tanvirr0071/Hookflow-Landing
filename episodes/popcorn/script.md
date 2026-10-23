@@ -18,7 +18,7 @@
 | 06 | The food itself costs about 20 cents per dollar. | Chalk note on the price board: `FOOD COST ≈ 20¢ PER $1` |
 | 07 | So why did theaters ever let popcorn in? | Question card in the lobby frame: `POPCORN?` |
 | 08 | Early movie palaces wanted nothing to do with it. | Coatroom sign in an ornate palace lobby: `PLEASE CHECK YOUR POPCORN` |
-| 09 | They had rugs, and didn't want popcorn ground in. | Quote plaque: `“THEY HAD BEAUTIFUL CARPETS AND RUGS…”` · `— ANDREW F. SMITH, FOOD HISTORIAN, VIA SMITHSONIAN` |
+| 09 | They had rugs, and didn't want popcorn ground in. | Quote plaque: `“THEY HAD BEAUTIFUL CARPETS AND RUGS…”` · `— ANDREW F. SMITH, HISTORIAN, VIA SMITHSONIAN` |
 | 10 | Then the Depression hit. | Newspaper banner: `THE GREAT DEPRESSION` |
 | 11 | A bag of popcorn cost 5 or 10 cents. | Vendor wagon sign: `FRESH POPCORN 5¢ · 10¢` |
 | 12 | The theaters that sold snacks survived. | Marquee bulbs relighting: `OPEN` |
