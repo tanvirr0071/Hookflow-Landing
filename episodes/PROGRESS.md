@@ -7,13 +7,13 @@ Steps: facts → baseline → arena → polished → checked → build prompt �
 | 1 | costco | Markup | build prompt | arena done (winner 86 vs baseline 51); polished; build prompt written and self-reviewed; independent fact-check and reviewer pass not run |
 | 2 | delta | Markup | build prompt | arena stopped after R2 by request; used the higher-scoring R2 finalist (a008, 92–87.5), polished; build prompt written and self-reviewed |
 | 3 | popcorn | Markup | build prompt | written directly from facts (no arena, by request); build prompt self-reviewed |
-| 4 | card-rewards | Markup | build prompt | written directly from facts (no arena, by request); build prompt self-reviewed |
-| 5 | mcdonalds | Markup | build prompt | written directly from facts (no arena, by request); build prompt self-reviewed |
-| 6 | blockbuster | Billion-Dollar Mistakes, ep 6 | build prompt | written directly from facts (no arena, by request); build prompt self-reviewed |
-| 7 | diamonds | Markup | build prompt | written directly from facts (no arena, by request); build prompt self-reviewed |
-| 8 | gyms | Markup | build prompt | written directly from facts (no arena, by request); build prompt self-reviewed |
-| 9 | eyeglasses | Markup | build prompt | written directly from facts (no arena, by request); build prompt self-reviewed |
-| 10 | printer-ink | Markup | build prompt | written directly from facts (no arena, by request); build prompt self-reviewed |
+| 4 | card-rewards | Markup | v2 script + v2 build prompt | rewritten Nov 10 from retention data; v1 in git history; not independently fact-checked |
+| 5 | mcdonalds | Markup | v2 script + v2 build prompt | rewritten Nov 10 from retention data; v1 in git history; not independently fact-checked |
+| 6 | blockbuster | Billion-Dollar Mistakes, ep 6 | v2 script + v2 build prompt | rewritten Nov 10 from retention data; v1 in git history; not independently fact-checked |
+| 7 | diamonds | Markup | v2 script + v2 build prompt | rewritten Nov 10 from retention data; v1 in git history; not independently fact-checked |
+| 8 | gyms | Markup | v2 script + v2 build prompt | rewritten Nov 10 from retention data; v1 in git history; not independently fact-checked |
+| 9 | eyeglasses | Markup | v2 script + v2 build prompt | rewritten Nov 10 from retention data; v1 in git history; not independently fact-checked |
+| 10 | printer-ink | Markup | v2 script + v2 build prompt | rewritten Nov 10 from retention data; v1 in git history; not independently fact-checked |
 
 ## Session log
 - Session started 2026-10-23 on branch claude/serene-faraday-lavdgr. Web search, web fetch and sub-agents available. Arena skill found (bracket.py), used as ARENA.
@@ -29,3 +29,8 @@ Steps: facts → baseline → arena → polished → checked → build prompt �
 - A usage limit stopped 8 build-prompt writers at about 08:52 UTC; they were resumed after it reset at 10:50 UTC.
 - A second usage limit paused the doc copy until 15:50 UTC; all 10 build prompts were then copied in and read back.
 - Not run: Step 3 independent fact-check wave and the separate Step 4 reviewer wave.
+- Nov 10: user reported weak results after posting and asked for better retention and better animation prompts for the remaining scripts, in doc tabs. Pulled channel analytics through vidIQ (6 Shorts, 2,590 views) and had two Shorts reviewed frame by frame.
+- Findings: 54-66% swipe before an engaged view; engaged viewers drop mostly between seconds 5 and 15, then hold; long endings leak; about 33 s average view duration at any length; human puppet rigs, small text and flat scenes are the visual faults. The upload titled as popcorn (fi1eUIt-_8I) plays the Quibi video.
+- v2 decisions: scripts 4-10 cut to 105-122 words, conflict-first hook, a story or mechanism instead of stacked statistics in seconds 3-15, short endings. Animation moves to a shared house style (tabletop miniature, real 3D with @remotion/three, no articulated humans, large type) in episodes/_house-style-v2-prompt.txt, with short per-episode prompts generated from one data file each so the in-world copy matches the script by construction.
+- Readings: "remaining" means episodes 4-10 (1-3 are already built). v2 runs 38-45 s, below the old 45-55 s target, because average view duration is about 33 s whatever the length. The v2 look has not been test-rendered here; card-rewards is the test episode.
+- Fact refresh on Nov 10: De Beers still unsold; HP named Emma Walmsley CEO from Jan 4, 2027 (Lores is "former CEO"); the Bend Blockbuster had no closure report.

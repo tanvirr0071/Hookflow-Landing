@@ -1,55 +1,61 @@
-# Why Printer Ink Costs More Than Champagne
+# HP's Ex-CEO Called Some Customers "a Bad Investment"
 
-- **Title:** Why Printer Ink Costs More Than Champagne
-- **Hook text (frame 0):** SOME CUSTOMERS: “A BAD INVESTMENT”
+- **Title:** HP's Ex-CEO Called Some Customers "a Bad Investment"
+- **Hook text (frame 0):** SKIP HP INK? “A BAD INVESTMENT”
 - **Series:** Markup
-- **Runtime:** 144 spoken words, about 52 seconds at 165 words per minute
-- **Method:** written directly from the fact sheet (no arena, by request)
+- **Runtime:** 114 spoken words, about 41 seconds at 165 words per minute
+- **Version:** v2 (rewritten Nov 10 for retention; v1 is in git history)
+
+## What changed and why
+
+- **Hook:** kept the quote, which is the strongest opening of the seven, and fixed it: Lores left HP in February 2026, so he is now "HP's former CEO". Frame 0 shows the quote coming out of the printer.
+- **Seconds 3 to 15:** the second quote ("We lose money on the hardware") moves up to second 7, straight after the hook. In v1 it sat behind three revenue figures.
+- **Middle and end:** one question at about 20 seconds ("So what does ink really cost?") and two answers. Cut the "one in four customers" line and the PC-profit comparison, which was a second topic. 114 words instead of 144.
 
 ## Voiceover
 
 | # | VO line | In-world text |
 |---|---------|---------------|
-| 01 | HP's CEO called some customers "a bad investment." | TV lower third: `SOME CUSTOMERS: “A BAD INVESTMENT”` · `— ENRIQUE LORES, HP CEO, CNBC, JAN 2024` |
-| 02 | The ones who skip HP ink. | Shopping-bag label: `NON-HP INK` |
-| 03 | Last year, HP sold ink and toner | Annual-report tab: `SUPPLIES · FY2025` |
-| 04 | worth $10.9 billion. | Report line: `INK & TONER $10.9 BILLION` |
-| 05 | That's about $30 million a day. | Odometer counter: `≈ $30 MILLION / DAY` |
-| 06 | Home printers? Just $1.15 billion. | Report line: `CONSUMER PRINTER HARDWARE $1.15B` |
-| 07 | So why are printers cheap? | Store price tag on a printer: `WHY SO CHEAP?` |
-| 08 | The CEO said it in 2024: | Name card: `ENRIQUE LORES · HP CEO · 2024` |
-| 09 | "We lose money on the hardware, | Quote card: `“WE LOSE MONEY ON THE HARDWARE,` |
-| 10 | we make money on the supplies." | Quote card: `WE MAKE MONEY ON THE SUPPLIES.”` · `— ENRIQUE LORES, 2024, VIA THE REGISTER` |
-| 11 | It loses money on about one in four customers. | Customer ledger: `≈ 1 IN 4 CUSTOMERS: LOSS` · small print: `HP EXECUTIVES, 2020 & 2022` |
-| 12 | In Britain, Which? found one Epson ink set | Report cover: `WHICH? · UK · SEPT 2022` · line: `EPSON INK SET · £1.78 / ML` |
-| 13 | cost over seven times Dom Pérignon, per milliliter. | Champagne price card: `> 7× DOM PÉRIGNON PER ML` · small print: `UK PRICES` |
-| 14 | In 2018, Consumer Reports priced one HP cartridge | Magazine page header: `CONSUMER REPORTS · 2018` |
-| 15 | at $93 an ounce. | Cartridge sticker: `HP 64XL BLACK · $93 / OZ` |
-| 16 | Print rarely? Half the ink may never hit paper. | Ink-level gauge: `≤ HALF THE INK ON THE PAGE` · small print: `CONSUMER REPORTS, 2018 · OCCASIONAL USE` |
-| 17 | Printing even out-earns HP's PCs. | Two shelf labels: `PRINTING` · `PCs` |
-| 18 | A billion more profit, on under half the sales. | Bar chart: `PRINTING $3.1B OPERATING PROFIT · PCs $2.1B` · small print: `FY2025` |
-| 19 | The long-term goal: "make printing a subscription." | Whiteboard: `“MAKE PRINTING A SUBSCRIPTION”` · `— ENRIQUE LORES, CNBC, JAN 2024` |
-| 20 | The printer's the bait. The ink's the business. | Printer tag: `BAIT` · cartridge tag: `BUSINESS` · back to the TV: `SOME CUSTOMERS: “A BAD INVESTMENT”` |
+| 01 | HP's former CEO called some customers "a bad investment." | `SKIP HP INK?` · `“A BAD INVESTMENT”` · `— ENRIQUE LORES, THEN HP CEO, CNBC, JAN 2024` |
+| 02 | Which ones? The ones who skip HP ink. | `HP INK` · `OTHER INK` |
+| 03 | He explained the business himself. | `HP CEO · 2024` |
+| 04 | "We lose money on the hardware, | `“WE LOSE MONEY ON THE HARDWARE,` |
+| 05 | we make money on the supplies." | `WE MAKE MONEY ON THE SUPPLIES.”` · `— ENRIQUE LORES, 2024, VIA THE REGISTER` |
+| 06 | Last year HP sold ink and toner | `INK & TONER` · `HP SUPPLIES · FISCAL 2025` |
+| 07 | worth $10.9 billion. | `$10.9 BILLION` |
+| 08 | Home printers? $1.15 billion. | `$1.15 BILLION` · `HOME PRINTERS` |
+| 09 | So what does ink really cost? | `PER OUNCE?` |
+| 10 | In 2018, Consumer Reports priced one HP cartridge | `CONSUMER REPORTS · 2018` |
+| 11 | at $93 an ounce. | `$93 / OUNCE` · `HP 64XL BLACK` |
+| 12 | A British test found one Epson ink set | `EPSON INK SET` · `WHICH? · UK · 2022` |
+| 13 | cost over seven times Dom Pérignon. | `DOM PÉRIGNON` · `7× PER MILLILITRE` · `UK PRICES` |
+| 14 | Print rarely, and half may never reach the page. | `HALF OR LESS ON THE PAGE` · `CONSUMER REPORTS, 2018 · OCCASIONAL PRINTING` |
+| 15 | The long-term goal? "Make printing a subscription." | `“MAKE PRINTING A SUBSCRIPTION”` · `— ENRIQUE LORES, CNBC, JAN 2024` |
+| 16 | The printer is the bait. The ink is the business. | `BAIT` · `THE BUSINESS` · `SKIP HP INK?` · `“A BAD INVESTMENT”` |
 
 ## ElevenLabs script
 
 ```text
-HP's CEO called some customers "a bad investment." The ones who skip HP ink.
+HP's former CEO called some customers "a bad investment." Which ones? The ones who skip HP ink.
 
-Last year, HP sold ink and toner worth ten point nine billion dollars. That's about thirty million dollars a day. Home printers? Just one point one five billion.
+He explained the business himself. "We lose money on the hardware, we make money on the supplies."
 
-So why are printers cheap?
+Last year HP sold ink and toner worth ten point nine billion dollars. Home printers? One point one five billion.
 
-The CEO said it in twenty twenty-four: "We lose money on the hardware, we make money on the supplies." It loses money on about one in four customers.
+So what does ink really cost? In twenty eighteen, Consumer Reports priced one HP cartridge at ninety-three dollars an ounce. A British test found one Epson ink set cost over seven times Dom Pérignon. Print rarely, and half may never reach the page.
 
-In Britain, Which? found one Epson ink set cost over seven times Dom Pérignon, per milliliter. In twenty eighteen, Consumer Reports priced one HP cartridge at ninety-three dollars an ounce. Print rarely? Half the ink may never hit paper.
-
-Printing even out-earns HP's PCs. A billion more profit, on under half the sales.
-
-The long-term goal: "make printing a subscription." The printer's the bait. The ink's the business.
+The long-term goal? "Make printing a subscription." The printer is the bait. The ink is the business.
 ```
 
-Pronunciation: Which? = "which" (the UK consumer group) · Dom Pérignon = dom PEH-ree-nyon · Lores = LOR-ez.
+Pronunciation: Dom Pérignon = dom PEH-ree-nyon · Epson = EP-son.
+
+## Edit notes (Premiere)
+
+- **Music:** Dry, slightly mischievous, around 100 BPM. Leave a gap of silence for the single drop in shot 09.
+- **Sound effects:** inkjet carriage and page feed, status-light beep, spotlight clunk, microphone tap, scale creak, coins leaking and pouring, conveyor hum, LED counter locking, single drop into glass, magazine slide, price tag flick, bottle set down on wood, drip onto a pad, calendar click. Exact frames are in `out/printer-ink/sfx-cues.csv` after the build.
+- **Start and end:** the voice starts on frame 0 with no lead-in. End the export on the last word with no outro, so it loops into the first line.
+- **Cover:** use `out/printer-ink/cover.png` (frame 0).
+- **Re-check before posting:** HP's fiscal 2026 results are due in late November 2026 and will replace the $10.9 billion and $1.15 billion figures. HP named Emma Walmsley as its next CEO on Nov 4, 2026, so "former CEO" for Enrique Lores is right.
 
 ## Sources
 

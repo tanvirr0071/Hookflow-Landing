@@ -1,0 +1,108 @@
+Upgrade this Remotion project to the Markup v2 house style, "tabletop miniature documentary". Build the shared kit, prove it with a look test, then stop. Do not build an episode in this session.
+
+WHY THIS CHANGE (so you make the right trade-offs)
+My first Shorts were reviewed frame by frame and against their YouTube retention:
+- The hand-coded human characters move like jointed wooden puppets. They are the weakest thing on screen and they took most of the build time.
+- Small text (plaques, posters, sticky notes) cannot be read on a phone.
+- Some scenes are flat and washed out; lighting is uneven from shot to shot.
+- About 6 in 10 viewers swipe in the first moments, and most of the rest who leave do so between seconds 5 and 15.
+What worked and must stay: one big number on a surface, side-by-side comparisons, every action landing on its word, tight cuts.
+
+STEP 0 — AUDIT
+Read src/lib, src/components and one finished episode. Keep and reuse as they are: the timing pipeline (whisper → words.json → onset refinement → timeline.ts with beat() helpers), copy.ts and its check script, the audio rules (my voice-over only, −14 LUFS copy), the grain and grade overlays, the QA scripts (freeze detect, loop SSIM, duration, safe zone). Do not break episodes that already render. Log what you kept, changed and built in out/kit/review.md.
+
+STEP 1 — SAVE THE HOUSE STYLE
+Save everything between the two marker lines below, word for word, as docs/markup-house-style.md. Add one line to CLAUDE.md: "Every Markup episode follows docs/markup-house-style.md." Episode prompts will be short and will rely on that file.
+
+----- BEGIN docs/markup-house-style.md -----
+# Markup house style v2: tabletop miniature documentary
+
+## The idea
+Every film takes place on one tabletop. Everything on it is a small physical model: card stock, painted wood, brass, felt, glass, enamel, paper. It is lit and shot like a product film: one soft key light, real shadows, shallow depth of field, a slow moving camera. Simple shapes are deliberate. They read as hand-made models, never as failed realism.
+
+## Order of priorities
+1. Sync and facts. Every cut and action lands on its word; every string matches copy.ts.
+2. The first second (see below).
+3. Legible type on a phone.
+4. Light and depth.
+5. Detail. Fewer, better objects beat many crude ones.
+
+## People
+No articulated humans. No faces, hands, arms or walk cycles, anywhere.
+- A person is a static miniature figurine, like the people in an architect's model: one solid matte colour, a rounded head on a tapered body, no face, no joints, about one sixth the height of the hero prop.
+- Figurines never bend. They move like game pieces: slide, hop, turn, lean, tip over, get set down or lifted away by an unseen hand.
+- At most 3 figurines in a shot. Many shots need none: objects act on their own with physical logic (a stamp drops, a receipt prints, a drawer slides, a coin rolls).
+
+## The first second
+- Frame 0 is the finished hook: the hook text fully readable, the hero prop in frame, and at least one thing already mid-motion (a tag swinging, a coin in the air, a sign flickering on its second flicker). The camera is already moving.
+- No fade-in, no build-up, no empty table. The voice starts on frame 0.
+- By frame 30 something has changed: a number has landed or the camera has revealed the second half of the conflict.
+- Build frame 0 as a <HookFrame /> component. The last 4 frames of the film render <HookFrame /> exactly, so the Short loops.
+
+## Type
+- No captions and no floating text. Every word is on an object: a sign, a tag, a receipt, a ledger, a stamp, a screen, a label.
+- One idea per surface, 5 words at most. The key number or word of each beat has a cap height of at least 110 px at 1080×1920 and stays readable for at least 1.0 s after it lands.
+- A fact the viewer needs is never small print. Small print is only for source tags and attributions: cap height at least 36 px, on screen at least 1.5 s, high contrast.
+- Key text stays inside x 48–888, y 288–1248. Background can fill the frame.
+- Entrances match the surface and land on the beat frame: printed text arrives with its paper; a stamp drops and squashes; LED digits roll and lock; a bulb sign flickers on; marker text is revealed along its strokes; a flap board flips.
+- Phone test: every style frame is also saved at 360×640. If you cannot read the key text there in under a second, make it bigger or cut words.
+
+## Light, colour, depth
+- One key light per set, soft, from above and to one side; a dim cool or warm fill from the opposite side; small practical lights (bulbs, LED signs, a desk lamp) that really light what is near them.
+- Each episode has one accent colour used for the thing that matters and nowhere else. Backgrounds stay darker and less saturated than the hero prop. No grey, muddy mid-tones: push contrast.
+- Every shot has a clear focal plane. The subject is sharp; foreground and background fall out of focus with soft bokeh on small lights.
+- Most shots keep one blurred foreground object near the lens.
+- The same set appears from several angles. Lighting stays continuous between them.
+
+## Camera and cutting
+- A new shot or a clear new action every 2–3 seconds. Every cut changes scale or angle enough to feel like a new picture (wide → macro, front → top-down, eye level → low).
+- The camera always drifts: slow dolly, arc or crane, eased, with a little handheld noise. Push-ins are real dollies, so near things grow faster than far ones.
+- 4 to 6 setups per film, reused. Do not build a new world for every line.
+- Cuts land on the CUT word. A big hit never lands on a shot's first frame: leave at least 6 frames.
+- Transitions: match cut on shape or motion, whip pan, an object wiping past the lens, a light blooming to white, or one continuous move. Never crossfades, dips to black or slides.
+
+## Motion
+- Things have weight. Heavy things start slowly, stop hard and shake the table a little. Paper flutters and settles. Coins spin, wobble and ring down.
+- Every move has anticipation, action, overshoot and settle. No linear easing except mechanical motion (digit rolls, a printer feed, a conveyor).
+- Everything is a pure function of the frame number. No Math.random(), no clocks, no useFrame().
+- Impact frames (2–3 frames of exposure flash and a small shake, max 8 px) on 3 to 5 hits per film, no more.
+- Nothing is ever frozen: a held shot still has camera drift, dust in the light, a swinging tag.
+
+## Never
+- Human characters with joints, faces or hands.
+- Flat vector fills, clip art, icons used as props, stock-explainer tropes (falling money bags, floating gears, generic bar charts with no object behind them).
+- More than one new piece of information on screen at once.
+- Text under the minimum sizes. Grey shadows. Evenly lit, everything-in-focus frames.
+- Real logos, trade dress, mascots, real card or currency designs, likenesses of real people. Company names are plain lettering only.
+- Any fact, number, date or name that is not in the episode prompt.
+----- END docs/markup-house-style.md -----
+
+STEP 2 — THE RENDERING STACK
+- Keep Remotion. Render the sets in real 3D so light, shadow and depth of field are real instead of faked: `npx remotion add @remotion/three`, then `npm i three @react-three/fiber @react-three/drei @react-three/postprocessing` in versions that match the installed React and each other. Run `npx remotion skills add` and follow the 3D rule of /remotion-best-practices.
+- <ThreeCanvas> from @remotion/three with explicit width and height. Every animated value comes from useCurrentFrame(). Never useFrame(), never OrbitControls or anything that animates on its own.
+- In remotion.config.ts set Config.setChromiumOpenGlRenderer("angle"). If frames flicker or a WebGL context is lost, render with --concurrency=2.
+- No outside assets: no HDRI files, no downloaded models or textures, no AI images. Geometry comes from primitives, rounded boxes, extrusions (Shape + ExtrudeGeometry), lathes and tubes. Textures are drawn on a seeded 2D canvas (paper fibre, card grain, brushed brass, wood grain, felt, halftone print, scuffs) and used as map, roughnessMap and bumpMap. Image-based light comes from a drei <Environment> built only from <Lightformer> panels.
+- Shadows: the key light casts soft shadows (shadow map 2048 or more, drei <SoftShadows /> or an equivalent), plus contact shadows under props.
+- Post: depth of field with a focus distance set per shot and animated for rack focus, bloom on emissive surfaces only, a light vignette. Keep the existing grade and grain as 2D overlays above the canvas.
+- Type on surfaces: load fonts from local files in public/fonts with delayRender/continueRender. Use drei <Text> or a CanvasTexture, whichever renders identically in `remotion still` and `remotion render`. Prove it with a still. Emissive type (LED, bulb signs) uses an emissive map so bloom picks it up.
+
+STEP 3 — THE KIT (src/lib/v2/, with a short README.md listing every export and its props)
+- Stage: ThreeCanvas wrapper with the camera rig (position, look-at, lens 35/50/85 mm equivalents, focus distance, handheld noise seeded per shot), the light rig (key, fill, practicals) with per-set presets, post effects, and the 2D overlays.
+- Tabletop: the table surface (wood, felt or slate variants), a backdrop that falls into darkness, dust motes in the key light.
+- Materials and textures: paper, card stock, receipt paper, painted wood, brass, steel, enamel, felt, glass, matte plastic, LED panel.
+- SurfaceText: type on any plane or curved label, with modes printed, stamped, handwritten (stroke reveal), LED (digit roll), bulb sign (flicker on), flap board (flip).
+- Figurine: the static miniature person, with colour and scale, and moves: slide, hop, turn, tip, lift.
+- Props that every episode needs: PriceTag on a string (swings), Receipt (prints out of a slot line by line), Coin and coin stack, Card (blank payment or member card, plain lettering only), Document and Ledger, RubberStamp with ink pad, Sign (lightbox, bulb marquee, LED strip), DeskCalendar (page flip), BalanceScale, small Building block (a box with a lit sign and windows).
+- Motion helpers as pure functions of frame: spring, drop-and-bounce, slide-with-friction, swing, stamp, printOut, flip, coinSpin.
+- Shot: a wrapper that takes a cut frame, a camera move preset and its beats from timeline.ts.
+- QA: a script that renders one style frame per shot at full size, at 360×640 and at 135×240 greyscale, and a check that fails when a key text is under the minimum cap height or outside the safe zone.
+
+STEP 4 — LOOK TEST (composition "KitTest", 6 seconds, no audio)
+Three shots on one tabletop, using only kit parts:
+A. Macro: a price tag on a string swings into the key light beside a small lightbox sign that flickers on reading "MARKUP"; a receipt prints "KIT TEST · 1 2 3".
+B. Top-down: a rubber stamp drops onto a ledger and leaves "APPROVED" in red; two figurines slide out of the way; coins ring down.
+C. Low wide at night: a small building block with a lit bulb sign, bokeh behind, one figurine hopping to the door.
+Render 2 stills per shot. Open every still and write what you actually see in out/kit/review.md. Score each 1–5 on: looks like a lit physical miniature (not flat vector, not a toy render); type readable at 360×640; one clear focal point; depth; consistent light across the three shots. Fix and re-render until every score is 4 or more, up to 3 passes. Then render KitTest to out/kit/kit-test.mp4.
+
+STEP 5 — STOP AND SHOW ME
+Show me the stills and the scores, the render time per frame, and anything you could not get right. If real 3D cannot be made to render reliably on this machine after honest debugging, say so plainly, keep the same art direction with pre-rendered 2.5D plates, and show me that look test instead. Do not start an episode.

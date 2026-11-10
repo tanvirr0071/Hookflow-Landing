@@ -1,6 +1,6 @@
 # Markup — All 10 Scripts
 
-In posting order. Each script's build prompt is in `episodes/<id>/build-prompt.txt`.
+In posting order. Episodes 1–3 are v1 (already built). Episodes 4–10 are v2, rewritten on Nov 10, 2026 from the channel's retention data. Each build prompt is in `episodes/<id>/build-prompt.txt`; v2 prompts need `episodes/_house-style-v2-prompt.txt` run once first.
 
 ---
 
@@ -208,58 +208,62 @@ Pronunciation: AMC = A-M-C (letters).
 
 <!-- 4. card-rewards -->
 
-# Who Really Pays for Your Credit-Card Rewards
+# Who Really Pays for Your Credit Card Points
 
-- **Title:** Who Really Pays for Your Credit-Card Rewards
-- **Hook text (frame 0):** PAYING CASH COSTS YOU $149
+- **Title:** Who Really Pays for Your Credit Card Points
+- **Hook text (frame 0):** CASH PAYS FOR YOUR POINTS
 - **Series:** Markup
-- **Runtime:** 141 spoken words, about 51 seconds at 165 words per minute
-- **Method:** written directly from the fact sheet (no arena, by request)
+- **Runtime:** 110 spoken words, about 40 seconds at 165 words per minute
+- **Version:** v2 (rewritten Nov 10 for retention; v1 is in git history)
+
+## What changed and why
+
+- **Hook:** v1 opened on a number ("Paying cash costs you $149"). v2 opens on the conflict, cash shoppers paying for someone else's points, and shows it with one coin rolling from the cash side to the card side.
+- **Seconds 3 to 15:** v1 stacked three statistics here ($149, 2.4%, $198 billion), which is the stretch where your viewers leave. v2 tells the mechanism as one chain (swipe, fee, bank, rewards) with a single number.
+- **Middle and end:** the question lands at about 20 seconds and the $149 and $1,133 are held back as its answer. Cut the $198 billion, $15 billion and $40 billion figures. 110 words instead of 141, and the last line hands straight back to the first.
 
 ## Voiceover
 
 | # | VO line | In-world text |
 |---|---------|---------------|
-| 01 | Paying cash costs you $149. | Cash-register display: `PAYING CASH COSTS YOU $149` |
-| 02 | Every year, according to a Boston Fed study. | Report cover: `WHO GAINS AND WHO LOSES FROM CREDIT CARD PAYMENTS?` · `FEDERAL RESERVE BANK OF BOSTON · 2010` · small print: `“CASH” = CASH, CHECKS, DEBIT & PREPAID` |
-| 03 | It flows to households that pay by credit card. | Arrow painted on the floor: `$149 / YEAR → CREDIT-CARD HOUSEHOLDS` |
-| 04 | Here's how. Every swipe costs the store a fee. | Card-terminal screen: `SWIPE FEE` |
-| 05 | Visa or Mastercard credit: about 2.4%. | Store receipt line: `VISA / MASTERCARD CREDIT · AVG FEE ≈ 2.4% · 2025` |
-| 06 | Merchant groups count $198 billion for 2025. | Ledger total: `2025 SWIPE FEES ≈ $198B` · small print: `NILSON DATA, VIA MERCHANT GROUPS` |
-| 07 | Most goes to the bank that issued the card. | Fee split diagram: `$2.20 FEE → $1.70 TO THE CARD’S BANK` · small print: `GAO EXAMPLE · $100 SALE · 2009` |
-| 08 | And that money helps pay for rewards. | Arrow from the bank: `→ REWARDS` |
-| 09 | But stores don't charge card users more. | Shelf tag: `SAME PRICE · CARD OR CASH` |
-| 10 | They raise prices for everyone. | Price tag flipping up: `PRICE ↑` |
-| 11 | So who comes out ahead? | Chalkboard: `WHO COMES OUT AHEAD?` |
-| 12 | The poorest households pay in about $21. | Balance-sheet line: `LOWEST INCOME: PAYS $21 / YEAR` |
-| 13 | The richest collect about $750. | Balance-sheet line: `HIGHEST INCOME: GETS $750 / YEAR` |
-| 14 | Even among cardholders, there's a split. | Two card stacks labeled: `CARRY A BALANCE` and `PAY IN FULL` |
-| 15 | Fed economists estimate $15 billion a year moves | Flow arrow: `$15B / YEAR` · small print: `FEDERAL RESERVE BOARD WORKING PAPER, 2023` |
-| 16 | from people who carry balances to people who don't. | Arrow lands: `CARRY A BALANCE → PAY IN FULL` |
-| 17 | Rewards earned in 2022: over $40 billion. | Points statement: `REWARDS EARNED, 2022: > $40B` · small print: `CFPB` |
-| 18 | In the cash line? That's your $149. | Back to the register display: `PAYING CASH COSTS YOU $149` |
+| 01 | Cash shoppers pay for your credit-card points. | `CASH PAYS FOR YOUR POINTS` · `POINTS` |
+| 02 | It happens at every checkout. | `CHECKOUT` |
+| 03 | Each swipe costs the store a fee. | `SWIPE FEE` |
+| 04 | About 2.4% of the sale. | `≈ 2.4%` · `VISA / MASTERCARD CREDIT · AVG FEE · 2025` · `NILSON DATA, VIA MERCHANT GROUPS` |
+| 05 | Most goes to the bank that issued the card. | `THE CARD’S BANK` · `$1.70 OF A $2.20 FEE · GAO EXAMPLE, 2009` |
+| 06 | That money helps fund your rewards. | `“FUNDED IN PART BY INTERCHANGE FEE REVENUES” — GAO, 2009` |
+| 07 | But stores don't charge card users more. | `SAME PRICE · CARD OR CASH` |
+| 08 | They raise prices for everyone. | `PRICE ↑` |
+| 09 | So what does that cost a cash payer? | `COST TO A CASH PAYER?` |
+| 10 | A Boston Fed study put a number on it. | `BOSTON FED · 2010` · `“WHO GAINS AND WHO LOSES FROM CREDIT CARD PAYMENTS?”` · `“CASH” = CASH, CHECKS, DEBIT & PREPAID` |
+| 11 | About $149 a year. | `−$149 / YEAR` · `EACH CASH HOUSEHOLD` |
+| 12 | And a card household? It collects about $1,133. | `+$1,133 / YEAR` · `EACH CARD HOUSEHOLD` |
+| 13 | The poorest households pay in. | `LOWEST INCOME: PAYS $21 / YEAR` |
+| 14 | The richest collect about $750. | `HIGHEST INCOME: GETS $750 / YEAR` |
+| 15 | So your points aren't free. | `NOT FREE` |
+| 16 | The cash line paid for them. | `CASH PAYS FOR YOUR POINTS` |
 
 ## ElevenLabs script
 
 ```text
-Paying cash costs you a hundred forty-nine dollars. Every year, according to a Boston Fed study. It flows to households that pay by credit card.
+Cash shoppers pay for your credit-card points. It happens at every checkout. Each swipe costs the store a fee. About two point four percent of the sale. Most goes to the bank that issued the card. That money helps fund your rewards. But stores don't charge card users more. They raise prices for everyone.
 
-Here's how. Every swipe costs the store a fee. Visa or Mastercard credit: about two point four percent. Merchant groups count one ninety-eight billion for twenty twenty-five.
+So what does that cost a cash payer? A Boston Fed study put a number on it. About a hundred forty-nine dollars a year. And a card household? It collects about eleven hundred.
 
-Most goes to the bank that issued the card. And that money helps pay for rewards. But stores don't charge card users more. They raise prices for everyone.
+The poorest households pay in. The richest collect about seven hundred fifty.
 
-So who comes out ahead?
-
-The poorest households pay in about twenty-one dollars. The richest collect about seven hundred fifty.
-
-Even among cardholders, there's a split. Fed economists estimate fifteen billion a year moves from people who carry balances to people who don't.
-
-Rewards earned in twenty twenty-two: over forty billion dollars.
-
-In the cash line? That's your one forty-nine.
+So your points aren't free. The cash line paid for them.
 ```
 
 Pronunciation: Mastercard = MAS-ter-card · "Fed" = fed.
+
+## Edit notes (Premiere)
+
+- **Music:** Light, curious pulse around 100 BPM. Drop it to almost nothing under shot 09 ("So what does that cost a cash payer?") and bring it back on the stamp in shot 11.
+- **Sound effects:** coin rolling on brass, coin dropping into a glass jar, conveyor hum, card-reader beep, receipt printer, shelf tags flipping, rubber stamp thud, scale creak, coins pouring. Exact frames are in `out/card-rewards/sfx-cues.csv` after the build.
+- **Start and end:** the voice starts on frame 0 with no lead-in. End the export on the last word with no outro, so it loops into the first line.
+- **Cover:** use `out/card-rewards/cover.png` (frame 0).
+- **Re-check before posting:** Nothing here moves daily. The Boston Fed figures are from a 2010 study and are labelled that way on screen.
 
 ## Sources
 
@@ -275,59 +279,64 @@ Pronunciation: Mastercard = MAS-ter-card · "Fed" = fed.
 
 <!-- 5. mcdonalds -->
 
-# Why McDonald's Is Really a Landlord
+# McDonald's Biggest Paycheck Isn't Burgers
 
-- **Title:** Why McDonald's Is Really a Landlord
-- **Hook text (frame 0):** $10.4 BILLION IN RENT
+- **Title:** McDonald's Biggest Paycheck Isn't Burgers
+- **Hook text (frame 0):** NOT BURGERS. RENT.
 - **Series:** Markup
-- **Runtime:** 143 spoken words, about 52 seconds at 165 words per minute
-- **Method:** written directly from the fact sheet (no arena, by request)
+- **Runtime:** 111 spoken words, about 40 seconds at 165 words per minute
+- **Version:** v2 (rewritten Nov 10 for retention; v1 is in git history)
+
+## What changed and why
+
+- **Hook:** v1 opened on a bare number ("collected $10.4 billion in rent"). v2 opens on the contradiction, the burger company whose biggest revenue line is rent, and shows it: a rent box shoving the burgers out of frame.
+- **Seconds 3 to 15:** v1 followed the hook with four statistics in a row (royalties, 95%, 45,000, 2,000). v2 goes to a person instead: Harry Sonneborn and the line he gave the bankers. In v1 that was the last thing you heard.
+- **Middle and end:** one contrast pair of numbers ($1.4 billion against $13.9 billion) instead of seven figures. The 20-year twist stays as the payoff. 111 words instead of 143.
 
 ## Voiceover
 
 | # | VO line | In-world text |
 |---|---------|---------------|
-| 01 | McDonald's collected $10.4 billion in rent. | Rent-ledger header: `$10.4 BILLION IN RENT` · column date: `2025` |
-| 02 | Not from you. From its own franchisees. | Lease cover: `LEASE · FRANCHISEE` |
-| 03 | That's almost twice its royalties. | Two ledger bars: `RENT $10.4B` · `ROYALTIES $6.0B` |
-| 04 | About 95% of its restaurants are franchised. | Wall-map legend: `≈ 95% FRANCHISED` |
-| 05 | Of about 45,000, it runs only 2,000. | Map counter: `45,356 RESTAURANTS · 2,039 COMPANY-OPERATED` |
-| 06 | So what does McDonald's actually own? | Folder tab: `WHAT DOES IT OWN?` |
-| 07 | In the markets it runs directly, | Surveyor's map title: `CONSOLIDATED MARKETS` |
-| 08 | about 56% of the land under its restaurants. | Deed stamp: `LAND OWNED ≈ 56%` |
-| 09 | And about 80% of the buildings. | Deed stamp: `BUILDINGS OWNED ≈ 80%` |
-| 10 | Franchisees buy the right to run the restaurant. | Certificate: `LICENSE TO OPERATE` |
-| 11 | McDonald's is usually their landlord. | Lease line: `LANDLORD: McDONALD’S` |
-| 12 | And the rent goes up when sales go up. | Lease clause: `RENT = % OF SALES` |
-| 13 | Its own restaurants made it $1.4 billion. | Margin ledger: `COMPANY-OPERATED MARGIN · 2025 · $1.4B` |
-| 14 | The ones it rents out? $13.9 billion. | Margin ledger: `FRANCHISED MARGIN · 2025 · $13.9B` · small print: `43,317 FRANCHISED RESTAURANTS` |
-| 15 | After 20 years, the franchise ends. | Contract term: `TERM: 20 YEARS` |
-| 16 | The building still belongs to McDonald's. | Deed: `OWNER: McDONALD’S` |
-| 17 | The model was Harry Sonneborn's idea, in the mid-'50s. | Name card: `HARRY SONNEBORN · KROC’S FINANCE MAN · MID-1950s` |
-| 18 | He told bankers McDonald's was really in real estate. | Banker's file tab: `REAL ESTATE` |
-| 19 | The burgers just make the rent payable. | Back to the rent ledger: `$10.4 BILLION IN RENT` |
+| 01 | McDonald's biggest paycheck isn't burgers. It's rent. | `NOT BURGERS. RENT.` |
+| 02 | $10.4 billion last year. | `RENT $10.4B` · `OWN-RESTAURANT SALES $9.7B` · `FISCAL 2025 · McDONALD’S 10-K` |
+| 03 | Paid by its own franchisees. | `FROM FRANCHISEES` |
+| 04 | The idea came from one finance man. | `FINANCE` |
+| 05 | Harry Sonneborn, in the mid-1950s. | `HARRY SONNEBORN` · `MID-1950s` |
+| 06 | He told bankers McDonald's was really in real estate. | `REAL ESTATE` · `AS TOLD BY RESTAURANT FINANCE MONITOR` |
+| 07 | Here's how it works. | `HOW IT WORKS` |
+| 08 | McDonald's usually controls the land and building. | `LAND: McDONALD’S` · `BUILDING: McDONALD’S` · `OWNS OR HOLDS A LONG LEASE · 10-K` |
+| 09 | The franchisee pays rent as a slice of sales. | `RENT = % OF SALES` |
+| 10 | So when burgers sell, the landlord wins. | `LANDLORD` |
+| 11 | It runs only about 2,000 restaurants itself. | `COMPANY-RUN: 2,039` · `OF 45,356 RESTAURANTS · END OF 2025` |
+| 12 | Those made it $1.4 billion. | `$1.4B` · `COMPANY-OPERATED MARGIN · 2025` |
+| 13 | The ones it doesn't run? $13.9 billion. | `$13.9B` · `FRANCHISED MARGIN · 2025` |
+| 14 | And after 20 years, the franchise ends. | `TERM: 20 YEARS` |
+| 15 | The building stays with McDonald's. | `OWNER: McDONALD’S` |
+| 16 | That's why its biggest paycheck is rent. | `NOT BURGERS. RENT.` |
 
 ## ElevenLabs script
 
 ```text
-McDonald's collected ten point four billion in rent. Not from you. From its own franchisees. That's almost twice its royalties.
+McDonald's biggest paycheck isn't burgers. It's rent. Ten point four billion dollars last year. Paid by its own franchisees.
 
-About ninety-five percent of its restaurants are franchised. Of about forty-five thousand, it runs only two thousand.
+The idea came from one finance man. Harry Sonneborn, in the mid nineteen-fifties. He told bankers McDonald's was really in real estate.
 
-So what does McDonald's actually own?
+Here's how it works. McDonald's usually controls the land and building. The franchisee pays rent as a slice of sales. So when burgers sell, the landlord wins.
 
-In the markets it runs directly, about fifty-six percent of the land under its restaurants. And about eighty percent of the buildings.
+It runs only about two thousand restaurants itself. Those made it one point four billion. The ones it doesn't run? Thirteen point nine billion.
 
-Franchisees buy the right to run the restaurant. McDonald's is usually their landlord. And the rent goes up when sales go up.
-
-Its own restaurants made it one point four billion. The ones it rents out? Thirteen point nine billion.
-
-After twenty years, the franchise ends. The building still belongs to McDonald's.
-
-The model was Harry Sonneborn's idea, in the mid-fifties. He told bankers McDonald's was really in real estate. The burgers just make the rent payable.
+And after twenty years, the franchise ends. The building stays with McDonald's. That's why its biggest paycheck is rent.
 ```
 
-Pronunciation: Sonneborn = SON-uh-born · franchisees = fran-chy-ZEES.
+Pronunciation: Sonneborn = SON-uh-born · franchisee = fran-chy-ZEE.
+
+## Edit notes (Premiere)
+
+- **Music:** Unhurried, slightly sly groove around 95 BPM. Let it thin out under shots 04 to 06 (the 1950s desk) and return on shot 07.
+- **Sound effects:** heavy brass box sliding on felt, coin dropping into a metal box, LED counter ticking and locking, adding-machine clack, folder sliding on a desk, block lifted off felt, receipt printer, coin stacks rising, calendar pages riffling, rubber stamp thud. Exact frames are in `out/mcdonalds/sfx-cues.csv` after the build.
+- **Start and end:** the voice starts on frame 0 with no lead-in. End the export on the last word with no outro, so it loops into the first line.
+- **Cover:** use `out/mcdonalds/cover.png` (frame 0).
+- **Re-check before posting:** All figures are fiscal 2025. McDonald's fiscal 2026 annual report is due around February 2027.
 
 ## Sources
 
@@ -341,64 +350,67 @@ Pronunciation: Sonneborn = SON-uh-born · franchisees = fran-chy-ZEES.
 
 <!-- 6. blockbuster -->
 
-# Blockbuster Could've Bought Netflix for $50 Million
+# Blockbuster Said No to Netflix for $50 Million
 
-- **Title:** Blockbuster Could've Bought Netflix for $50 Million
-- **Hook text (frame 0):** NETFLIX FOR $50 MILLION?
+- **Title:** Blockbuster Said No to Netflix for $50 Million
+- **Hook text (frame 0):** BLOCKBUSTER SAID NO TO NETFLIX
 - **Series:** Billion-Dollar Mistakes, episode 6
-- **Runtime:** 144 spoken words, about 52 seconds at 165 words per minute
-- **Method:** written directly from the fact sheet (no arena, by request)
+- **Runtime:** 117 spoken words, about 43 seconds at 165 words per minute
+- **Version:** v2 (rewritten Nov 10 for retention; v1 is in git history)
+
+## What changed and why
+
+- **Hook:** v1 said Blockbuster "could have bought" Netflix. v2 says it said no, which is the story, and frame 0 shows the stamp about to land on the offer.
+- **Seconds 3 to 15:** this is the meeting itself, told as a scene: the flight, the question, the number. The two "laughed" quotes are cut to the stronger one so the scene doesn't stall.
+- **Middle and end:** "But the no made sense" now arrives at about 20 seconds, then a second question ("So what actually killed it?") holds the back half. Cut the $6 billion and 2 million subscriber figures. The ending is one image, the last store, with no moral. 117 words instead of 144.
 
 ## Voiceover
 
 | # | VO line | In-world text |
 |---|---------|---------------|
-| 01 | Blockbuster could have bought Netflix for $50 million. | Rental-store window poster: `NETFLIX FOR $50 MILLION?` |
-| 02 | September 2000, Dallas. | Tower lobby directory: `DALLAS · SEPT 2000` |
-| 03 | Netflix's founders flew in with a pitch. | Elevator panel: `FLOOR 23` |
-| 04 | Blockbuster's lawyer asked their price. | Legal pad: `PRICE?` |
-| 05 | Reed Hastings said, "Fifty million." | Same pad, written under it: `$50 MILLION` |
-| 06 | A co-founder says Blockbuster's CEO | Desk nameplate: `BLOCKBUSTER · CEO` |
-| 07 | was "struggling not to laugh." | Memoir page, underlined: `“STRUGGLING NOT TO LAUGH”` · `— MARC RANDOLPH, NETFLIX CO-FOUNDER, “THAT WILL NEVER WORK”` |
-| 08 | Netflix's ex-CFO said Blockbuster basically | Visitor badge: `BARRY McCARTHY · NETFLIX CFO` |
-| 09 | "laughed us out of their office." | Newspaper pull quote: `“LAUGHED US OUT OF THEIR OFFICE”` · `— BARRY McCARTHY, 2008 INTERVIEW, VIA CNBC` |
-| 10 | But that no made sense at the time. | Chalk on the boardroom whiteboard: `MADE SENSE?` |
-| 11 | In 2000, Netflix lost $57 million. | Ledger: `NETFLIX 2000 NET LOSS: $57.4M` |
-| 12 | More than its own price tag. | Price tag on the ledger: `ASKING PRICE: $50M` |
-| 13 | Blockbuster's peak: about 9,000 stores. | Wall map of pins: `≈ 9,000 STORES · 2004` |
-| 14 | And $6 billion a year. | Annual report cover: `REVENUE $6.1B · 2004` |
-| 15 | Its own online service hit 2 million subscribers. | Monitor screen: `BLOCKBUSTER ONLINE · 2,000,000 SUBSCRIBERS` |
-| 16 | Hastings admitted, "If it hadn't been for their debt, | Quote card: `“IF IT HADN’T BEEN FOR THEIR DEBT,` |
-| 17 | they could have killed us." | Quote card: `THEY COULD HAVE KILLED US.”` · `— REED HASTINGS, 2009, VIA CNBC` |
-| 18 | In 2010, Blockbuster filed for bankruptcy. | Court filing stamp: `CHAPTER 11 · SEPT 23, 2010` |
-| 19 | Last year, Netflix brought in $45.2 billion. | TV screen: `NETFLIX 2025 REVENUE: $45.2B` |
-| 20 | $50 million is under 10 hours of that. | Wall clock face: `$50M ≈ 9.7 HOURS OF NETFLIX REVENUE` |
-| 21 | One Blockbuster is left, in Bend, Oregon. | Lit strip-mall sign lettering: `THE LAST BLOCKBUSTER · BEND, OREGON` |
-| 22 | It still rents the DVDs Netflix gave up. | Rack sign: `DVD RENTALS` · small print: `NETFLIX’S LAST DISC: SEPT 29, 2023` · back to the poster: `NETFLIX FOR $50 MILLION?` |
+| 01 | Blockbuster said no to buying Netflix. | `BLOCKBUSTER SAID NO TO NETFLIX` · `NETFLIX` · `NO` |
+| 02 | The price was $50 million. | `$50 MILLION` |
+| 03 | September 2000. Dallas. | `SEPT 2000` · `DALLAS` |
+| 04 | Netflix's founders flew in to pitch a deal. | (no new text) |
+| 05 | Blockbuster's lawyer asked what they wanted. | `YOUR PRICE?` |
+| 06 | Reed Hastings said, "Fifty million." | `“FIFTY MILLION.”` · `— REED HASTINGS, AS TOLD BY MARC RANDOLPH` |
+| 07 | A Netflix co-founder says Blockbuster's CEO | `BLOCKBUSTER · CEO` |
+| 08 | was "struggling not to laugh." | `“STRUGGLING NOT TO LAUGH”` · `— MARC RANDOLPH, “THAT WILL NEVER WORK”` |
+| 09 | But the no made sense. | `NO` · `NETFLIX · 2000` |
+| 10 | That year, Netflix lost $57 million. | `LOSS: $57.4 MILLION` · `NETFLIX S-1 FILING` |
+| 11 | More than its own price tag. | `$50 MILLION` · `$57.4M` |
+| 12 | At its peak, Blockbuster had about 9,000 stores. | `≈ 9,000 STORES` · `PEAK · END OF 2004` |
+| 13 | So what actually killed it? | `WHAT KILLED IT?` |
+| 14 | Reed Hastings later gave the answer. | `REED HASTINGS · 2009` |
+| 15 | "If it hadn't been for their debt, | `“IF IT HADN’T BEEN FOR THEIR DEBT,` · `NEARLY $1 BILLION IN DEBT` |
+| 16 | they could have killed us." | `THEY COULD HAVE KILLED US.”` · `— REED HASTINGS, 2009, VIA CNBC` |
+| 17 | Blockbuster went bankrupt in 2010. | `CHAPTER 11 · SEPT 23, 2010` |
+| 18 | Netflix now takes in $50 million about every 10 hours. | `$50 MILLION` · `EVERY ≈ 10 HOURS` · `2025 REVENUE: $45.2 BILLION` |
+| 19 | One Blockbuster is left. Bend, Oregon. | `BEND, OREGON` · `BLOCKBUSTER SAID NO TO NETFLIX` |
 
 ## ElevenLabs script
 
 ```text
-Blockbuster could have bought Netflix for fifty million.
+Blockbuster said no to buying Netflix. The price was fifty million dollars.
 
-September two thousand, Dallas. Netflix's founders flew in with a pitch. Blockbuster's lawyer asked their price. Reed Hastings said, "Fifty million."
+September two thousand. Dallas. Netflix's founders flew in to pitch a deal. Blockbuster's lawyer asked what they wanted. Reed Hastings said, "Fifty million." A Netflix co-founder says Blockbuster's CEO was "struggling not to laugh."
 
-A co-founder says Blockbuster's CEO was "struggling not to laugh." Netflix's ex-CFO said Blockbuster basically "laughed us out of their office."
+But the no made sense. That year, Netflix lost fifty-seven million. More than its own price tag. At its peak, Blockbuster had about nine thousand stores.
 
-But that no made sense at the time.
+So what actually killed it? Reed Hastings later gave the answer. "If it hadn't been for their debt, they could have killed us." Blockbuster went bankrupt in twenty ten.
 
-In two thousand, Netflix lost fifty-seven million. More than its own price tag. Blockbuster's peak: about nine thousand stores. And six billion dollars a year.
-
-Its own online service hit two million subscribers. Hastings admitted, "If it hadn't been for their debt, they could have killed us."
-
-In twenty ten, Blockbuster filed for bankruptcy.
-
-Last year, Netflix brought in forty-five point two billion. Fifty million is under ten hours of that.
-
-One Blockbuster is left, in Bend, Oregon. It still rents the DVDs Netflix gave up.
+Netflix now takes in fifty million about every ten hours. One Blockbuster is left. Bend, Oregon.
 ```
 
-Pronunciation: Hastings = HAY-stings · CFO = C-F-O.
+Pronunciation: Hastings = HAY-stings · Bend = bend.
+
+## Edit notes (Premiere)
+
+- **Music:** Tense, low pulse around 90 BPM. Pull it out for half a second before shot 09 ("But the no made sense") and bring in a warmer line there.
+- **Sound effects:** envelope sliding on wood, rubber stamp thud, price tag flick, small plane whoosh, notepad slide, marker squeak, book page flip, scale creak, rows of signs switching on, iron weight landing, neon sign buzzing out, clock tick. Exact frames are in `out/blockbuster/sfx-cues.csv` after the build.
+- **Start and end:** the voice starts on frame 0 with no lead-in. End the export on the last word with no outro, so it loops into the first line.
+- **Cover:** use `out/blockbuster/cover.png` (frame 0).
+- **Re-check before posting:** The Bend, Oregon store was last confirmed open in 2025 and early-2026 coverage; check it is still open. Netflix's full-year 2026 revenue (January 2027) will change the "every 10 hours" line.
 
 ## Sources
 
@@ -412,6 +424,7 @@ Pronunciation: Hastings = HAY-stings · CFO = C-F-O.
 - Netflix, DVD final season (last disc Sept 29, 2023): https://about.netflix.com/en/news/netflix-dvd-the-final-season
 - AP via OPB, the last Blockbuster in Bend: https://www.opb.org/article/2021/03/30/world-s-last-blockbuster-more-popular-after-netflix-show/
 - Central Oregon Daily News, store open Oct 18, 2025: https://www.centraloregondaily.com/news/local/blockbuster-bend-40-anniversary-party/article_0a455b7d-b747-4b26-9713-453428e6acd0.html
+- UPI, Blockbuster bankruptcy and nearly $1 billion in debt: https://www.upi.com/Business_News/2010/09/23/Blockbuster-busted-but-plans-a-rebirth/21491285269470/
 
 ---
 
@@ -420,57 +433,60 @@ Pronunciation: Hastings = HAY-stings · CFO = C-F-O.
 # "A Diamond Is Forever" Was an Ad
 
 - **Title:** "A Diamond Is Forever" Was an Ad
-- **Hook text (frame 0):** FOREVER WAS A 1947 AD
+- **Hook text (frame 0):** “FOREVER” WAS AN AD
 - **Series:** Markup
-- **Runtime:** 144 spoken words, about 52 seconds at 165 words per minute
-- **Method:** written directly from the fact sheet (no arena, by request)
+- **Runtime:** 122 spoken words, about 44 seconds at 165 words per minute
+- **Version:** v2 (rewritten Nov 10 for retention; v1 is in git history)
+
+## What changed and why
+
+- **Hook:** kept, because the slogan is the one thing every viewer already knows. v2 says "is an ad slogan" in the present tense and frame 0 shows the ad and the ring together.
+- **Seconds 3 to 15:** tightened to who wrote it, for whom, and what it did (1 in 10 rings to 8 in 10). Cut "two months' salary", which delayed the turn.
+- **Middle and end:** the lab-grown turn lands at about 19 seconds. The fall is told through one price tag: $800, then minus 90%, then a supermarket shelf. Cut the rough-diamond 37% figure and the $1 billion sale price from the voice. 122 words instead of 144.
 
 ## Voiceover
 
 | # | VO line | In-world text |
 |---|---------|---------------|
-| 01 | "A diamond is forever" was a 1947 ad. | Vintage magazine ad page: `“A DIAMOND IS FOREVER”` · stamp across the corner: `FOREVER WAS A 1947 AD` |
-| 02 | Copywriter Frances Gerety wrote it for De Beers. | Typewriter page header: `FRANCES GERETY · N.W. AYER · FOR DE BEERS` |
-| 03 | Before World War Two, | Newsreel title card: `BEFORE WWII` |
-| 04 | about one in ten engagement rings had a diamond. | Ring-tray label: `1 IN 10 WITH A DIAMOND` |
-| 05 | By the late twentieth century, about eight in ten. | Ring-tray label: `LATE 20TH CENTURY: 8 IN 10` |
-| 06 | Then the ads suggested two months' salary. | Ad tagline: `“HOW CAN YOU MAKE TWO MONTHS’ SALARY LAST FOREVER?”` · `— DE BEERS AD, 1980s` |
-| 07 | So what happens when anyone can make one? | Lab door placard: `ANYONE CAN MAKE ONE?` |
-| 08 | In 2018, De Beers launched lab-grown Lightbox. | Box-lid lettering: `LIGHTBOX · LAB-GROWN · 2018` |
-| 09 | One carat: $800. | Price tag: `1 CARAT · $800` |
-| 10 | Its CEO said it "may not be forever." | Launch banner: `“MAY NOT BE FOREVER, BUT IS PERFECT FOR RIGHT NOW”` · `— BRUCE CLEAVER, DE BEERS CEO, 2018` |
-| 11 | By 2025, it said prices fell 90%. | Price chart line: `LAB-GROWN WHOLESALE −90% SINCE 2018` · small print: `DE BEERS ESTIMATE, MAY 2025` |
-| 12 | A new CEO said you can buy lab-grown | Name card: `AL COOK · DE BEERS CEO` |
-| 13 | "in supermarkets for $200." | Supermarket shelf tag: `“IN SUPERMARKETS FOR $200”` · `— AL COOK, TO JCK, 2025` |
-| 14 | So De Beers said it would close Lightbox. | Notice on the box: `LIGHTBOX · CLOSING` · `ANNOUNCED MAY 2025` |
-| 15 | Of couples married in 2025, | Survey card header: `COUPLES MARRIED IN 2025` |
-| 16 | 61% chose lab-grown. | Survey bar: `61% LAB-GROWN` · small print: `THE KNOT 2026 REAL WEDDINGS STUDY` |
-| 17 | Even mined rough prices fell 37% in a year. | Sorting-table tag: `AVG ROUGH PRICE −37% · $155 → $97 / CARAT` |
-| 18 | Now De Beers itself is for sale. | Sign on the mine office: `DE BEERS · FOR SALE` |
-| 19 | Reported price: about $1 billion. | Deal folder: `ANGLO’S 85% · REPORTED ~$1 BILLION · BLOOMBERG` |
-| 20 | The diamond lasts. The price didn't. | Back to the ad page: `“A DIAMOND IS FOREVER”` · `FOREVER WAS A 1947 AD` |
+| 01 | "A diamond is forever" is an ad slogan. | `“A DIAMOND IS FOREVER”` · `“FOREVER” WAS AN AD` · `AD` |
+| 02 | A copywriter wrote it in 1947. | `1947` · `FRANCES GERETY · N.W. AYER` |
+| 03 | For De Beers, the diamond giant. | `CLIENT: DE BEERS` |
+| 04 | Before World War Two, | `BEFORE WWII` |
+| 05 | about one engagement ring in ten had a diamond. | `1 IN 10` |
+| 06 | Decades of ads later, about eight in ten. | `8 IN 10` · `LATE 20TH CENTURY` |
+| 07 | Then came diamonds grown in a lab. | `LAB-GROWN` · `FTC, 2018: “THUS, THEY ARE DIAMONDS.”` |
+| 08 | In 2018, De Beers sold them too. | `LIGHTBOX · BY DE BEERS · 2018` |
+| 09 | $800 a carat. | `$800 / CARAT` |
+| 10 | Its own CEO said they "may not be forever." | `“MAY NOT BE FOREVER”` · `— BRUCE CLEAVER, DE BEERS CEO, 2018` |
+| 11 | Seven years later, prices had fallen 90%. | `−90%` · `WHOLESALE, SINCE 2018 · DE BEERS, MAY 2025` |
+| 12 | A later CEO said supermarkets sell them for $200. | `$200` · `“IN SUPERMARKETS FOR $200” — AL COOK, DE BEERS CEO, 2025` |
+| 13 | So De Beers moved to shut its lab brand. | `CLOSING` · `ANNOUNCED MAY 2025` |
+| 14 | For couples married last year, | `MARRIED IN 2025` |
+| 15 | 61% of rings were lab-grown. | `61% LAB-GROWN` · `THE KNOT 2026 STUDY · U.S. ENGAGEMENT RINGS` |
+| 16 | Now De Beers itself is for sale. | `DE BEERS` · `FOR SALE` · `REPORTED PRICE ≈ $1 BILLION · BLOOMBERG` |
+| 17 | The slogan lasted. The price didn't. | `“A DIAMOND IS FOREVER”` · `“FOREVER” WAS AN AD` |
 
 ## ElevenLabs script
 
 ```text
-"A diamond is forever" was a nineteen forty-seven ad. Copywriter Frances Gerety wrote it for De Beers.
+"A diamond is forever" is an ad slogan. A copywriter wrote it in nineteen forty-seven. For De Beers, the diamond giant.
 
-Before World War Two, about one in ten engagement rings had a diamond. By the late twentieth century, about eight in ten. Then the ads suggested two months' salary.
+Before World War Two, about one engagement ring in ten had a diamond. Decades of ads later, about eight in ten.
 
-So what happens when anyone can make one?
+Then came diamonds grown in a lab. In twenty eighteen, De Beers sold them too. Eight hundred dollars a carat. Its own CEO said they "may not be forever." Seven years later, prices had fallen ninety percent. A later CEO said supermarkets sell them for two hundred. So De Beers moved to shut its lab brand.
 
-In twenty eighteen, De Beers launched lab-grown Lightbox. One carat: eight hundred dollars. Its CEO said it "may not be forever."
-
-By twenty twenty-five, it said prices fell ninety percent. A new CEO said you can buy lab-grown "in supermarkets for two hundred dollars." So De Beers said it would close Lightbox.
-
-Of couples married in twenty twenty-five, sixty-one percent chose lab-grown. Even mined rough prices fell thirty-seven percent in a year.
-
-Now De Beers itself is for sale. Reported price: about one billion dollars.
-
-The diamond lasts. The price didn't.
+For couples married last year, sixty-one percent of rings were lab-grown. Now De Beers itself is for sale. The slogan lasted. The price didn't.
 ```
 
-Pronunciation: De Beers = deh BEERZ · Gerety = GAIR-uh-tee.
+Pronunciation: De Beers = deh BEERZ.
+
+## Edit notes (Premiere)
+
+- **Music:** Elegant and slow at first, a waltz feel around 80 BPM. Switch to something colder and electronic on shot 07 (the lab) and keep it to the end.
+- **Sound effects:** typewriter keys and carriage return, paper pulled from a roller, folder stamp, ring stones clicking into a tray, magazine pages fluttering, low electric hum of the lab dome, price tag flick, string snip, tag falling on a brass scale, shelf-tag click, box lid closing, signpost hammered into the table. Exact frames are in `out/diamonds/sfx-cues.csv` after the build.
+- **Start and end:** the voice starts on frame 0 with no lead-in. End the export on the last word with no outro, so it loops into the first line.
+- **Cover:** use `out/diamonds/cover.png` (frame 0).
+- **Re-check before posting:** As of Nov 10, 2026, De Beers was still for sale with no deal signed. If a sale is announced before you post, change shot 16 and the last line. Lab-grown price figures update every quarter.
 
 ## Sources
 
@@ -485,65 +501,70 @@ Pronunciation: De Beers = deh BEERZ · Gerety = GAIR-uh-tee.
 - JCK, The Knot 2026 study (61% lab-grown): https://www.jckonline.com/editorial-article/lab-diamonds-engagement-market/
 - Anglo American Q3 2026 production report (rough price −37%): https://www.angloamerican.com/media/press-releases/2026/20-10-2026
 - National Jeweler, De Beers sale and preferred bidder: https://nationaljeweler.com/articles/15150-anglo-reportedly-selects-gareth-penny-s-consortium-as-top-bidder-for-de-beers
+- FTC, 2018 Jewelry Guides revision: https://www.ftc.gov/news-events/news/press-releases/2018/07/ftc-approves-final-revisions-jewelry-guides
 
 ---
 
 <!-- 8. gyms -->
 
-# Your Gym Is Betting You Won't Show Up
+# Why Your Gym Has 7,200 Members and Room for 300
 
-- **Title:** Your Gym Is Betting You Won't Show Up
-- **Hook text (frame 0):** 7,200 MEMBERS PER GYM
+- **Title:** Why Your Gym Has 7,200 Members and Room for 300
+- **Hook text (frame 0):** 7,200 MEMBERS. ROOM FOR 300.
 - **Series:** Markup
-- **Runtime:** 141 spoken words, about 51 seconds at 165 words per minute
-- **Method:** written directly from the fact sheet (no arena, by request)
+- **Runtime:** 107 spoken words, about 39 seconds at 165 words per minute
+- **Version:** v2 (rewritten Nov 10 for retention; v1 is in git history)
+
+## What changed and why
+
+- **Hook:** v1 opened on half the conflict ("averages about 7,200 members a gym"). v2 puts both halves in the first three seconds, 7,200 members against room for 300, the same "X versus Y" shape as your best opener (Juicero).
+- **Seconds 3 to 15:** the question ("what if everybody showed up?") comes at second 5, then the manager's line. In v1 the question came after two source-heavy sentences.
+- **Middle and end:** cut the $15 starting price, the $49 fee and the 90% recurring-revenue line, which were a list. Kept the two facts that explain the trick: people keep paying after they stop going, and most are on the dearer plan. The NPR line is the payoff and the last thing said. 107 words instead of 141.
 
 ## Voiceover
 
 | # | VO line | In-world text |
 |---|---------|---------------|
-| 01 | Planet Fitness averages about 7,200 members a gym. | Front-desk LED counter: `7,200 MEMBERS PER GYM` · small print: `AVG · 20.8M MEMBERS ÷ 2,896 CLUBS · 2025` |
-| 02 | NPR reported most could hold around 300. | Capacity plaque by the door: `CAPACITY ≈ 300` · small print: `NPR, 2014` |
-| 03 | So how does that work? | Whiteboard scrawl: `HOW?` |
-| 04 | One Manhattan manager told NPR, | Name badge: `CLUB MANAGER · MIDTOWN MANHATTAN` |
-| 05 | "Thank goodness they all don't show up | Quote card: `“THANK GOODNESS THEY ALL DON’T SHOW UP` |
-| 06 | at one time." | Quote card: `AT ONE TIME.”` · `— CHRYSANTHI LASKARIS, CLUB MANAGER, TO NPR, 2014` |
-| 07 | In 2022, CNN said around 60% | News chyron on the lobby TV: `CNN, 2022` |
-| 08 | didn't visit in a 30-day stretch. | Attendance board: `≈ 60% · NO VISIT IN 30 DAYS` |
-| 09 | And that famous $10 plan? | Old window sign: `$10 / MONTH` |
-| 10 | New members now start at $15. | Sign repainted: `NEW MEMBERS FROM $15 / MONTH` |
-| 11 | But two-thirds pay $24.99 for the Black Card. | Membership card: `BLACK CARD · $24.99 / MONTH` · small print: `66.5% OF MEMBERS` |
-| 12 | Plus a $49 yearly fee. | Fee notice: `ANNUAL FEE $49` |
-| 13 | Over 90% of revenue is recurring, | Bank statement header: `> 90% RECURRING REVENUE` · small print: `CLUB & FRANCHISE REVENUE · 10-K` |
-| 14 | pulled automatically, month after month. | Statement lines repeating down the page: `EFT · MONTHLY DUES` |
-| 15 | And people are slow to quit. | Cancellation form, untouched: `CANCEL?` |
-| 16 | In a study of over 7,000 gym members, | Journal cover: `“PAYING NOT TO GO TO THE GYM” · 7,752 MEMBERS` · `DELLAVIGNA & MALMENDIER · AER · 2006` |
-| 17 | people kept paying over two months after their last workout. | Timeline on the page: `LAST VISIT → CANCEL: 2.31 MONTHS` |
-| 18 | As NPR put it, people who don't show up | Empty treadmill readout: `DON’T SHOW UP` |
-| 19 | help pay for the people who do. | Busy treadmill readout: `→ PAY FOR THOSE WHO DO` · small print: `NPR PLANET MONEY, 2014` |
-| 20 | That's how 7,200 members fit in one gym. | Back to the counter: `7,200 MEMBERS PER GYM` |
+| 01 | 7,200 members. Room for about 300. | `7,200 MEMBERS.` · `ROOM FOR 300.` · `AVERAGE · 20.8M MEMBERS ÷ 2,896 CLUBS · 2025` · `NPR, 2014` |
+| 02 | That's Planet Fitness, on average. | `PLANET FITNESS` · `AVERAGE PER GYM` |
+| 03 | So what if everybody showed up? | `EVERYBODY?` |
+| 04 | One manager told NPR, | `CLUB MANAGER · MANHATTAN` |
+| 05 | "Thank goodness they all don't show up at one time." | `“THANK GOODNESS THEY ALL` · `DON’T SHOW UP AT ONE TIME.”` · `— CHRYSANTHI LASKARIS, TO NPR, 2014` |
+| 06 | And mostly, they don't. | `NO ONE` |
+| 07 | CNN reported about 60% | `≈ 60%` · `CNN, 2022` |
+| 08 | skip the gym for a whole month. | `NO VISIT IN 30 DAYS` |
+| 09 | An analyst explained the low price. | `$10 A MONTH` · `THE CLASSIC PRICE, 1998–2024` |
+| 10 | It's too cheap to bother cancelling. | `CANCEL?` · `PER A BMO ANALYST, VIA CNN, 2022` |
+| 11 | One study tracked 7,000 gym members. | `7,752 GYM MEMBERS` · `DELLAVIGNA & MALMENDIER · AER, 2006 · OTHER U.S. CLUBS` |
+| 12 | They kept paying two months after their last workout. | `DUES PAID` · `2.31 MONTHS AFTER LAST VISIT` |
+| 13 | And most don't even pay the cheap price. | `66.5% OF MEMBERS` |
+| 14 | Two-thirds pay about $25 a month. | `$24.99 / MONTH` |
+| 15 | As NPR put it, the people who don't go | `DON’T GO` |
+| 16 | pay for the people who do. | `PAY FOR THOSE WHO DO` · `NPR PLANET MONEY, 2014` · `7,200 MEMBERS.` · `ROOM FOR 300.` |
 
 ## ElevenLabs script
 
 ```text
-Planet Fitness averages about seventy-two hundred members a gym. NPR reported most could hold around three hundred.
+Seventy-two hundred members. Room for about three hundred. That's Planet Fitness, on average. So what if everybody showed up?
 
-So how does that work?
+One manager told NPR, "Thank goodness they all don't show up at one time." And mostly, they don't. CNN reported about sixty percent skip the gym for a whole month.
 
-One Manhattan manager told NPR, "Thank goodness they all don't show up at one time."
+An analyst explained the low price. It's too cheap to bother cancelling. One study tracked seven thousand gym members. They kept paying two months after their last workout.
 
-In twenty twenty-two, CNN said around sixty percent didn't visit in a thirty-day stretch.
+And most don't even pay the cheap price. Two-thirds pay about twenty-five dollars a month.
 
-And that famous ten-dollar plan? New members now start at fifteen. But two-thirds pay twenty-four ninety-nine for the Black Card. Plus a forty-nine dollar yearly fee.
-
-Over ninety percent of revenue is recurring, pulled automatically, month after month.
-
-And people are slow to quit. In a study of over seven thousand gym members, people kept paying over two months after their last workout.
-
-As NPR put it, people who don't show up help pay for the people who do. That's how seventy-two hundred members fit in one gym.
+As NPR put it, the people who don't go pay for the people who do.
 ```
 
 Pronunciation: NPR = N-P-R · CNN = C-N-N.
+
+## Edit notes (Premiere)
+
+- **Music:** Bright, bouncy and a little ironic, around 110 BPM. Drop to just a beat under the manager's quote (shot 05).
+- **Sound effects:** LED counter ticking and locking, crowd shuffle, turnstile clunk, treadmill belt hum, lightbox bulbs warming up, marker crosses on paper, poster flip, pen rolling off a desk, receipt printer, card stack tap, coins sliding on a table. Exact frames are in `out/gyms/sfx-cues.csv` after the build.
+- **Start and end:** the voice starts on frame 0 with no lead-in. End the export on the last word with no outro, so it loops into the first line.
+- **Cover:** use `out/gyms/cover.png` (frame 0).
+- **Re-check before posting:** Member and club counts are year-end 2025. Planet Fitness prices and member totals may have moved in its latest quarterly results; the on-screen tags already carry their years.
 
 ## Sources
 
@@ -558,56 +579,62 @@ Pronunciation: NPR = N-P-R · CNN = C-N-N.
 
 <!-- 9. eyeglasses -->
 
-# One Company Is Behind Your Glasses
+# Oakley Sued Ray-Ban's Owner. Then It Got Bought.
 
-- **Title:** One Company Is Behind Your Glasses
-- **Hook text (frame 0):** RAY-BAN · OAKLEY · SUNGLASS HUT: ONE COMPANY
+- **Title:** Oakley Sued Ray-Ban's Owner. Then It Got Bought.
+- **Hook text (frame 0):** OAKLEY VS. RAY-BAN’S OWNER
 - **Series:** Markup
-- **Runtime:** 137 spoken words, about 50 seconds at 165 words per minute
-- **Method:** written directly from the fact sheet (no arena, by request)
+- **Runtime:** 105 spoken words, about 38 seconds at 165 words per minute
+- **Version:** v2 (rewritten Nov 10 for retention; v1 is in git history)
+
+## What changed and why
+
+- **Hook:** v1 opened on a list ("Ray-Ban, Oakley and Sunglass Hut: one company"). v2 opens on the fight, which was v1's best material and was buried at second 25.
+- **Seconds 3 to 15:** this is now the whole Oakley story in order: the store chain is bought, Oakley is cut back, Oakley sues, Oakley is bought. In v1 this stretch was a revenue figure and a list of acquisitions with dates.
+- **Middle and end:** the brand list comes after the story and is three quick reveals. Cut the "20 times" markup claim (a 2012 TV line, the weakest fact in v1) and the AI-glasses figure. 105 words instead of 137.
 
 ## Voiceover
 
 | # | VO line | In-world text |
 |---|---------|---------------|
-| 01 | Ray-Ban, Oakley and Sunglass Hut: one company. | Mall directory board: `RAY-BAN · OAKLEY · SUNGLASS HUT` · header strip: `ONE COMPANY` |
-| 02 | It's called EssilorLuxottica. | Headquarters plaque: `ESSILORLUXOTTICA · CHARENTON-LE-PONT, FRANCE` |
-| 03 | Last year: about €28.5 billion. | Annual-report cover: `FY2025 REVENUE ≈ €28.5 BILLION` |
-| 04 | It makes the frames. It makes the lenses. | Factory crate labels: `FRAMES` · `LENSES` |
-| 05 | Then it bought the stores. | Storefront deed folder: `STORES` |
-| 06 | LensCrafters in '95. Sunglass Hut in 2001. | Deed tabs: `1995 · LENSCRAFTERS` · `2001 · SUNGLASS HUT` |
-| 07 | Pearle Vision in 2004. | Deed tab: `2004 · PEARLE VISION` |
-| 08 | A vision insurer, EyeMed, came in that same deal. | Deed tab: `2004 · EYEMED · VISION INSURANCE` |
-| 09 | It even runs Target Optical, under a license. | Counter sign: `TARGET OPTICAL` · small print: `RUN UNDER LICENSE FROM TARGET` |
-| 10 | But what happens to a rival? Take Oakley. | Shelf header: `RIVAL?` |
-| 11 | Its Sunglass Hut stores cut back on Oakley. | Sunglass-shop shelf tag, half the slots empty: `OAKLEY` |
-| 12 | Oakley sued. In 2007, it bought Oakley | Court envelope: `LAWSUIT · 2001` · deal folder tab: `2007 · OAKLEY` |
-| 13 | for about $2.1 billion. | Deal sheet: `≈ $2.1 BILLION · $29.30 / SHARE` |
-| 14 | Its CEO later said, "life was better together." | TV quote card: `“LIFE WAS BETTER TOGETHER.”` · `— ANDREA GUERRA, LUXOTTICA CEO, 60 MINUTES, 2012` |
-| 15 | 60 Minutes reported glasses can sell | TV lower third: `60 MINUTES · 2012` |
-| 16 | for up to 20 times their cost to make. | Price card: `UP TO 20× WHAT THEY COST TO MAKE` · `— CBS 60 MINUTES, 2012` |
-| 17 | It sold over 7 million AI glasses last year. | Smart-glasses shipping carton: `> 7 MILLION AI GLASSES · 2025` |
-| 18 | Different names. One company behind your glasses. | Back to the directory: `RAY-BAN · OAKLEY · SUNGLASS HUT` · `ONE COMPANY` |
+| 01 | Oakley once sued the company behind Ray-Ban. | `OAKLEY VS. RAY-BAN’S OWNER` · `OAKLEY` · `LUXOTTICA` |
+| 02 | Six years later, that company owned Oakley. | `2001` · `2007` · `OWNED BY LUXOTTICA` |
+| 03 | Here's how. | (no new text) |
+| 04 | In 2001, Luxottica bought Sunglass Hut. | `SUNGLASS HUT` · `BOUGHT BY LUXOTTICA · 2001` |
+| 05 | Then those stores cut back on Oakley. | `OAKLEY` |
+| 06 | Oakley sued. The two settled. | `LAWSUIT · 2001` · `SETTLED` |
+| 07 | In 2007, Luxottica bought Oakley. | `SOLD · 2007` |
+| 08 | About $2.1 billion. | `≈ $2.1 BILLION` |
+| 09 | Its CEO said they "understood that life was better together." | `“LIFE WAS BETTER TOGETHER.”` · `— ANDREA GUERRA, LUXOTTICA CEO, 60 MINUTES, 2012` |
+| 10 | And it didn't stop at sunglasses. | (no new text) |
+| 11 | The same group runs LensCrafters and Pearle Vision. | `LENSCRAFTERS` · `PEARLE VISION` |
+| 12 | It runs Target Optical under a license. | `TARGET OPTICAL` · `UNDER LICENSE` |
+| 13 | It even runs a vision plan, EyeMed. | `EYEMED · VISION PLAN` |
+| 14 | Last year: about €28.5 billion. | `ESSILORLUXOTTICA` · `≈ €28.5 BILLION` · `2025 REVENUE · LUXOTTICA + ESSILOR SINCE 2018` |
+| 15 | So the glasses, the store, even the insurance. | `SAME OWNER` |
+| 16 | One company. | `OAKLEY VS. RAY-BAN’S OWNER` |
 
 ## ElevenLabs script
 
 ```text
-Ray-Ban, Oakley and Sunglass Hut: one company. It's called EssilorLuxottica. Last year: about twenty-eight point five billion euros.
+Oakley once sued the company behind Ray-Ban. Six years later, that company owned Oakley. Here's how.
 
-It makes the frames. It makes the lenses. Then it bought the stores. LensCrafters in ninety-five. Sunglass Hut in two thousand one. Pearle Vision in two thousand four. A vision insurer, EyeMed, came in that same deal.
+In two thousand one, Luxottica bought Sunglass Hut. Then those stores cut back on Oakley. Oakley sued. The two settled. In two thousand seven, Luxottica bought Oakley. About two point one billion dollars. Its CEO said they "understood that life was better together."
 
-It even runs Target Optical, under a license.
+And it didn't stop at sunglasses. The same group runs LensCrafters and Pearle Vision. It runs Target Optical under a license. It even runs a vision plan, EyeMed.
 
-But what happens to a rival? Take Oakley.
-
-Its Sunglass Hut stores cut back on Oakley. Oakley sued. In two thousand seven, it bought Oakley for about two point one billion dollars. Its CEO later said, "life was better together."
-
-Sixty Minutes reported glasses can sell for up to twenty times their cost to make. It sold over seven million AI glasses last year.
-
-Different names. One company behind your glasses.
+Last year: about twenty-eight point five billion euros. So the glasses, the store, even the insurance. One company.
 ```
 
-Pronunciation: EssilorLuxottica = ESS-ih-lor-LUX-uh-TEE-kuh · Pearle = PURL · EyeMed = EYE-med.
+Pronunciation: Luxottica = lux-OTT-ih-kuh · Pearle = PURL · EyeMed = EYE-med.
+
+## Edit notes (Premiere)
+
+- **Music:** Tight, percussive, a courtroom-drama feel around 105 BPM. One hit on the gavel in shot 01 and again in shot 06.
+- **Sound effects:** gavel hit, bulb scoreboard hum, calendar flip, tag string pulled tight, shop sign buzzing on, frames lifted off pegs, envelope slap, rubber stamp thud, price tag flick, card sliding on a desk, strings pulling taut. Exact frames are in `out/eyeglasses/sfx-cues.csv` after the build.
+- **Start and end:** the voice starts on frame 0 with no lead-in. End the export on the last word with no outro, so it loops into the first line.
+- **Cover:** use `out/eyeglasses/cover.png` (frame 0).
+- **Re-check before posting:** Revenue is fiscal 2025; fiscal 2026 results are due around February 2027. The company's share price has been volatile, so do not add it.
 
 ## Sources
 
@@ -624,58 +651,64 @@ Pronunciation: EssilorLuxottica = ESS-ih-lor-LUX-uh-TEE-kuh · Pearle = PURL · 
 
 <!-- 10. printer-ink -->
 
-# Why Printer Ink Costs More Than Champagne
+# HP's Ex-CEO Called Some Customers "a Bad Investment"
 
-- **Title:** Why Printer Ink Costs More Than Champagne
-- **Hook text (frame 0):** SOME CUSTOMERS: “A BAD INVESTMENT”
+- **Title:** HP's Ex-CEO Called Some Customers "a Bad Investment"
+- **Hook text (frame 0):** SKIP HP INK? “A BAD INVESTMENT”
 - **Series:** Markup
-- **Runtime:** 144 spoken words, about 52 seconds at 165 words per minute
-- **Method:** written directly from the fact sheet (no arena, by request)
+- **Runtime:** 114 spoken words, about 41 seconds at 165 words per minute
+- **Version:** v2 (rewritten Nov 10 for retention; v1 is in git history)
+
+## What changed and why
+
+- **Hook:** kept the quote, which is the strongest opening of the seven, and fixed it: Lores left HP in February 2026, so he is now "HP's former CEO". Frame 0 shows the quote coming out of the printer.
+- **Seconds 3 to 15:** the second quote ("We lose money on the hardware") moves up to second 7, straight after the hook. In v1 it sat behind three revenue figures.
+- **Middle and end:** one question at about 20 seconds ("So what does ink really cost?") and two answers. Cut the "one in four customers" line and the PC-profit comparison, which was a second topic. 114 words instead of 144.
 
 ## Voiceover
 
 | # | VO line | In-world text |
 |---|---------|---------------|
-| 01 | HP's CEO called some customers "a bad investment." | TV lower third: `SOME CUSTOMERS: “A BAD INVESTMENT”` · `— ENRIQUE LORES, HP CEO, CNBC, JAN 2024` |
-| 02 | The ones who skip HP ink. | Shopping-bag label: `NON-HP INK` |
-| 03 | Last year, HP sold ink and toner | Annual-report tab: `SUPPLIES · FY2025` |
-| 04 | worth $10.9 billion. | Report line: `INK & TONER $10.9 BILLION` |
-| 05 | That's about $30 million a day. | Odometer counter: `≈ $30 MILLION / DAY` |
-| 06 | Home printers? Just $1.15 billion. | Report line: `CONSUMER PRINTER HARDWARE $1.15B` |
-| 07 | So why are printers cheap? | Store price tag on a printer: `WHY SO CHEAP?` |
-| 08 | The CEO said it in 2024: | Name card: `ENRIQUE LORES · HP CEO · 2024` |
-| 09 | "We lose money on the hardware, | Quote card: `“WE LOSE MONEY ON THE HARDWARE,` |
-| 10 | we make money on the supplies." | Quote card: `WE MAKE MONEY ON THE SUPPLIES.”` · `— ENRIQUE LORES, 2024, VIA THE REGISTER` |
-| 11 | It loses money on about one in four customers. | Customer ledger: `≈ 1 IN 4 CUSTOMERS: LOSS` · small print: `HP EXECUTIVES, 2020 & 2022` |
-| 12 | In Britain, Which? found one Epson ink set | Report cover: `WHICH? · UK · SEPT 2022` · line: `EPSON INK SET · £1.78 / ML` |
-| 13 | cost over seven times Dom Pérignon, per milliliter. | Champagne price card: `> 7× DOM PÉRIGNON PER ML` · small print: `UK PRICES` |
-| 14 | In 2018, Consumer Reports priced one HP cartridge | Magazine page header: `CONSUMER REPORTS · 2018` |
-| 15 | at $93 an ounce. | Cartridge sticker: `HP 64XL BLACK · $93 / OZ` |
-| 16 | Print rarely? Half the ink may never hit paper. | Ink-level gauge: `≤ HALF THE INK ON THE PAGE` · small print: `CONSUMER REPORTS, 2018 · OCCASIONAL USE` |
-| 17 | Printing even out-earns HP's PCs. | Two shelf labels: `PRINTING` · `PCs` |
-| 18 | A billion more profit, on under half the sales. | Bar chart: `PRINTING $3.1B OPERATING PROFIT · PCs $2.1B` · small print: `FY2025` |
-| 19 | The long-term goal: "make printing a subscription." | Whiteboard: `“MAKE PRINTING A SUBSCRIPTION”` · `— ENRIQUE LORES, CNBC, JAN 2024` |
-| 20 | The printer's the bait. The ink's the business. | Printer tag: `BAIT` · cartridge tag: `BUSINESS` · back to the TV: `SOME CUSTOMERS: “A BAD INVESTMENT”` |
+| 01 | HP's former CEO called some customers "a bad investment." | `SKIP HP INK?` · `“A BAD INVESTMENT”` · `— ENRIQUE LORES, THEN HP CEO, CNBC, JAN 2024` |
+| 02 | Which ones? The ones who skip HP ink. | `HP INK` · `OTHER INK` |
+| 03 | He explained the business himself. | `HP CEO · 2024` |
+| 04 | "We lose money on the hardware, | `“WE LOSE MONEY ON THE HARDWARE,` |
+| 05 | we make money on the supplies." | `WE MAKE MONEY ON THE SUPPLIES.”` · `— ENRIQUE LORES, 2024, VIA THE REGISTER` |
+| 06 | Last year HP sold ink and toner | `INK & TONER` · `HP SUPPLIES · FISCAL 2025` |
+| 07 | worth $10.9 billion. | `$10.9 BILLION` |
+| 08 | Home printers? $1.15 billion. | `$1.15 BILLION` · `HOME PRINTERS` |
+| 09 | So what does ink really cost? | `PER OUNCE?` |
+| 10 | In 2018, Consumer Reports priced one HP cartridge | `CONSUMER REPORTS · 2018` |
+| 11 | at $93 an ounce. | `$93 / OUNCE` · `HP 64XL BLACK` |
+| 12 | A British test found one Epson ink set | `EPSON INK SET` · `WHICH? · UK · 2022` |
+| 13 | cost over seven times Dom Pérignon. | `DOM PÉRIGNON` · `7× PER MILLILITRE` · `UK PRICES` |
+| 14 | Print rarely, and half may never reach the page. | `HALF OR LESS ON THE PAGE` · `CONSUMER REPORTS, 2018 · OCCASIONAL PRINTING` |
+| 15 | The long-term goal? "Make printing a subscription." | `“MAKE PRINTING A SUBSCRIPTION”` · `— ENRIQUE LORES, CNBC, JAN 2024` |
+| 16 | The printer is the bait. The ink is the business. | `BAIT` · `THE BUSINESS` · `SKIP HP INK?` · `“A BAD INVESTMENT”` |
 
 ## ElevenLabs script
 
 ```text
-HP's CEO called some customers "a bad investment." The ones who skip HP ink.
+HP's former CEO called some customers "a bad investment." Which ones? The ones who skip HP ink.
 
-Last year, HP sold ink and toner worth ten point nine billion dollars. That's about thirty million dollars a day. Home printers? Just one point one five billion.
+He explained the business himself. "We lose money on the hardware, we make money on the supplies."
 
-So why are printers cheap?
+Last year HP sold ink and toner worth ten point nine billion dollars. Home printers? One point one five billion.
 
-The CEO said it in twenty twenty-four: "We lose money on the hardware, we make money on the supplies." It loses money on about one in four customers.
+So what does ink really cost? In twenty eighteen, Consumer Reports priced one HP cartridge at ninety-three dollars an ounce. A British test found one Epson ink set cost over seven times Dom Pérignon. Print rarely, and half may never reach the page.
 
-In Britain, Which? found one Epson ink set cost over seven times Dom Pérignon, per milliliter. In twenty eighteen, Consumer Reports priced one HP cartridge at ninety-three dollars an ounce. Print rarely? Half the ink may never hit paper.
-
-Printing even out-earns HP's PCs. A billion more profit, on under half the sales.
-
-The long-term goal: "make printing a subscription." The printer's the bait. The ink's the business.
+The long-term goal? "Make printing a subscription." The printer is the bait. The ink is the business.
 ```
 
-Pronunciation: Which? = "which" (the UK consumer group) · Dom Pérignon = dom PEH-ree-nyon · Lores = LOR-ez.
+Pronunciation: Dom Pérignon = dom PEH-ree-nyon · Epson = EP-son.
+
+## Edit notes (Premiere)
+
+- **Music:** Dry, slightly mischievous, around 100 BPM. Leave a gap of silence for the single drop in shot 09.
+- **Sound effects:** inkjet carriage and page feed, status-light beep, spotlight clunk, microphone tap, scale creak, coins leaking and pouring, conveyor hum, LED counter locking, single drop into glass, magazine slide, price tag flick, bottle set down on wood, drip onto a pad, calendar click. Exact frames are in `out/printer-ink/sfx-cues.csv` after the build.
+- **Start and end:** the voice starts on frame 0 with no lead-in. End the export on the last word with no outro, so it loops into the first line.
+- **Cover:** use `out/printer-ink/cover.png` (frame 0).
+- **Re-check before posting:** HP's fiscal 2026 results are due in late November 2026 and will replace the $10.9 billion and $1.15 billion figures. HP named Emma Walmsley as its next CEO on Nov 4, 2026, so "former CEO" for Enrique Lores is right.
 
 ## Sources
 

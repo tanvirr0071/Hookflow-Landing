@@ -1,56 +1,61 @@
-# Why McDonald's Is Really a Landlord
+# McDonald's Biggest Paycheck Isn't Burgers
 
-- **Title:** Why McDonald's Is Really a Landlord
-- **Hook text (frame 0):** $10.4 BILLION IN RENT
+- **Title:** McDonald's Biggest Paycheck Isn't Burgers
+- **Hook text (frame 0):** NOT BURGERS. RENT.
 - **Series:** Markup
-- **Runtime:** 143 spoken words, about 52 seconds at 165 words per minute
-- **Method:** written directly from the fact sheet (no arena, by request)
+- **Runtime:** 111 spoken words, about 40 seconds at 165 words per minute
+- **Version:** v2 (rewritten Nov 10 for retention; v1 is in git history)
+
+## What changed and why
+
+- **Hook:** v1 opened on a bare number ("collected $10.4 billion in rent"). v2 opens on the contradiction, the burger company whose biggest revenue line is rent, and shows it: a rent box shoving the burgers out of frame.
+- **Seconds 3 to 15:** v1 followed the hook with four statistics in a row (royalties, 95%, 45,000, 2,000). v2 goes to a person instead: Harry Sonneborn and the line he gave the bankers. In v1 that was the last thing you heard.
+- **Middle and end:** one contrast pair of numbers ($1.4 billion against $13.9 billion) instead of seven figures. The 20-year twist stays as the payoff. 111 words instead of 143.
 
 ## Voiceover
 
 | # | VO line | In-world text |
 |---|---------|---------------|
-| 01 | McDonald's collected $10.4 billion in rent. | Rent-ledger header: `$10.4 BILLION IN RENT` · column date: `2025` |
-| 02 | Not from you. From its own franchisees. | Lease cover: `LEASE · FRANCHISEE` |
-| 03 | That's almost twice its royalties. | Two ledger bars: `RENT $10.4B` · `ROYALTIES $6.0B` |
-| 04 | About 95% of its restaurants are franchised. | Wall-map legend: `≈ 95% FRANCHISED` |
-| 05 | Of about 45,000, it runs only 2,000. | Map counter: `45,356 RESTAURANTS · 2,039 COMPANY-OPERATED` |
-| 06 | So what does McDonald's actually own? | Folder tab: `WHAT DOES IT OWN?` |
-| 07 | In the markets it runs directly, | Surveyor's map title: `CONSOLIDATED MARKETS` |
-| 08 | about 56% of the land under its restaurants. | Deed stamp: `LAND OWNED ≈ 56%` |
-| 09 | And about 80% of the buildings. | Deed stamp: `BUILDINGS OWNED ≈ 80%` |
-| 10 | Franchisees buy the right to run the restaurant. | Certificate: `LICENSE TO OPERATE` |
-| 11 | McDonald's is usually their landlord. | Lease line: `LANDLORD: McDONALD’S` |
-| 12 | And the rent goes up when sales go up. | Lease clause: `RENT = % OF SALES` |
-| 13 | Its own restaurants made it $1.4 billion. | Margin ledger: `COMPANY-OPERATED MARGIN · 2025 · $1.4B` |
-| 14 | The ones it rents out? $13.9 billion. | Margin ledger: `FRANCHISED MARGIN · 2025 · $13.9B` · small print: `43,317 FRANCHISED RESTAURANTS` |
-| 15 | After 20 years, the franchise ends. | Contract term: `TERM: 20 YEARS` |
-| 16 | The building still belongs to McDonald's. | Deed: `OWNER: McDONALD’S` |
-| 17 | The model was Harry Sonneborn's idea, in the mid-'50s. | Name card: `HARRY SONNEBORN · KROC’S FINANCE MAN · MID-1950s` |
-| 18 | He told bankers McDonald's was really in real estate. | Banker's file tab: `REAL ESTATE` |
-| 19 | The burgers just make the rent payable. | Back to the rent ledger: `$10.4 BILLION IN RENT` |
+| 01 | McDonald's biggest paycheck isn't burgers. It's rent. | `NOT BURGERS. RENT.` |
+| 02 | $10.4 billion last year. | `RENT $10.4B` · `OWN-RESTAURANT SALES $9.7B` · `FISCAL 2025 · McDONALD’S 10-K` |
+| 03 | Paid by its own franchisees. | `FROM FRANCHISEES` |
+| 04 | The idea came from one finance man. | `FINANCE` |
+| 05 | Harry Sonneborn, in the mid-1950s. | `HARRY SONNEBORN` · `MID-1950s` |
+| 06 | He told bankers McDonald's was really in real estate. | `REAL ESTATE` · `AS TOLD BY RESTAURANT FINANCE MONITOR` |
+| 07 | Here's how it works. | `HOW IT WORKS` |
+| 08 | McDonald's usually controls the land and building. | `LAND: McDONALD’S` · `BUILDING: McDONALD’S` · `OWNS OR HOLDS A LONG LEASE · 10-K` |
+| 09 | The franchisee pays rent as a slice of sales. | `RENT = % OF SALES` |
+| 10 | So when burgers sell, the landlord wins. | `LANDLORD` |
+| 11 | It runs only about 2,000 restaurants itself. | `COMPANY-RUN: 2,039` · `OF 45,356 RESTAURANTS · END OF 2025` |
+| 12 | Those made it $1.4 billion. | `$1.4B` · `COMPANY-OPERATED MARGIN · 2025` |
+| 13 | The ones it doesn't run? $13.9 billion. | `$13.9B` · `FRANCHISED MARGIN · 2025` |
+| 14 | And after 20 years, the franchise ends. | `TERM: 20 YEARS` |
+| 15 | The building stays with McDonald's. | `OWNER: McDONALD’S` |
+| 16 | That's why its biggest paycheck is rent. | `NOT BURGERS. RENT.` |
 
 ## ElevenLabs script
 
 ```text
-McDonald's collected ten point four billion in rent. Not from you. From its own franchisees. That's almost twice its royalties.
+McDonald's biggest paycheck isn't burgers. It's rent. Ten point four billion dollars last year. Paid by its own franchisees.
 
-About ninety-five percent of its restaurants are franchised. Of about forty-five thousand, it runs only two thousand.
+The idea came from one finance man. Harry Sonneborn, in the mid nineteen-fifties. He told bankers McDonald's was really in real estate.
 
-So what does McDonald's actually own?
+Here's how it works. McDonald's usually controls the land and building. The franchisee pays rent as a slice of sales. So when burgers sell, the landlord wins.
 
-In the markets it runs directly, about fifty-six percent of the land under its restaurants. And about eighty percent of the buildings.
+It runs only about two thousand restaurants itself. Those made it one point four billion. The ones it doesn't run? Thirteen point nine billion.
 
-Franchisees buy the right to run the restaurant. McDonald's is usually their landlord. And the rent goes up when sales go up.
-
-Its own restaurants made it one point four billion. The ones it rents out? Thirteen point nine billion.
-
-After twenty years, the franchise ends. The building still belongs to McDonald's.
-
-The model was Harry Sonneborn's idea, in the mid-fifties. He told bankers McDonald's was really in real estate. The burgers just make the rent payable.
+And after twenty years, the franchise ends. The building stays with McDonald's. That's why its biggest paycheck is rent.
 ```
 
-Pronunciation: Sonneborn = SON-uh-born · franchisees = fran-chy-ZEES.
+Pronunciation: Sonneborn = SON-uh-born · franchisee = fran-chy-ZEE.
+
+## Edit notes (Premiere)
+
+- **Music:** Unhurried, slightly sly groove around 95 BPM. Let it thin out under shots 04 to 06 (the 1950s desk) and return on shot 07.
+- **Sound effects:** heavy brass box sliding on felt, coin dropping into a metal box, LED counter ticking and locking, adding-machine clack, folder sliding on a desk, block lifted off felt, receipt printer, coin stacks rising, calendar pages riffling, rubber stamp thud. Exact frames are in `out/mcdonalds/sfx-cues.csv` after the build.
+- **Start and end:** the voice starts on frame 0 with no lead-in. End the export on the last word with no outro, so it loops into the first line.
+- **Cover:** use `out/mcdonalds/cover.png` (frame 0).
+- **Re-check before posting:** All figures are fiscal 2025. McDonald's fiscal 2026 annual report is due around February 2027.
 
 ## Sources
 

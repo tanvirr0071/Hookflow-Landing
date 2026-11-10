@@ -1,57 +1,61 @@
-# Your Gym Is Betting You Won't Show Up
+# Why Your Gym Has 7,200 Members and Room for 300
 
-- **Title:** Your Gym Is Betting You Won't Show Up
-- **Hook text (frame 0):** 7,200 MEMBERS PER GYM
+- **Title:** Why Your Gym Has 7,200 Members and Room for 300
+- **Hook text (frame 0):** 7,200 MEMBERS. ROOM FOR 300.
 - **Series:** Markup
-- **Runtime:** 141 spoken words, about 51 seconds at 165 words per minute
-- **Method:** written directly from the fact sheet (no arena, by request)
+- **Runtime:** 107 spoken words, about 39 seconds at 165 words per minute
+- **Version:** v2 (rewritten Nov 10 for retention; v1 is in git history)
+
+## What changed and why
+
+- **Hook:** v1 opened on half the conflict ("averages about 7,200 members a gym"). v2 puts both halves in the first three seconds, 7,200 members against room for 300, the same "X versus Y" shape as your best opener (Juicero).
+- **Seconds 3 to 15:** the question ("what if everybody showed up?") comes at second 5, then the manager's line. In v1 the question came after two source-heavy sentences.
+- **Middle and end:** cut the $15 starting price, the $49 fee and the 90% recurring-revenue line, which were a list. Kept the two facts that explain the trick: people keep paying after they stop going, and most are on the dearer plan. The NPR line is the payoff and the last thing said. 107 words instead of 141.
 
 ## Voiceover
 
 | # | VO line | In-world text |
 |---|---------|---------------|
-| 01 | Planet Fitness averages about 7,200 members a gym. | Front-desk LED counter: `7,200 MEMBERS PER GYM` · small print: `AVG · 20.8M MEMBERS ÷ 2,896 CLUBS · 2025` |
-| 02 | NPR reported most could hold around 300. | Capacity plaque by the door: `CAPACITY ≈ 300` · small print: `NPR, 2014` |
-| 03 | So how does that work? | Whiteboard scrawl: `HOW?` |
-| 04 | One Manhattan manager told NPR, | Name badge: `CLUB MANAGER · MIDTOWN MANHATTAN` |
-| 05 | "Thank goodness they all don't show up | Quote card: `“THANK GOODNESS THEY ALL DON’T SHOW UP` |
-| 06 | at one time." | Quote card: `AT ONE TIME.”` · `— CHRYSANTHI LASKARIS, CLUB MANAGER, TO NPR, 2014` |
-| 07 | In 2022, CNN said around 60% | News chyron on the lobby TV: `CNN, 2022` |
-| 08 | didn't visit in a 30-day stretch. | Attendance board: `≈ 60% · NO VISIT IN 30 DAYS` |
-| 09 | And that famous $10 plan? | Old window sign: `$10 / MONTH` |
-| 10 | New members now start at $15. | Sign repainted: `NEW MEMBERS FROM $15 / MONTH` |
-| 11 | But two-thirds pay $24.99 for the Black Card. | Membership card: `BLACK CARD · $24.99 / MONTH` · small print: `66.5% OF MEMBERS` |
-| 12 | Plus a $49 yearly fee. | Fee notice: `ANNUAL FEE $49` |
-| 13 | Over 90% of revenue is recurring, | Bank statement header: `> 90% RECURRING REVENUE` · small print: `CLUB & FRANCHISE REVENUE · 10-K` |
-| 14 | pulled automatically, month after month. | Statement lines repeating down the page: `EFT · MONTHLY DUES` |
-| 15 | And people are slow to quit. | Cancellation form, untouched: `CANCEL?` |
-| 16 | In a study of over 7,000 gym members, | Journal cover: `“PAYING NOT TO GO TO THE GYM” · 7,752 MEMBERS` · `DELLAVIGNA & MALMENDIER · AER · 2006` |
-| 17 | people kept paying over two months after their last workout. | Timeline on the page: `LAST VISIT → CANCEL: 2.31 MONTHS` |
-| 18 | As NPR put it, people who don't show up | Empty treadmill readout: `DON’T SHOW UP` |
-| 19 | help pay for the people who do. | Busy treadmill readout: `→ PAY FOR THOSE WHO DO` · small print: `NPR PLANET MONEY, 2014` |
-| 20 | That's how 7,200 members fit in one gym. | Back to the counter: `7,200 MEMBERS PER GYM` |
+| 01 | 7,200 members. Room for about 300. | `7,200 MEMBERS.` · `ROOM FOR 300.` · `AVERAGE · 20.8M MEMBERS ÷ 2,896 CLUBS · 2025` · `NPR, 2014` |
+| 02 | That's Planet Fitness, on average. | `PLANET FITNESS` · `AVERAGE PER GYM` |
+| 03 | So what if everybody showed up? | `EVERYBODY?` |
+| 04 | One manager told NPR, | `CLUB MANAGER · MANHATTAN` |
+| 05 | "Thank goodness they all don't show up at one time." | `“THANK GOODNESS THEY ALL` · `DON’T SHOW UP AT ONE TIME.”` · `— CHRYSANTHI LASKARIS, TO NPR, 2014` |
+| 06 | And mostly, they don't. | `NO ONE` |
+| 07 | CNN reported about 60% | `≈ 60%` · `CNN, 2022` |
+| 08 | skip the gym for a whole month. | `NO VISIT IN 30 DAYS` |
+| 09 | An analyst explained the low price. | `$10 A MONTH` · `THE CLASSIC PRICE, 1998–2024` |
+| 10 | It's too cheap to bother cancelling. | `CANCEL?` · `PER A BMO ANALYST, VIA CNN, 2022` |
+| 11 | One study tracked 7,000 gym members. | `7,752 GYM MEMBERS` · `DELLAVIGNA & MALMENDIER · AER, 2006 · OTHER U.S. CLUBS` |
+| 12 | They kept paying two months after their last workout. | `DUES PAID` · `2.31 MONTHS AFTER LAST VISIT` |
+| 13 | And most don't even pay the cheap price. | `66.5% OF MEMBERS` |
+| 14 | Two-thirds pay about $25 a month. | `$24.99 / MONTH` |
+| 15 | As NPR put it, the people who don't go | `DON’T GO` |
+| 16 | pay for the people who do. | `PAY FOR THOSE WHO DO` · `NPR PLANET MONEY, 2014` · `7,200 MEMBERS.` · `ROOM FOR 300.` |
 
 ## ElevenLabs script
 
 ```text
-Planet Fitness averages about seventy-two hundred members a gym. NPR reported most could hold around three hundred.
+Seventy-two hundred members. Room for about three hundred. That's Planet Fitness, on average. So what if everybody showed up?
 
-So how does that work?
+One manager told NPR, "Thank goodness they all don't show up at one time." And mostly, they don't. CNN reported about sixty percent skip the gym for a whole month.
 
-One Manhattan manager told NPR, "Thank goodness they all don't show up at one time."
+An analyst explained the low price. It's too cheap to bother cancelling. One study tracked seven thousand gym members. They kept paying two months after their last workout.
 
-In twenty twenty-two, CNN said around sixty percent didn't visit in a thirty-day stretch.
+And most don't even pay the cheap price. Two-thirds pay about twenty-five dollars a month.
 
-And that famous ten-dollar plan? New members now start at fifteen. But two-thirds pay twenty-four ninety-nine for the Black Card. Plus a forty-nine dollar yearly fee.
-
-Over ninety percent of revenue is recurring, pulled automatically, month after month.
-
-And people are slow to quit. In a study of over seven thousand gym members, people kept paying over two months after their last workout.
-
-As NPR put it, people who don't show up help pay for the people who do. That's how seventy-two hundred members fit in one gym.
+As NPR put it, the people who don't go pay for the people who do.
 ```
 
 Pronunciation: NPR = N-P-R · CNN = C-N-N.
+
+## Edit notes (Premiere)
+
+- **Music:** Bright, bouncy and a little ironic, around 110 BPM. Drop to just a beat under the manager's quote (shot 05).
+- **Sound effects:** LED counter ticking and locking, crowd shuffle, turnstile clunk, treadmill belt hum, lightbox bulbs warming up, marker crosses on paper, poster flip, pen rolling off a desk, receipt printer, card stack tap, coins sliding on a table. Exact frames are in `out/gyms/sfx-cues.csv` after the build.
+- **Start and end:** the voice starts on frame 0 with no lead-in. End the export on the last word with no outro, so it loops into the first line.
+- **Cover:** use `out/gyms/cover.png` (frame 0).
+- **Re-check before posting:** Member and club counts are year-end 2025. Planet Fitness prices and member totals may have moved in its latest quarterly results; the on-screen tags already carry their years.
 
 ## Sources
 

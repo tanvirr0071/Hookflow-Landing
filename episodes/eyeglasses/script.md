@@ -1,53 +1,59 @@
-# One Company Is Behind Your Glasses
+# Oakley Sued Ray-Ban's Owner. Then It Got Bought.
 
-- **Title:** One Company Is Behind Your Glasses
-- **Hook text (frame 0):** RAY-BAN · OAKLEY · SUNGLASS HUT: ONE COMPANY
+- **Title:** Oakley Sued Ray-Ban's Owner. Then It Got Bought.
+- **Hook text (frame 0):** OAKLEY VS. RAY-BAN’S OWNER
 - **Series:** Markup
-- **Runtime:** 137 spoken words, about 50 seconds at 165 words per minute
-- **Method:** written directly from the fact sheet (no arena, by request)
+- **Runtime:** 105 spoken words, about 38 seconds at 165 words per minute
+- **Version:** v2 (rewritten Nov 10 for retention; v1 is in git history)
+
+## What changed and why
+
+- **Hook:** v1 opened on a list ("Ray-Ban, Oakley and Sunglass Hut: one company"). v2 opens on the fight, which was v1's best material and was buried at second 25.
+- **Seconds 3 to 15:** this is now the whole Oakley story in order: the store chain is bought, Oakley is cut back, Oakley sues, Oakley is bought. In v1 this stretch was a revenue figure and a list of acquisitions with dates.
+- **Middle and end:** the brand list comes after the story and is three quick reveals. Cut the "20 times" markup claim (a 2012 TV line, the weakest fact in v1) and the AI-glasses figure. 105 words instead of 137.
 
 ## Voiceover
 
 | # | VO line | In-world text |
 |---|---------|---------------|
-| 01 | Ray-Ban, Oakley and Sunglass Hut: one company. | Mall directory board: `RAY-BAN · OAKLEY · SUNGLASS HUT` · header strip: `ONE COMPANY` |
-| 02 | It's called EssilorLuxottica. | Headquarters plaque: `ESSILORLUXOTTICA · CHARENTON-LE-PONT, FRANCE` |
-| 03 | Last year: about €28.5 billion. | Annual-report cover: `FY2025 REVENUE ≈ €28.5 BILLION` |
-| 04 | It makes the frames. It makes the lenses. | Factory crate labels: `FRAMES` · `LENSES` |
-| 05 | Then it bought the stores. | Storefront deed folder: `STORES` |
-| 06 | LensCrafters in '95. Sunglass Hut in 2001. | Deed tabs: `1995 · LENSCRAFTERS` · `2001 · SUNGLASS HUT` |
-| 07 | Pearle Vision in 2004. | Deed tab: `2004 · PEARLE VISION` |
-| 08 | A vision insurer, EyeMed, came in that same deal. | Deed tab: `2004 · EYEMED · VISION INSURANCE` |
-| 09 | It even runs Target Optical, under a license. | Counter sign: `TARGET OPTICAL` · small print: `RUN UNDER LICENSE FROM TARGET` |
-| 10 | But what happens to a rival? Take Oakley. | Shelf header: `RIVAL?` |
-| 11 | Its Sunglass Hut stores cut back on Oakley. | Sunglass-shop shelf tag, half the slots empty: `OAKLEY` |
-| 12 | Oakley sued. In 2007, it bought Oakley | Court envelope: `LAWSUIT · 2001` · deal folder tab: `2007 · OAKLEY` |
-| 13 | for about $2.1 billion. | Deal sheet: `≈ $2.1 BILLION · $29.30 / SHARE` |
-| 14 | Its CEO later said, "life was better together." | TV quote card: `“LIFE WAS BETTER TOGETHER.”` · `— ANDREA GUERRA, LUXOTTICA CEO, 60 MINUTES, 2012` |
-| 15 | 60 Minutes reported glasses can sell | TV lower third: `60 MINUTES · 2012` |
-| 16 | for up to 20 times their cost to make. | Price card: `UP TO 20× WHAT THEY COST TO MAKE` · `— CBS 60 MINUTES, 2012` |
-| 17 | It sold over 7 million AI glasses last year. | Smart-glasses shipping carton: `> 7 MILLION AI GLASSES · 2025` |
-| 18 | Different names. One company behind your glasses. | Back to the directory: `RAY-BAN · OAKLEY · SUNGLASS HUT` · `ONE COMPANY` |
+| 01 | Oakley once sued the company behind Ray-Ban. | `OAKLEY VS. RAY-BAN’S OWNER` · `OAKLEY` · `LUXOTTICA` |
+| 02 | Six years later, that company owned Oakley. | `2001` · `2007` · `OWNED BY LUXOTTICA` |
+| 03 | Here's how. | (no new text) |
+| 04 | In 2001, Luxottica bought Sunglass Hut. | `SUNGLASS HUT` · `BOUGHT BY LUXOTTICA · 2001` |
+| 05 | Then those stores cut back on Oakley. | `OAKLEY` |
+| 06 | Oakley sued. The two settled. | `LAWSUIT · 2001` · `SETTLED` |
+| 07 | In 2007, Luxottica bought Oakley. | `SOLD · 2007` |
+| 08 | About $2.1 billion. | `≈ $2.1 BILLION` |
+| 09 | Its CEO said they "understood that life was better together." | `“LIFE WAS BETTER TOGETHER.”` · `— ANDREA GUERRA, LUXOTTICA CEO, 60 MINUTES, 2012` |
+| 10 | And it didn't stop at sunglasses. | (no new text) |
+| 11 | The same group runs LensCrafters and Pearle Vision. | `LENSCRAFTERS` · `PEARLE VISION` |
+| 12 | It runs Target Optical under a license. | `TARGET OPTICAL` · `UNDER LICENSE` |
+| 13 | It even runs a vision plan, EyeMed. | `EYEMED · VISION PLAN` |
+| 14 | Last year: about €28.5 billion. | `ESSILORLUXOTTICA` · `≈ €28.5 BILLION` · `2025 REVENUE · LUXOTTICA + ESSILOR SINCE 2018` |
+| 15 | So the glasses, the store, even the insurance. | `SAME OWNER` |
+| 16 | One company. | `OAKLEY VS. RAY-BAN’S OWNER` |
 
 ## ElevenLabs script
 
 ```text
-Ray-Ban, Oakley and Sunglass Hut: one company. It's called EssilorLuxottica. Last year: about twenty-eight point five billion euros.
+Oakley once sued the company behind Ray-Ban. Six years later, that company owned Oakley. Here's how.
 
-It makes the frames. It makes the lenses. Then it bought the stores. LensCrafters in ninety-five. Sunglass Hut in two thousand one. Pearle Vision in two thousand four. A vision insurer, EyeMed, came in that same deal.
+In two thousand one, Luxottica bought Sunglass Hut. Then those stores cut back on Oakley. Oakley sued. The two settled. In two thousand seven, Luxottica bought Oakley. About two point one billion dollars. Its CEO said they "understood that life was better together."
 
-It even runs Target Optical, under a license.
+And it didn't stop at sunglasses. The same group runs LensCrafters and Pearle Vision. It runs Target Optical under a license. It even runs a vision plan, EyeMed.
 
-But what happens to a rival? Take Oakley.
-
-Its Sunglass Hut stores cut back on Oakley. Oakley sued. In two thousand seven, it bought Oakley for about two point one billion dollars. Its CEO later said, "life was better together."
-
-Sixty Minutes reported glasses can sell for up to twenty times their cost to make. It sold over seven million AI glasses last year.
-
-Different names. One company behind your glasses.
+Last year: about twenty-eight point five billion euros. So the glasses, the store, even the insurance. One company.
 ```
 
-Pronunciation: EssilorLuxottica = ESS-ih-lor-LUX-uh-TEE-kuh · Pearle = PURL · EyeMed = EYE-med.
+Pronunciation: Luxottica = lux-OTT-ih-kuh · Pearle = PURL · EyeMed = EYE-med.
+
+## Edit notes (Premiere)
+
+- **Music:** Tight, percussive, a courtroom-drama feel around 105 BPM. One hit on the gavel in shot 01 and again in shot 06.
+- **Sound effects:** gavel hit, bulb scoreboard hum, calendar flip, tag string pulled tight, shop sign buzzing on, frames lifted off pegs, envelope slap, rubber stamp thud, price tag flick, card sliding on a desk, strings pulling taut. Exact frames are in `out/eyeglasses/sfx-cues.csv` after the build.
+- **Start and end:** the voice starts on frame 0 with no lead-in. End the export on the last word with no outro, so it loops into the first line.
+- **Cover:** use `out/eyeglasses/cover.png` (frame 0).
+- **Re-check before posting:** Revenue is fiscal 2025; fiscal 2026 results are due around February 2027. The company's share price has been volatile, so do not add it.
 
 ## Sources
 

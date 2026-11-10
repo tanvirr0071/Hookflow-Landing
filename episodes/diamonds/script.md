@@ -1,57 +1,60 @@
 # "A Diamond Is Forever" Was an Ad
 
 - **Title:** "A Diamond Is Forever" Was an Ad
-- **Hook text (frame 0):** FOREVER WAS A 1947 AD
+- **Hook text (frame 0):** “FOREVER” WAS AN AD
 - **Series:** Markup
-- **Runtime:** 144 spoken words, about 52 seconds at 165 words per minute
-- **Method:** written directly from the fact sheet (no arena, by request)
+- **Runtime:** 122 spoken words, about 44 seconds at 165 words per minute
+- **Version:** v2 (rewritten Nov 10 for retention; v1 is in git history)
+
+## What changed and why
+
+- **Hook:** kept, because the slogan is the one thing every viewer already knows. v2 says "is an ad slogan" in the present tense and frame 0 shows the ad and the ring together.
+- **Seconds 3 to 15:** tightened to who wrote it, for whom, and what it did (1 in 10 rings to 8 in 10). Cut "two months' salary", which delayed the turn.
+- **Middle and end:** the lab-grown turn lands at about 19 seconds. The fall is told through one price tag: $800, then minus 90%, then a supermarket shelf. Cut the rough-diamond 37% figure and the $1 billion sale price from the voice. 122 words instead of 144.
 
 ## Voiceover
 
 | # | VO line | In-world text |
 |---|---------|---------------|
-| 01 | "A diamond is forever" was a 1947 ad. | Vintage magazine ad page: `“A DIAMOND IS FOREVER”` · stamp across the corner: `FOREVER WAS A 1947 AD` |
-| 02 | Copywriter Frances Gerety wrote it for De Beers. | Typewriter page header: `FRANCES GERETY · N.W. AYER · FOR DE BEERS` |
-| 03 | Before World War Two, | Newsreel title card: `BEFORE WWII` |
-| 04 | about one in ten engagement rings had a diamond. | Ring-tray label: `1 IN 10 WITH A DIAMOND` |
-| 05 | By the late twentieth century, about eight in ten. | Ring-tray label: `LATE 20TH CENTURY: 8 IN 10` |
-| 06 | Then the ads suggested two months' salary. | Ad tagline: `“HOW CAN YOU MAKE TWO MONTHS’ SALARY LAST FOREVER?”` · `— DE BEERS AD, 1980s` |
-| 07 | So what happens when anyone can make one? | Lab door placard: `ANYONE CAN MAKE ONE?` |
-| 08 | In 2018, De Beers launched lab-grown Lightbox. | Box-lid lettering: `LIGHTBOX · LAB-GROWN · 2018` |
-| 09 | One carat: $800. | Price tag: `1 CARAT · $800` |
-| 10 | Its CEO said it "may not be forever." | Launch banner: `“MAY NOT BE FOREVER, BUT IS PERFECT FOR RIGHT NOW”` · `— BRUCE CLEAVER, DE BEERS CEO, 2018` |
-| 11 | By 2025, it said prices fell 90%. | Price chart line: `LAB-GROWN WHOLESALE −90% SINCE 2018` · small print: `DE BEERS ESTIMATE, MAY 2025` |
-| 12 | A new CEO said you can buy lab-grown | Name card: `AL COOK · DE BEERS CEO` |
-| 13 | "in supermarkets for $200." | Supermarket shelf tag: `“IN SUPERMARKETS FOR $200”` · `— AL COOK, TO JCK, 2025` |
-| 14 | So De Beers said it would close Lightbox. | Notice on the box: `LIGHTBOX · CLOSING` · `ANNOUNCED MAY 2025` |
-| 15 | Of couples married in 2025, | Survey card header: `COUPLES MARRIED IN 2025` |
-| 16 | 61% chose lab-grown. | Survey bar: `61% LAB-GROWN` · small print: `THE KNOT 2026 REAL WEDDINGS STUDY` |
-| 17 | Even mined rough prices fell 37% in a year. | Sorting-table tag: `AVG ROUGH PRICE −37% · $155 → $97 / CARAT` |
-| 18 | Now De Beers itself is for sale. | Sign on the mine office: `DE BEERS · FOR SALE` |
-| 19 | Reported price: about $1 billion. | Deal folder: `ANGLO’S 85% · REPORTED ~$1 BILLION · BLOOMBERG` |
-| 20 | The diamond lasts. The price didn't. | Back to the ad page: `“A DIAMOND IS FOREVER”` · `FOREVER WAS A 1947 AD` |
+| 01 | "A diamond is forever" is an ad slogan. | `“A DIAMOND IS FOREVER”` · `“FOREVER” WAS AN AD` · `AD` |
+| 02 | A copywriter wrote it in 1947. | `1947` · `FRANCES GERETY · N.W. AYER` |
+| 03 | For De Beers, the diamond giant. | `CLIENT: DE BEERS` |
+| 04 | Before World War Two, | `BEFORE WWII` |
+| 05 | about one engagement ring in ten had a diamond. | `1 IN 10` |
+| 06 | Decades of ads later, about eight in ten. | `8 IN 10` · `LATE 20TH CENTURY` |
+| 07 | Then came diamonds grown in a lab. | `LAB-GROWN` · `FTC, 2018: “THUS, THEY ARE DIAMONDS.”` |
+| 08 | In 2018, De Beers sold them too. | `LIGHTBOX · BY DE BEERS · 2018` |
+| 09 | $800 a carat. | `$800 / CARAT` |
+| 10 | Its own CEO said they "may not be forever." | `“MAY NOT BE FOREVER”` · `— BRUCE CLEAVER, DE BEERS CEO, 2018` |
+| 11 | Seven years later, prices had fallen 90%. | `−90%` · `WHOLESALE, SINCE 2018 · DE BEERS, MAY 2025` |
+| 12 | A later CEO said supermarkets sell them for $200. | `$200` · `“IN SUPERMARKETS FOR $200” — AL COOK, DE BEERS CEO, 2025` |
+| 13 | So De Beers moved to shut its lab brand. | `CLOSING` · `ANNOUNCED MAY 2025` |
+| 14 | For couples married last year, | `MARRIED IN 2025` |
+| 15 | 61% of rings were lab-grown. | `61% LAB-GROWN` · `THE KNOT 2026 STUDY · U.S. ENGAGEMENT RINGS` |
+| 16 | Now De Beers itself is for sale. | `DE BEERS` · `FOR SALE` · `REPORTED PRICE ≈ $1 BILLION · BLOOMBERG` |
+| 17 | The slogan lasted. The price didn't. | `“A DIAMOND IS FOREVER”` · `“FOREVER” WAS AN AD` |
 
 ## ElevenLabs script
 
 ```text
-"A diamond is forever" was a nineteen forty-seven ad. Copywriter Frances Gerety wrote it for De Beers.
+"A diamond is forever" is an ad slogan. A copywriter wrote it in nineteen forty-seven. For De Beers, the diamond giant.
 
-Before World War Two, about one in ten engagement rings had a diamond. By the late twentieth century, about eight in ten. Then the ads suggested two months' salary.
+Before World War Two, about one engagement ring in ten had a diamond. Decades of ads later, about eight in ten.
 
-So what happens when anyone can make one?
+Then came diamonds grown in a lab. In twenty eighteen, De Beers sold them too. Eight hundred dollars a carat. Its own CEO said they "may not be forever." Seven years later, prices had fallen ninety percent. A later CEO said supermarkets sell them for two hundred. So De Beers moved to shut its lab brand.
 
-In twenty eighteen, De Beers launched lab-grown Lightbox. One carat: eight hundred dollars. Its CEO said it "may not be forever."
-
-By twenty twenty-five, it said prices fell ninety percent. A new CEO said you can buy lab-grown "in supermarkets for two hundred dollars." So De Beers said it would close Lightbox.
-
-Of couples married in twenty twenty-five, sixty-one percent chose lab-grown. Even mined rough prices fell thirty-seven percent in a year.
-
-Now De Beers itself is for sale. Reported price: about one billion dollars.
-
-The diamond lasts. The price didn't.
+For couples married last year, sixty-one percent of rings were lab-grown. Now De Beers itself is for sale. The slogan lasted. The price didn't.
 ```
 
-Pronunciation: De Beers = deh BEERZ · Gerety = GAIR-uh-tee.
+Pronunciation: De Beers = deh BEERZ.
+
+## Edit notes (Premiere)
+
+- **Music:** Elegant and slow at first, a waltz feel around 80 BPM. Switch to something colder and electronic on shot 07 (the lab) and keep it to the end.
+- **Sound effects:** typewriter keys and carriage return, paper pulled from a roller, folder stamp, ring stones clicking into a tray, magazine pages fluttering, low electric hum of the lab dome, price tag flick, string snip, tag falling on a brass scale, shelf-tag click, box lid closing, signpost hammered into the table. Exact frames are in `out/diamonds/sfx-cues.csv` after the build.
+- **Start and end:** the voice starts on frame 0 with no lead-in. End the export on the last word with no outro, so it loops into the first line.
+- **Cover:** use `out/diamonds/cover.png` (frame 0).
+- **Re-check before posting:** As of Nov 10, 2026, De Beers was still for sale with no deal signed. If a sale is announced before you post, change shot 16 and the last line. Lab-grown price figures update every quarter.
 
 ## Sources
 
@@ -66,3 +69,4 @@ Pronunciation: De Beers = deh BEERZ · Gerety = GAIR-uh-tee.
 - JCK, The Knot 2026 study (61% lab-grown): https://www.jckonline.com/editorial-article/lab-diamonds-engagement-market/
 - Anglo American Q3 2026 production report (rough price −37%): https://www.angloamerican.com/media/press-releases/2026/20-10-2026
 - National Jeweler, De Beers sale and preferred bidder: https://nationaljeweler.com/articles/15150-anglo-reportedly-selects-gareth-penny-s-consortium-as-top-bidder-for-de-beers
+- FTC, 2018 Jewelry Guides revision: https://www.ftc.gov/news-events/news/press-releases/2018/07/ftc-approves-final-revisions-jewelry-guides

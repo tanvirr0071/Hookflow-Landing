@@ -1,55 +1,59 @@
-# Who Really Pays for Your Credit-Card Rewards
+# Who Really Pays for Your Credit Card Points
 
-- **Title:** Who Really Pays for Your Credit-Card Rewards
-- **Hook text (frame 0):** PAYING CASH COSTS YOU $149
+- **Title:** Who Really Pays for Your Credit Card Points
+- **Hook text (frame 0):** CASH PAYS FOR YOUR POINTS
 - **Series:** Markup
-- **Runtime:** 141 spoken words, about 51 seconds at 165 words per minute
-- **Method:** written directly from the fact sheet (no arena, by request)
+- **Runtime:** 110 spoken words, about 40 seconds at 165 words per minute
+- **Version:** v2 (rewritten Nov 10 for retention; v1 is in git history)
+
+## What changed and why
+
+- **Hook:** v1 opened on a number ("Paying cash costs you $149"). v2 opens on the conflict, cash shoppers paying for someone else's points, and shows it with one coin rolling from the cash side to the card side.
+- **Seconds 3 to 15:** v1 stacked three statistics here ($149, 2.4%, $198 billion), which is the stretch where your viewers leave. v2 tells the mechanism as one chain (swipe, fee, bank, rewards) with a single number.
+- **Middle and end:** the question lands at about 20 seconds and the $149 and $1,133 are held back as its answer. Cut the $198 billion, $15 billion and $40 billion figures. 110 words instead of 141, and the last line hands straight back to the first.
 
 ## Voiceover
 
 | # | VO line | In-world text |
 |---|---------|---------------|
-| 01 | Paying cash costs you $149. | Cash-register display: `PAYING CASH COSTS YOU $149` |
-| 02 | Every year, according to a Boston Fed study. | Report cover: `WHO GAINS AND WHO LOSES FROM CREDIT CARD PAYMENTS?` · `FEDERAL RESERVE BANK OF BOSTON · 2010` · small print: `“CASH” = CASH, CHECKS, DEBIT & PREPAID` |
-| 03 | It flows to households that pay by credit card. | Arrow painted on the floor: `$149 / YEAR → CREDIT-CARD HOUSEHOLDS` |
-| 04 | Here's how. Every swipe costs the store a fee. | Card-terminal screen: `SWIPE FEE` |
-| 05 | Visa or Mastercard credit: about 2.4%. | Store receipt line: `VISA / MASTERCARD CREDIT · AVG FEE ≈ 2.4% · 2025` |
-| 06 | Merchant groups count $198 billion for 2025. | Ledger total: `2025 SWIPE FEES ≈ $198B` · small print: `NILSON DATA, VIA MERCHANT GROUPS` |
-| 07 | Most goes to the bank that issued the card. | Fee split diagram: `$2.20 FEE → $1.70 TO THE CARD’S BANK` · small print: `GAO EXAMPLE · $100 SALE · 2009` |
-| 08 | And that money helps pay for rewards. | Arrow from the bank: `→ REWARDS` |
-| 09 | But stores don't charge card users more. | Shelf tag: `SAME PRICE · CARD OR CASH` |
-| 10 | They raise prices for everyone. | Price tag flipping up: `PRICE ↑` |
-| 11 | So who comes out ahead? | Chalkboard: `WHO COMES OUT AHEAD?` |
-| 12 | The poorest households pay in about $21. | Balance-sheet line: `LOWEST INCOME: PAYS $21 / YEAR` |
-| 13 | The richest collect about $750. | Balance-sheet line: `HIGHEST INCOME: GETS $750 / YEAR` |
-| 14 | Even among cardholders, there's a split. | Two card stacks labeled: `CARRY A BALANCE` and `PAY IN FULL` |
-| 15 | Fed economists estimate $15 billion a year moves | Flow arrow: `$15B / YEAR` · small print: `FEDERAL RESERVE BOARD WORKING PAPER, 2023` |
-| 16 | from people who carry balances to people who don't. | Arrow lands: `CARRY A BALANCE → PAY IN FULL` |
-| 17 | Rewards earned in 2022: over $40 billion. | Points statement: `REWARDS EARNED, 2022: > $40B` · small print: `CFPB` |
-| 18 | In the cash line? That's your $149. | Back to the register display: `PAYING CASH COSTS YOU $149` |
+| 01 | Cash shoppers pay for your credit-card points. | `CASH PAYS FOR YOUR POINTS` · `POINTS` |
+| 02 | It happens at every checkout. | `CHECKOUT` |
+| 03 | Each swipe costs the store a fee. | `SWIPE FEE` |
+| 04 | About 2.4% of the sale. | `≈ 2.4%` · `VISA / MASTERCARD CREDIT · AVG FEE · 2025` · `NILSON DATA, VIA MERCHANT GROUPS` |
+| 05 | Most goes to the bank that issued the card. | `THE CARD’S BANK` · `$1.70 OF A $2.20 FEE · GAO EXAMPLE, 2009` |
+| 06 | That money helps fund your rewards. | `“FUNDED IN PART BY INTERCHANGE FEE REVENUES” — GAO, 2009` |
+| 07 | But stores don't charge card users more. | `SAME PRICE · CARD OR CASH` |
+| 08 | They raise prices for everyone. | `PRICE ↑` |
+| 09 | So what does that cost a cash payer? | `COST TO A CASH PAYER?` |
+| 10 | A Boston Fed study put a number on it. | `BOSTON FED · 2010` · `“WHO GAINS AND WHO LOSES FROM CREDIT CARD PAYMENTS?”` · `“CASH” = CASH, CHECKS, DEBIT & PREPAID` |
+| 11 | About $149 a year. | `−$149 / YEAR` · `EACH CASH HOUSEHOLD` |
+| 12 | And a card household? It collects about $1,133. | `+$1,133 / YEAR` · `EACH CARD HOUSEHOLD` |
+| 13 | The poorest households pay in. | `LOWEST INCOME: PAYS $21 / YEAR` |
+| 14 | The richest collect about $750. | `HIGHEST INCOME: GETS $750 / YEAR` |
+| 15 | So your points aren't free. | `NOT FREE` |
+| 16 | The cash line paid for them. | `CASH PAYS FOR YOUR POINTS` |
 
 ## ElevenLabs script
 
 ```text
-Paying cash costs you a hundred forty-nine dollars. Every year, according to a Boston Fed study. It flows to households that pay by credit card.
+Cash shoppers pay for your credit-card points. It happens at every checkout. Each swipe costs the store a fee. About two point four percent of the sale. Most goes to the bank that issued the card. That money helps fund your rewards. But stores don't charge card users more. They raise prices for everyone.
 
-Here's how. Every swipe costs the store a fee. Visa or Mastercard credit: about two point four percent. Merchant groups count one ninety-eight billion for twenty twenty-five.
+So what does that cost a cash payer? A Boston Fed study put a number on it. About a hundred forty-nine dollars a year. And a card household? It collects about eleven hundred.
 
-Most goes to the bank that issued the card. And that money helps pay for rewards. But stores don't charge card users more. They raise prices for everyone.
+The poorest households pay in. The richest collect about seven hundred fifty.
 
-So who comes out ahead?
-
-The poorest households pay in about twenty-one dollars. The richest collect about seven hundred fifty.
-
-Even among cardholders, there's a split. Fed economists estimate fifteen billion a year moves from people who carry balances to people who don't.
-
-Rewards earned in twenty twenty-two: over forty billion dollars.
-
-In the cash line? That's your one forty-nine.
+So your points aren't free. The cash line paid for them.
 ```
 
 Pronunciation: Mastercard = MAS-ter-card · "Fed" = fed.
+
+## Edit notes (Premiere)
+
+- **Music:** Light, curious pulse around 100 BPM. Drop it to almost nothing under shot 09 ("So what does that cost a cash payer?") and bring it back on the stamp in shot 11.
+- **Sound effects:** coin rolling on brass, coin dropping into a glass jar, conveyor hum, card-reader beep, receipt printer, shelf tags flipping, rubber stamp thud, scale creak, coins pouring. Exact frames are in `out/card-rewards/sfx-cues.csv` after the build.
+- **Start and end:** the voice starts on frame 0 with no lead-in. End the export on the last word with no outro, so it loops into the first line.
+- **Cover:** use `out/card-rewards/cover.png` (frame 0).
+- **Re-check before posting:** Nothing here moves daily. The Boston Fed figures are from a 2010 study and are labelled that way on screen.
 
 ## Sources
 
